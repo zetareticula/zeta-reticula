@@ -1,0 +1,32 @@
+executor: KubernetesExecutor
+
+airflow:
+  defaultAirflowRepository: apache/airflow
+  defaultAirflowTag: "2.9.0-python3.10"
+  image:
+    repository: zetareticula/airflow
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+kubernetes:
+  executor: KubernetesExecutor
+  kubeConfig:
+    config: /etc/kubernetes/config
+  worker:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+dags:
+  persistence:
+    enabled: true
+    existingClaim: airflow-dags-pvc
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 1Gi

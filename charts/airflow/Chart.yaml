@@ -1,0 +1,9 @@
+apiVersion: v2
+name: airflow
+description: Apache Airflow on Kubernetes
+version: 1.0.0
+appVersion: "2.9.0"
+dependencies:
+  - name: airflow
+    version: "1.10.0"
+    repository: https://airflow.apache.org

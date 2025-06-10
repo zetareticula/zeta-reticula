@@ -31,5 +31,41 @@ spec:
           limits:
             cpu: {{ $.Values.resources.limits.cpu }}
             memory: {{ $.Values.resources.limits.memory }}
+        {{- if eq .name "api" }}
+      - name: zeta-sidecar
+        image: "{{ $.Values.image.repository }}/zeta-sidecar:{{ $.Values.image.tag }}"
+        imagePullPolicy: {{ $.Values.image.pullPolicy }}
+        ports:
+        - containerPort: 50051
+        volumeMounts:
+        - name: cache-volume
+          mountPath: "/cache"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      {{- end }}
+      volumes:
+      - name: cache-volume
+        emptyDir: {}
 ---
+{{- end }}
+
+{{- if .Values.airflow.enabled }}
+---
+apiVersion: helm.sh/v1beta1
+kind: HelmRelease
+metadata:
+  name: airflow
+  namespace: {{ .Values.airflow.namespace }}
+spec:
+  chart: ./charts/airflow
+  values:
+    executor: KubernetesExecutor
+    airflow:
+      defaultAirflowRepository: zetareticula/airflow
+      defaultAirflowTag: "latest"
 {{- end }}

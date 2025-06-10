@@ -46,3 +46,9 @@ services:
     port: 8086
   - name: app
     port: 80
+  - name: zeta-sidecar
+    port: 50051
+
+airflow:
+  enabled: true
+  namespace: zeta-reticula
