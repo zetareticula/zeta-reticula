@@ -4,23 +4,25 @@ use log;
 pub mod router;
 pub mod strategy;
 pub mod context;
+pub mod symbolic;
 
 #[derive(Serialize, Deserialize)]
-pub struct RoutingPlan {
+pub struct NSRoutingPlan {
     pub model_config: ModelConfig,
     pub execution_strategy: String,
     pub kv_cache_config: KVCacheConfig,
+    pub symbolic_rules: Vec<String>,  // Symbolic constraints applied
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ModelConfig {
-    pub size: usize,          // e.g., 3B, 7B parameters
+    pub size: usize,
     pub precision: Vec<PrecisionLevel>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct KVCacheConfig {
-    pub sparsity: f32,        // 0.0 to 1.0 (fraction of cache retained)
+    pub sparsity: f32,
     pub priority_tokens: Vec<u32>,
 }
 
@@ -31,7 +33,7 @@ pub enum PrecisionLevel {
     Bit16,
 }
 
-pub fn initialize_router() -> router::Router {
-    log::info!("Initializing router-rs");
-    router::Router::new()
+pub fn initialize_ns_router() -> router::NSRouter {
+    log::info!("Initializing ns-router-rs with neurosymbolic capabilities");
+    router::NSRouter::new()
 }

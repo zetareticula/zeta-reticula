@@ -1,0 +1,12 @@
+{
+    "functions": {
+      "src/routes/*.ts": {
+        "memory": 1024,
+        "maxDuration": 10
+      }
+    },
+    "routes": [
+      { "src": "/api/inference/(.*)", "dest": "/src/routes/inferenceRoutes.ts" },
+      { "src": "/api/models/(.*)", "dest": "/src/routes/modelRoutes.ts" }
+    ]
+  }

@@ -16,6 +16,8 @@ pub struct CliOutput {
     pub sparsity_ratio: f32,
     pub num_used: usize,
     pub last_k_active: Vec<usize>,
+    pub anns_recall: f32,  // Mock recall metric
+    pub anns_throughput: f32,  // Throughput for ANNS queries
 }
 
 pub fn write_output(output: &CliOutput, config: &super::config::CliConfig) -> std::io::Result<()> {

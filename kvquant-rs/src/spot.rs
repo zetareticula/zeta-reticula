@@ -8,7 +8,7 @@ pub struct Spot {
     pub id: usize,
     pub blocks: Vec<DataBlock>,
     pub is_full: bool,
-    pub capacity: usize,  // Number of blocks
+    pub capacity: usize,
 }
 
 impl Spot {
@@ -24,13 +24,13 @@ impl Spot {
         }
     }
 
-    pub fn append_block(&mut self, token_id: u32, value: f32) -> Option<usize> {
+    pub fn append_block(&mut self, token_id: u32, value: f32, pointer: usize, bias: f32) -> Option<usize> {
         if self.is_full {
             return None;
         }
         for block in &mut self.blocks {
             if block.state == BlockState::Free {
-                block.write(token_id, value);
+                block.write(token_id, value, pointer, bias);
                 if self.blocks.iter().all(|b| b.state != BlockState::Free) {
                     self.is_full = true;
                 }
@@ -65,17 +65,16 @@ impl SpotManager {
         }
     }
 
-    pub fn append(&self, token_id: u32, value: f32) -> (usize, usize) {
+    pub fn append(&self, token_id: u32, value: f32, pointer: usize, bias: f32) -> (usize, usize) {
         let mut working_spot = self.spots.get_mut(&self.working_spot_id).unwrap();
-        if let Some(block_id) = working_spot.append_block(token_id, value) {
+        if let Some(block_id) = working_spot.append_block(token_id, value, pointer, bias) {
             return (self.working_spot_id, block_id);
         }
 
-        // Working spot is full; select a new one
         let new_spot_id = self.working_spot_id + 1;
         self.spots.insert(new_spot_id, Arc::new(Spot::new(new_spot_id, self.spot_capacity)));
         let mut new_spot = self.spots.get_mut(&new_spot_id).unwrap();
-        let block_id = new_spot.append_block(token_id, value).unwrap();
+        let block_id = new_spot.append_block(token_id, value, pointer, bias).unwrap();
         (new_spot_id, block_id)
     }
 

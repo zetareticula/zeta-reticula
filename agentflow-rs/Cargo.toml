@@ -1,0 +1,22 @@
+[package]
+name = "agentflow-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+salience-engine = { path = "../salience-engine" }
+ns-router-rs = { path = "../ns-router-rs" }
+kvquant-rs = { path = "../kvquant-rs" }
+llm-rs = { path = "../llm-rs" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.8"
+tokio = { version = "1.0", features = ["full"] }
+dashmap = "5.5"
+log = "0.4"
+rand = "0.8"  # For differential privacy noise
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
