@@ -2,6 +2,15 @@ use crate::spot::SpotManager;
 use serde::{Serialize, Deserialize};
 use dashmap::DashMap;
 use std::sync::Mutex;
+use crate::block::KVQuantConfig;
+use std::sync::Arc;
+use std::collections::HashMap;
+use rand::Rng;
+use std::sync::RwLock;
+use crate::block::{DataBlock, BlockState};
+use dashmap::mapref::entry::Entry;
+
+
 
 #[derive(Serialize, Deserialize)]
 pub struct LogStructuredKVCache {
@@ -60,3 +69,32 @@ impl LogStructuredKVCache {
         }
     }
 }
+
+pub fn initialize_kv_cache(config: KVQuantConfig) -> LogStructuredKVCache {
+    LogStructuredKVCache::new(config)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct KVCache {
+    inner: LogStructuredKVCache,
+}
+
+impl KVCache {
+    pub fn new(config: KVQuantConfig) -> Self {
+        let inner = initialize_kv_cache(config);
+        KVCache { inner }
+    }
+
+    pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
+        self.inner.update(token_id, value, salience_score, pointer, bias);
+    }
+
+    pub fn invalidate_low_salience(&self, salience_scores: &[(u32, f32)]) {
+        self.inner.invalidate_low_salience(salience_scores);
+    }
+
+    pub fn erase_full_spots(&self) {
+        self.inner.erase_full_spots();
+    }
+}
+

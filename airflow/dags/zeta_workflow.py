@@ -21,34 +21,19 @@ with DAG(
     default_args=default_args,
     description="Zeta Reticula Inference Workflow",
     schedule_interval=timedelta(hours=1),
-    start_date=datetime(2025, 6, 9),
+    start_date=datetime(2025, 6, 10),
     catchup=False,
 ) as dag:
 
-    def update_cache_task(**kwargs):
+    def update_tableau_cache_task(**kwargs):
         channel = grpc.insecure_channel("zeta-sidecar:50051")
         stub = zeta_sidecar_pb2_grpc.SidecarServiceStub(channel)
+        # Mock tableau data update
         response = stub.UpdateCache(zeta_sidecar_pb2.CacheUpdate(
             vector_id="vec_001",
-            data=b"cached_data"  # Replace with actual data
+            data=b"tableau_data"  # Replace with actual tableau data
         ))
         print(response.status)
-
-    def sync_with_neon_task(**kwargs):
-        conn = psycopg2.connect(
-            dbname="dbname",
-            user="user",
-            password="password",
-            host="ep-cool-name-123456.us-east-2.neon.tech",
-            port="5432",
-            sslmode="require"
-        )
-        cur = conn.cursor()
-        cur.execute("INSERT INTO cache (vector_id, data) VALUES (%s, %s) ON CONFLICT (vector_id) DO UPDATE SET data = %s",
-                    ("vec_001", b"cached_data", b"cached_data"))
-        conn.commit()
-        cur.close()
-        conn.close()
 
     ingest_model = KubernetesPodOperator(
         task_id="ingest_model",
@@ -70,6 +55,16 @@ with DAG(
         get_logs=True,
     )
 
+    build_tableau = KubernetesPodOperator(
+        task_id="build_tableau",
+        name="build-tableau",
+        namespace="zeta-reticula",
+        image="zetareticula/salience-engine:latest",
+        cmds=["sh", "-c", "salience-engine --input quantized.bin --threshold 0.7"],
+        in_cluster=True,
+        get_logs=True,
+    )
+
     run_inference = KubernetesPodOperator(
         task_id="run_inference",
         name="run-inference",
@@ -82,12 +77,12 @@ with DAG(
 
     update_cache = PythonOperator(
         task_id="update_cache",
-        python_callable=update_cache_task,
+        python_callable=update_tableau_cache_task,
     )
 
     sync_with_neon = PythonOperator(
         task_id="sync_with_neon",
-        python_callable=sync_with_neon_task,
+        python_callable=lambda: sync_with_neon_task(),  # Reuse previous sync logic
     )
 
-    ingest_model >> quantize_model >> run_inference >> update_cache >> sync_with_neon
+    ingest_model >> quantize_model >> build_tableau >> run_inference >> update_cache >> sync_with_neon

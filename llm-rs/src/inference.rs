@@ -1,17 +1,18 @@
-use tonic::transport::Channel;
 use crate::model::Model;
 use crate::kv_cache::KVCache;
 use crate::fusion_anns::FusionANNS;
 use crate::utils::measure_latency;
-use salience_engine::quantizer::QuantizationResult;
+use salience_engine::quantizer::{SalienceQuantizer, QuantizationResult, TokenFeatures, PrecisionLevel};
+use salience_engine::tableaux::YoungTableau;
 use ns_router_rs::{NSRoutingPlan, ModelConfig, KVCacheConfig};
 use agentflow_rs::{initialize_agent_flow, AgentFlowConfig, FederatedANSS, DistributedCache, DistributedIO, FederatedRoleInference};
 use serde::{Serialize, Deserialize};
 use ndarray::Array1;
+use tonic::{transport::Channel, Request};
 use log;
 
 mod pb {
-    tonic::include_proto!("sidecar"); // Generated from proto file
+    tonic::include_proto!("sidecar"); // Generated from zeta-sidecar/proto/sidecar.proto
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,6 +23,7 @@ pub struct InferenceEngine {
     agent_flow_server: agentflow_rs::server::AgentFlowServer,
     quantization_results: Vec<QuantizationResult>,
     sidecar_client: pb::sidecar_service_client::SidecarServiceClient<Channel>,
+    tableau: YoungTableau,
 }
 
 impl InferenceEngine {
@@ -32,6 +34,7 @@ impl InferenceEngine {
         let agent_flow_config = AgentFlowConfig { num_clients: 4, privacy_epsilon: 1.0 };
         let agent_flow_server = initialize_agent_flow(agent_flow_config);
         let sidecar_client = pb::sidecar_service_client::SidecarServiceClient::connect("http://localhost:50051").await.unwrap();
+        let tableau = YoungTableau::new(768, 0.7); // Initial tableau
         InferenceEngine {
             model,
             kv_cache,
@@ -39,6 +42,7 @@ impl InferenceEngine {
             agent_flow_server,
             quantization_results: vec![],
             sidecar_client,
+            tableau,
         }
     }
 
@@ -60,16 +64,23 @@ impl InferenceEngine {
         let token_count = tokens.len();
         let mut output_text = String::new();
 
-        let (processed_text, latency) = measure_latency(|| {
-            // Fetch data from sidecar
-            let mut client = self.sidecar_client.clone();
-            let request = tonic::Request::new(pb::CacheRequest {
-                vector_id: "vec_001".to_string(),
-                layer_id: "layer_001".to_string(),
-            });
-            let response = rt.block_on(client.get_cached_data(request)).unwrap();
-            let cached_data = response.into_inner().data;
+        let quantizer = SalienceQuantizer::new(0.7);
+        let token_features: Vec<TokenFeatures> = tokens.iter()
+            .enumerate()
+            .map(|(i, _)| TokenFeatures {
+                token_id: i as u32,
+                frequency: 0.5,
+                sentiment_score: 0.0,
+                context_relevance: 0.5,
+                role: "".to_string(),
+            })
+            .collect();
+        let (results, mut tableau) = quantizer.quantize_tokens(token_features, "default");
+        self.quantization_results = results;
+        self.tableau = tableau;
+        self.tableau.cache_to_sidecar(&mut self.sidecar_client).await.unwrap();
 
+        let (processed_text, latency) = measure_latency(|| {
             let salience_scores: Vec<(u32, f32)> = self.quantization_results.iter()
                 .map(|r| (r.token_id, r.salience_score))
                 .collect();

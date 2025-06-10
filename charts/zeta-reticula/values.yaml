@@ -52,3 +52,6 @@ services:
 airflow:
   enabled: true
   namespace: zeta-reticula
+  chart: ./charts/airflow
+
+  

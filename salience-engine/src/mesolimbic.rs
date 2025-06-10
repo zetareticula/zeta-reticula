@@ -1,6 +1,19 @@
 use rand::Rng;
 use serde::{Serialize, Deserialize};
 use crate::role_inference::{RoleInferer, RoleInferenceResult};
+use std::sync::Arc;
+use dashmap::DashMap;
+use std::collections::HashMap;
+
+use rand_distr::{Distribution, Normal};
+use std::sync::Mutex;
+use std::sync::RwLock;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RoleTheory {
+    pub roles: Vec<String>,          // Possible roles (e.g., "subject", "verb", "object", "modifier", "negation")
+    pub probabilities: Vec<Vec<f32>>, // P(role | token_features)
+}
 
 // Represents a token's features relevant to salience
 #[derive(Serialize, Deserialize, Clone)]
@@ -72,3 +85,5 @@ impl MesolimbicSystem {
         }).collect()
     }
 }
+
+#[derive(Serialize, Deserialize)]

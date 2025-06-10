@@ -8,3 +8,13 @@ spec:
   resources:
     requests:
       storage: {{ .Values.persistence.size }}
+    storageClassName: {{ .Values.persistence.storageClass | default "standard" }}
+    {{- if .Values.persistence.existingClaim }}
+    existingClaim: {{ .Values.persistence.existingClaim }}
+        {{- end }}
+    {{- if .Values.persistence.annotations }}
+    annotations:
+        {{- range $key, $value := .Values.persistence.annotations }}
+        {{ $key }}: "{{ $value }}"
+        {{- end }}
+        {{- end }}

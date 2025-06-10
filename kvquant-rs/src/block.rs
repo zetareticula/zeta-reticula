@@ -1,5 +1,29 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use std::vec::Vec;
+use std::sync::Arc;
+use dashmap::DashMap;
+use std::sync::Mutex;
+use std::sync::RwLock;
+use dashmap::mapref::entry::Entry;
+use rand::Rng;
+
+#[derive(Serialize, Deserialize)]
+pub struct KVQuantConfig {
+    pub block_size: usize,
+    pub spot_capacity: usize,
+    pub salience_threshold: f32,
+    pub precision_level: PrecisionLevel,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub enum PrecisionLevel {
+    Bit16,
+    Bit32,
+    Bit64,
+}
+
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum BlockState {

@@ -15,3 +15,15 @@ pub fn initialize_kv_cache(config: KVQuantConfig) -> kv_cache::LogStructuredKVCa
     log::info!("Initializing kvquant-rs with block size: {}, spot capacity: {}", config.block_size, config.spot_capacity);
     kv_cache::LogStructuredKVCache::new(config)
 }
+
+pub fn initialize_spot_manager(config: KVQuantConfig) -> spot::SpotManager {
+    log::info!("Initializing SpotManager with block size: {}, spot capacity: {}", config.block_size, config.spot_capacity);
+    spot::SpotManager::new(config.spot_capacity)
+}
+
+/// Initializes the BlockManager with a specified block size
+pub fn initialize_block_manager(block_size: usize) -> block::BlockManager {
+    log::info!("Initializing BlockManager with block size: {}", block_size);
+    block::BlockManager::new(block_size)
+
+}

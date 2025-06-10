@@ -69,3 +69,76 @@ spec:
       defaultAirflowRepository: zetareticula/airflow
       defaultAirflowTag: "latest"
 {{- end }}
+
+    image:
+      repository: {{ .Values.airflow.image.repository }}
+      tag: {{ .Values.airflow.image.tag }}
+      pullPolicy: {{ .Values.airflow.image.pullPolicy }}
+    kubernetes:
+      executor: KubernetesExecutor
+      kubeConfig:
+        config: /etc/kubernetes/config
+      worker:
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+    dags:
+      persistence:
+        enabled: true
+        existingClaim: airflow-dags-pvc
+    persistence:
+      enabled: true
+      accessMode: {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+      size: {{ .Values.persistence.size | default "1Gi" }}
+      storageClass: {{ .Values.persistence.storageClass | default "standard" }}
+      annotations: {}
+      existingClaim: ""
+      subPath: ""
+      mountPath: /opt/airflow/dags
+    webserver:
+      service:
+        type: LoadBalancer
+        port: 8080
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      ingress:
+        enabled: true
+        pathType: Prefix
+        hosts:
+          - host: airflow.local
+            paths:
+              - /
+        annotations:
+          kubernetes.io/ingress.class: nginx
+          nginx.ingress.kubernetes.io/rewrite-target: /
+        tls: []
+    scheduler:
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+    
+        requests:
+            cpu: 200m
+            memory: 512Mi
+        {{- if .Values.airflow.scheduler.resources }}
+        {{- range $key, $value := .Values.airflow.scheduler.resources }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+        {{- end }}
+
+        {{- if .Values.airflow.webserver.resources }}
+        resources:
+          limits:
+            cpu: {{ .Values.airflow.webserver.resources.limits.cpu | default "500m" }}
+            memory: {{ .Values.airflow.webserver.resources.limits.memory | default "1Gi" }}
+          requests:
+            cpu: {{ .Values.airflow.webserver.resources.requests.cpu | default "200m" }}
+            memory: {{ .Values.airflow.webserver.resources.requests.memory | default "512Mi" }}
+        {{- end }}
+
+        {{- if .Values.airflow.worker.resources }}
