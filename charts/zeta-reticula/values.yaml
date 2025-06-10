@@ -1,0 +1,48 @@
+replicaCount: 3
+
+image:
+  repository: zetareticula
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: zeta-reticula.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+services:
+  - name: api
+    port: 8080
+  - name: llm-rs
+    port: 8081
+  - name: agentflow-rs
+    port: 8082
+  - name: ns-router-rs
+    port: 8083
+  - name: kvquant-rs
+    port: 8084
+  - name: salience-engine
+    port: 8085
+  - name: quantize-cli
+    port: 8086
+  - name: app
+    port: 80

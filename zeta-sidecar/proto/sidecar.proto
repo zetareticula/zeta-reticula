@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package sidecar;
+
+service SidecarService {
+  rpc GetCachedData (CacheRequest) returns (CacheResponse) {}
+  rpc UpdateCache (CacheUpdate) returns (UpdateResponse) {}
+}
+
+message CacheRequest {
+  string vector_id = 1;
+  string layer_id = 2;
+}
+
+message CacheResponse {
+  bytes data = 1;
+  string status = 2;
+}
+
+message CacheUpdate {
+  string vector_id = 1;
+  bytes data = 2;
+}
+
+message UpdateResponse {
+  string status = 1;
+}

@@ -1,0 +1,19 @@
+{{- range .Values.services }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels:
+    app: zeta-reticula
+    component: {{ .name }}
+spec:
+  ports:
+  - port: {{ .port }}
+    targetPort: {{ .port }}
+    protocol: TCP
+  selector:
+    app: zeta-reticula
+    component: {{ .name }}
+  type: {{ $.Values.service.type }}
+---
+{{- end }}

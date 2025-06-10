@@ -1,0 +1,20 @@
+{
+    "vectors": [
+      {
+        "id": "vec_001",
+        "dimensions": 768,
+        "layer_ref": "layer_001",
+        "default_data": [0.1, 0.2, 0.3]
+      }
+    ],
+    "layers": [
+      {
+        "id": "layer_001",
+        "bit_depth": 8,
+        "vectors": ["vec_001"]
+      }
+    ],
+    "defaults": {
+      "vector_data": [0.0, 0.0, 0.0]
+    }
+  }

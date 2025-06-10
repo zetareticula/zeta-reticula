@@ -1,0 +1,8 @@
+apiVersion: v2
+name: zeta-reticula
+description: A Kubernetes-native inference quantization platform
+version: 0.1.0
+appVersion: "0.1.0"
+maintainers:
+  - name: Zeta Reticula Team
+    email: info@zetareticula.ai
