@@ -1,19 +1,10 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Dashboard from "./components/Dashboard";
+import init, { infer_wasm, quantize_wasm, get_available_models_wasm } from './zeta-reticula-api.js';
 
-function App() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-cosmic-gradient">
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-        </Routes>
-      </div>
-    </Router>
-  );
+async function run() {
+  await init();
+  const models = get_available_models_wasm();
+  console.log(models);
+  const result = await infer_wasm("sample text", "CustomModel", "8");
+  console.log(result);
 }
-
-export default App;
+run();
