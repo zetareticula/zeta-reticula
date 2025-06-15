@@ -12,9 +12,9 @@
       "cors": "^2.8.5",
       "axios": "^1.6.2",
       "multer": "^1.4.5-lts.1",
-      "@neondatabase/serverless": "^0.6.0",  // Neon PostgreSQL client
-      "@vercel/blob": "^0.23.0",            // Vercel Blob for file storage
-      "uuid": "^9.0.1"                      // For generating model IDs
+      "@neondatabase/serverless": "^0.6.0",  
+      "@vercel/blob": "^0.23.0",            
+      "uuid": "^9.0.1"                      
     },
     "devDependencies": {
       "typescript": "^5.3.2",

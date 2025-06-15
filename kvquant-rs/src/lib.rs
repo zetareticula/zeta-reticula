@@ -22,7 +22,8 @@ pub fn initialize_spot_manager(config: KVQuantConfig) -> spot::SpotManager {
 }
 
 /// Initializes the BlockManager with a specified block size
-pub fn initialize_block_manager(block_size: usize) -> block::BlockManager {
+pub fn initialize_block_manager(block_size: usize) -> block::BlockManager {\
+    // This function initializes the BlockManager with a specified block size
     log::info!("Initializing BlockManager with block size: {}", block_size);
     block::BlockManager::new(block_size)
 

@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 use dashmap::DashMap;
 use std::sync::Arc;
 
+
 // Role inference state
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RoleTheory {

@@ -3,6 +3,19 @@ use ndarray::{Array2, Array1};
 use tonic::{transport::Channel, Request, Status};
 use log;
 use crate::quantizer::QuantizationResult;
+// Importing necessary modules for the gRPC client
+use crate::quantizer::PrecisionLevel;
+// Importing the protobuf definitions for the sidecar service
+use crate::quantizer::TokenFeatures;
+// Importing the protobuf definitions for the sidecar service
+use crate::quantizer::SalienceQuantizer;
+
+
+
+#![allow(clippy::module_inception)]
+// This module implements the Young Tableau structure for managing salience quantization results
+// and caching them to a sidecar service for further processing.
+
 
 // gRPC client for zeta-sidecar
 mod pb {
@@ -72,6 +85,8 @@ impl YoungTableau {
         Ok(())
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {

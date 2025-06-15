@@ -1,72 +1,92 @@
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
+#[cfg(feature = "server")]
+use actix_web::{App, HttpServer, web, HttpResponse};
+#[cfg(feature = "server")]
 use actix_multipart::Multipart;
+#[cfg(feature = "server")]
 use futures::StreamExt;
-use serde::{Serialize, Deserialize};
+#[cfg(feature = "server")]
 use tokio::fs::File;
+#[cfg(feature = "server")]
 use tokio::io::AsyncWriteExt;
+#[cfg(feature = "server")]
+use log;
+#[cfg(feature = "server")]
+use inference_handler::InferenceHandler;
+#[cfg(feature = "server")]
+use quantization_handler::QuantizationHandler;
+#[cfg(feature = "server")]
+use model_store::ModelStore;
+#[cfg(feature = "server")]
+use thiserror::Error;
 
-#[derive(Serialize)]
-struct Stats {
-    latency: f32,
-    memory_savings: f32,
-    throughput: f32,
-    anns_recall: f32,
+#[cfg(feature = "server")]
+#[derive(Error, Debug)]
+enum ApiError {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Validation error: {0}")]
+    Validation(String),
 }
 
-#[get("/models")]
-async fn get_models() -> impl Responder {
-    let models = vec![
-        "Mistral-7B".to_string(),
-        "OPT-6.7B".to_string(),
-        "LLaMA-13B".to_string(),
-    ];
+#[cfg(feature = "server")]
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    log::info!("Starting Zeta Reticula API at 09:43 PM PDT, June 10, 2025");
+
+    let model_store = ModelStore::new().await;
+    let inference_handler = InferenceHandler::new(model_store.clone()).await;
+    let quantization_handler = QuantizationHandler::new(model_store.clone());
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(inference_handler.clone()))
+            .app_data(web::Data::new(quantization_handler.clone()))
+            .app_data(web::Data::new(model_store.clone()))
+            .route("/infer", web::post().to(inference_handler.infer))
+            .route("/upload", web::post().to(upload_model))
+            .route("/quantize", web::post().to(quantization_handler.quantize))
+            .route("/models", web::get().to(get_available_models))
+            .route("/stats", web::get().to(get_stats))
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
+}
+
+#[cfg(feature = "server")]
+async fn upload_model(mut payload: Multipart, store: web::Data<ModelStore>) -> Result<HttpResponse, ApiError> {
+    while let Some(item) = payload.next().await {
+        let mut field = item.map_err(|e| ApiError::Validation(e.to_string()))?;
+        let content_type = field.content_disposition().unwrap().get_name().unwrap_or("");
+        if content_type != "model" {
+            return Err(ApiError::Validation("Invalid field name".to_string()));
+        }
+
+        let mut file = File::create("uploaded_model.bin").await?;
+        while let Some(chunk) = field.next().await {
+            let data = chunk.map_err(|e| ApiError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            file.write_all(&data).await?;
+        }
+        store.add_model("uploaded_model.bin".to_string(), "CustomModel".to_string(), "Zeta Reticula".to_string()).await;
+    }
+    Ok(HttpResponse::Ok().json(serde_json::json!({"status": "Model uploaded"})))
+}
+
+#[cfg(feature = "server")]
+async fn get_available_models(store: web::Data<ModelStore>) -> HttpResponse {
+    let models = store.get_available_models();
     HttpResponse::Ok().json(models)
 }
 
-#[post("/upload")]
-async fn upload_model(mut payload: Multipart) -> impl Responder {
-    while let Some(item) = payload.next().await {
-        let mut field = match item {
-            Ok(field) => field,
-            Err(_) => return HttpResponse::BadRequest().body("Upload failed"),
-        };
-
-        let mut file = File::create("uploaded_model.bin").await.unwrap();
-        while let Some(chunk) = field.next().await {
-            let data = chunk.unwrap();
-            file.write_all(&data).await.unwrap();
-        }
-    }
-
-    #[derive(Serialize)]
-    struct UploadResponse {
-        model_name: String,
-    }
-    HttpResponse::Ok().json(UploadResponse {
-        model_name: "CustomModel".to_string(),
-    })
-}
-
-#[get("/stats")]
-async fn get_stats() -> impl Responder {
-    let stats = Stats {
-        latency: 0.4,
-        memory_savings: 60.0,
-        throughput: 2500.0,
-        anns_recall: 0.95,
-    };
+#[cfg(feature = "server")]
+async fn get_stats() -> HttpResponse {
+    let stats = serde_json::json!({
+        "latency": 0.4,
+        "memory_savings": 60.0,
+        "throughput": 2500.0,
+        "anns_recall": 0.95,
+        "brand": "Zeta Reticula"
+    });
     HttpResponse::Ok().json(stats)
-}
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(get_models)
-            .service(upload_model)
-            .service(get_stats)
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
 }
