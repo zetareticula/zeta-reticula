@@ -11,9 +11,17 @@ neon = "0.10"
 rand = "0.8"
 rand_distr = "0.4"  # For stochastic search distributions
 serde = { version = "1.0", features = ["derive"] }
+serde_derive = "1.0"
 serde_json = "1.0"
 itertools = "0.12"
 dashmap = "5.5"  # For concurrent token processing
+ndarray = "0.15"  # For numerical operations
+half = "2.2"  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = "1.1"  # For fast hash maps
+argmin = "0.8"  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
 
 [profile.release]
 opt-level = 3

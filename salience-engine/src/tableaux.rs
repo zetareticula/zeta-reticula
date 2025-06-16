@@ -12,7 +12,8 @@ use crate::quantizer::SalienceQuantizer;
 
 
 
-#![allow(clippy::module_inception)]
+// This attribute allows the module inception warning to be ignored
+// It should be placed at the top of the file, before any items
 // This module implements the Young Tableau structure for managing salience quantization results
 // and caching them to a sidecar service for further processing.
 

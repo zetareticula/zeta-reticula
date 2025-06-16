@@ -10,8 +10,21 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dashmap = "5.5"  # Concurrent data structures
 log = "0.4"
+ndarray = "0.15"  # For numerical operations
+half = "2.2"  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = "1.1"  # For fast hash maps
+argmin = "0.8"  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[features]
+default = ["server"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]

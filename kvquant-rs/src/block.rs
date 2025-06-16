@@ -7,6 +7,57 @@ use std::sync::Mutex;
 use std::sync::RwLock;
 use dashmap::mapref::entry::Entry;
 use rand::Rng;
+use rand_distr::{Distribution, Normal};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicI32;
+use crate::tableaux::YoungTableau;
+use crate::role_inference::{RoleInferer, RoleInferenceResult};
+use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
+use crate::role_inference::RoleTheory;
+use crate::quantizer::{QuantizationResult, PrecisionLevel};
+use crate::quantizer::KVQuantConfig;
+
+#[derive(Serialize, Deserialize)]
+pub struct KVQuantizer {
+    pub config: KVQuantConfig,
+    pub data_blocks: DashMap<usize, DataBlock>, // Concurrent access to data blocks
+    pub role_inferer: Arc<RoleInferer>,
+    pub mesolimbic_system: Arc<MesolimbicSystem>,
+}
+
+impl KVQuantizer {
+    pub fn new(config: KVQuantConfig) -> Self {
+        let role_inferer = Arc::new(RoleInferer::new(10, 5)); // 10 outer, 5 inner iterations
+        let mesolimbic_system = Arc::new(MesolimbicSystem::new());
+        KVQuantizer {
+            config,
+            data_blocks: DashMap::new(),
+            role_inferer,
+            mesolimbic_system,
+        }
+    }
+
+    pub fn quantize(&self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) -> Option<QuantizationResult> {
+        let block_id = (token_id as usize) % self.config.block_size;
+        let mut block = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id));
+
+        if block.state == BlockState::Free || block.state == BlockState::Valid {
+            block.write(token_id, value, pointer, bias, vector_id, graph_entry);
+            Some(QuantizationResult {
+                token_id,
+                precision: self.config.precision_level,
+                salience_score: value * self.config.salience_threshold,
+                row: block.id,
+                role: "default".to_string(), // Placeholder for role
+                role_confidence: 1.0, // Placeholder for confidence
+            })
+        } else {
+            None
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct KVQuantConfig {

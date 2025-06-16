@@ -9,9 +9,17 @@ use rand::Rng;
 use std::sync::RwLock;
 use crate::block::{DataBlock, BlockState};
 use dashmap::mapref::entry::Entry;
+use rand_distr::{Distribution, Normal};
 
+// KVQuantConfig defines the configuration for the KVQuant system
+#[derive(Serialize, Deserialize, Clone)]
+pub struct KVQuantConfig {
+    pub spot_capacity: usize, // Maximum number of spots
+    pub block_size: usize,    // Size of each block in the cache
+    pub salience_threshold: f32, // Threshold for salience score to consider a token valid
+}
 
-
+// LogStructuredKVCache implements a log-structured key-value cache
 #[derive(Serialize, Deserialize)]
 pub struct LogStructuredKVCache {
     spots: SpotManager,
@@ -21,7 +29,9 @@ pub struct LogStructuredKVCache {
     lock: Mutex<()>,
 }
 
+// SpotManager is a manager for handling spots in the cache
 impl LogStructuredKVCache {
+    // Creates a new LogStructuredKVCache with the given configuration
     pub fn new(config: KVQuantConfig) -> Self {
         LogStructuredKVCache {
             spots: SpotManager::new(config.spot_capacity),
@@ -32,11 +42,13 @@ impl LogStructuredKVCache {
         }
     }
 
+    // update adds a new token to the cache if its salience score is above the threshold
     pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
         let _guard = self.lock.lock().unwrap();
         if salience_score < self.salience_threshold {
             return;
         }
+        // Generate a random spot ID based on the token ID
         let (spot_id, block_id) = self.spots.append(token_id, value, pointer, bias);
         self.valid_bitmap.insert((spot_id, block_id), true);
     }
@@ -47,7 +59,7 @@ impl LogStructuredKVCache {
             if salience < self.salience_threshold {
                 for entry in self.valid_bitmap.iter() {
                     let ((spot_id, block_id), _) = entry.pair();
-                    if let Some(spot) = self.spots.spots.get(spot_id) {
+                    if let Some(spot) = self.spots.get_spot(spot_id) {
                         if spot.blocks[*block_id].data.contains_key(&token_id) {
                             spot.blocks[*block_id].unmap();
                             spot.blocks[*block_id].invalidate();
@@ -62,7 +74,7 @@ impl LogStructuredKVCache {
 
     pub fn erase_full_spots(&self) {
         let _guard = self.lock.lock().unwrap();
-        for spot in self.spots.spots.iter() {
+        for spot in self.spots.iter() {
             if spot.is_full {
                 self.spots.erase_spot(spot.id);
             }

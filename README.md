@@ -13,6 +13,7 @@ Welcome to **Zeta Reticula**, a pioneering inference quantization platform that 
 Zeta Reticula is an open-source, cutting-edge framework designed to revolutionize large language model (LLM) inference through advanced quantization techniques. Leveraging state-of-the-art algorithms and a distributed, federated architecture, we enable developers and enterprises to deploy trillion-parameter models with unprecedented efficiency. Our platform offers plug-and-play support for 4-bit, 8-bit, and 16-bit quantization, ensuring hardware and cloud-agnostic compatibility across diverse environments—from edge devices to hyperscale data centers.
 
 ### Core Features
+
 - **Quantization Excellence**: Optimize inference with precision-tuned 4, 8, and 16-bit quantization, reducing memory footprint by up to 60% while maintaining high accuracy.
 - **Scalable Architecture**: Harness federated learning and distributed computing to support long-context scenarios (e.g., 1M tokens) and billion-scale datasets.
 - **Hardware Agnosticism**: Seamlessly integrate with GPUs, CPUs, TPUs, and cloud infrastructures, eliminating vendor lock-in.
@@ -33,6 +34,7 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
 ## Getting Started
 
 ### Prerequisites
+
 - Rust (latest stable version)
 - Node.js and npm (for front-end)
 - Docker (optional, for containerized deployment)
@@ -40,12 +42,14 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
 ### Installation
 
 1. **Clone the Repository**
+
    ```bash
    git clone https://github.com/your-org/zeta-reticula.git
    cd zeta-reticula
    ```
 
 2. **Build the Backend**
+
    ```bash
    cd api
    cargo build --release
@@ -53,6 +57,7 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
    ```
 
 3. **Set Up the Front-End**
+
    ```bash
    cd app
    npm install
@@ -60,6 +65,7 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
    ```
 
 4. **Run the API**
+
    ```bash
    cd api
    cargo run --release
@@ -118,4 +124,3 @@ Embark on this odyssey with us! Reach out at [info@zetareticula.ai](mailto:info@
 "Into the abyss of the future we go, where machines dream and humanity ascends!" — H.G. Wells, rekindled.
 
 🌠 **Zeta Reticula: Quantizing the Infinite, Today!** 🌠
-
