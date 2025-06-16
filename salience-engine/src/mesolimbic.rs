@@ -87,3 +87,78 @@ impl MesolimbicSystem {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct MesolimbicConfig {
+    pub outer_loop_iterations: usize,
+    pub inner_loop_iterations: usize,
+}
+
+impl MesolimbicConfig {
+    pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
+        MesolimbicConfig {
+            outer_loop_iterations,
+            inner_loop_iterations,
+        }
+    }
+}
+
+// RoleInferer is responsible for inferring roles based on token features
+impl RoleInferer {
+    pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
+        let theories = DashMap::new();
+        // Initialize with a default theory
+        theories.insert("default".to_string(), RoleTheory {
+            roles: vec!["subject".to_string(), "verb".to_string(), "object".to_string(), "modifier".to_string(), "negation".to_string()],
+            probabilities: vec![vec![0.2; 5]; 5], // Uniform distribution initially
+        });
+        RoleInferer {
+            theories,
+            outer_loop_iterations,
+            inner_loop_iterations,
+        }
+    }
+
+    // Stochastic search to infer roles
+    pub fn infer_roles(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<RoleInferenceResult> {
+        let mut rng = rand::thread_rng();
+        let theory = self.theories.get(theory_key).unwrap_or_else(|| self.theories.get("default").unwrap()).clone();
+
+        // Outer loop: Sample theories
+        let mut best_theory = theory.clone();
+        let mut best_likelihood = f32::NEG_INFINITY;
+
+        for _ in 0..self.outer_loop_iterations {
+            let mut candidate_theory = theory.clone();
+            // Perturb probabilities (simplified perturbation)
+            for probs in &mut candidate_theory.probabilities {
+                let normal = Normal::new(0.0, 0.1).unwrap();
+                for p in probs {
+                    *p = (*p + normal.sample(&mut rng)).clamp(0.0, 1.0);
+                }
+                // Normalize
+                let sum: f32 = probs.iter().sum();
+                for p in probs {
+                    *p /= sum;
+                }
+            }
+
+            // Compute likelihood (placeholder)
+            let likelihood = rng.gen_range(-1.0..1.0); // Replace with actual likelihood computation
+
+            if likelihood > best_likelihood {
+                best_likelihood = likelihood;
+                best_theory = candidate_theory;
+            }
+        }
+
+        // Inner loop: Infer roles based on the best theory
+        features.into_iter().map(|feature| {
+            let role_index = rng.gen_range(0..best_theory.roles.len());
+            RoleInferenceResult {
+                token_id: feature.token_id,
+                inferred_role: best_theory.roles[role_index].clone(),
+                confidence: best_theory.probabilities[role_index][role_index], // Placeholder for confidence
+            }
+        }).collect()
+    }
+}
+

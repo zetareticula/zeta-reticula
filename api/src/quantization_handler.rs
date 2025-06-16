@@ -10,6 +10,24 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use ndarray::{Array2, array};
 use half::f16;
+use std::fs;
+use std::path::PathBuf;
+use actix_web::web::Json;
+use actix_web::HttpResponse;
+use actix_web::error::InternalError;
+
+use actix_web::web::Data;
+use actix_web::web::JsonConfig;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QuantizationResult {
+    pub token_id: u32,
+    pub precision: PrecisionLevel,
+    pub salience_score: f32,
+    pub row: usize,
+    pub role: String,
+    pub role_confidence: f32,
+}
 
 #[derive(Error, Debug)]
 enum QuantizationError {

@@ -19,7 +19,10 @@ use crate::role_inference::{RoleInferer, RoleInferenceResult};
 use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
 use crate::role_inference::RoleTheory;
 
+// TokenFeatures represents the features of a token used for salience quantization
+use crate::quantizer::{QuantizationResult, PrecisionLevel};
 
+// Represents a token's features relevant to salience
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TokenFeatures {

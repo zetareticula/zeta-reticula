@@ -12,8 +12,53 @@ serde_json = "1.0"
 csv = "1.3"
 log = "0.4"
 env_logger = "0.10"
+ndarray = "0.15"  # For numerical operations
+half = "2.2"  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = "1.1"  # For fast hash maps
+argmin = "0.8"  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[features]
+default = ["server"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]
+
+[dev-dependencies]
+actix-rt = "2.5"
+serde_test = "1.0"
+
+[build-dependencies]
+tonic-build = "0.10"
+pyo3-build-config = { version = "0.19", optional = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+
+[workspace]
+members = [
+    "api",
+    "salience-engine",
+    "llm-rs",
+    "ns-router-rs",
+    "kvquant-rs",
+    "quantize-cli",
+]
+
+[patch.crates-io]
+# This section can be used to override dependencies with local paths or specific versions
+# For example, if you want to use a local version of `llm-rs`:
+llm-rs = { path = "../llm-rs" }
+# Similarly, you can patch other dependencies if needed
+# For example, if you want to use a local version of `ns-router-rs`:
+ns-router-rs = { path = "../ns-router-rs" }
+# Similarly, you can patch other dependencies if needed
+# For example, if you want to use a local version of `salience-engine`:
+salience-engine = { path = "../salience-engine" }

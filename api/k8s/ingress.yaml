@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: api.zeta-reticula.coreweave.com
+    http:
+      paths:
+      - path: /subscribe
+        pathType: Prefix
+        backend:
+          service:
+            name: subscription-service
+            port:
+              number: 80
+      - path: /billing/webhook
+        pathType: Prefix
+        backend:
+          service:
+            name: billing-service
+            port:
+              number: 80

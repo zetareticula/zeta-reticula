@@ -7,3 +7,4 @@ A command-line tool to quantize large language models (LLMs) using Zeta Reticula
 ```bash
 cd quantize-cli
 cargo build --release
+

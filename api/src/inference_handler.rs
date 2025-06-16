@@ -4,6 +4,18 @@ use reqwest;
 use crate::model_store::ModelStore;
 use crate::zeta_vault::{ZetaVault, VaultConfig};
 use tokio::task;
+use actix_web::web::Data;
+use actix_web::HttpResponse;
+use reqwest::Client;
+
+
+// This module handles inference requests, utilizing CoreWeave for GPU processing
+// and Neon for storage, with optional SageMaker deployment.
+
+// This module provides the inference handler for the Zeta Reticula API.
+// It processes inference requests, interacts with CoreWeave for GPU inference,
+// stores results in Neon, and optionally pushes to SageMaker for deployment.
+// It uses Actix-web for the web framework and Reqwest for HTTP requests.
 
 #[derive(Deserialize)]
 pub struct InferenceRequest {
@@ -57,4 +69,42 @@ pub struct AppState {
     model_store: ModelStore,
     coreweave_client: reqwest::Client,
     // Add SageMaker client or config if needed
+}
+
+impl AppState {
+    pub fn new(model_store: ModelStore, coreweave_client: reqwest::Client) -> Self {
+        AppState {
+            model_store,
+            coreweave_client,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{test, App};
+
+    #[actix_web::test]
+    async fn test_inference_handler() {
+        let model_store = ModelStore::new();
+        let coreweave_client = reqwest::Client::new();
+        let app_state = AppState::new(model_store, coreweave_client);
+
+        let app = test::init_service(App::new().app_data(Data::new(app_state)).service(web::resource("/infer").route(web::post().to(infer)))).await;
+
+        let req = test::TestRequest::post()
+            .uri("/infer")
+            .set_json(InferenceRequest {
+                input: "test input".to_string(),
+                model_name: "test_model".to_string(),
+                precision: "fp32".to_string(),
+            })
+            .to_request();
+
+        let resp: InferenceResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert!(!resp.text.is_empty());
+        assert!(resp.tokens_processed > 0);
+    }
 }

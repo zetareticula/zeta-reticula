@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const Subscribe: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,15 +16,18 @@ const Subscribe: React.FC = () => {
     setSubmitted(false);
 
     try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe failed to load');
+
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/subscribe`, {
         email,
         plan,
       }, {
         headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}` },
       });
-      if (response.data.status === 'success') {
-        setSubmitted(true);
-        setEmail('');
+
+      if (response.data.status === 'success' && response.data.checkout_url) {
+        await stripe.redirectToCheckout({ sessionId: response.data.subscription_id });
       }
     } catch (err) {
       setError('Subscription failed. Please try again.');

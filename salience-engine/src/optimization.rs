@@ -1,6 +1,16 @@
 use dashmap::DashMap;
 use rayon::prelude::*;
 use std::sync::Arc;
+use serde::{Serialize, Deserialize};
+use rand::Rng;
+use rand_distr::{Distribution, Normal};
+
+// SalienceOptimizer optimizes the computation of salience scores for tokens
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]  
+#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone)]
+
 
 pub struct SalienceOptimizer {
     cache: Arc<DashMap<u32, f32>>, // Cache token salience scores

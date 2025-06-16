@@ -16,6 +16,20 @@ openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS suppor
 rustc-hash = "1.1"  # For fast hash maps
 argmin = "0.8"  # For optimization algorithms
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
+validator = { version = "0.16", features = ["derive"] }  # For data validation
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+js-sys = "0.3.64"
+uuid = { version = "1.2", features = ["v4"] }  # For unique identifiers
+chrono = { version = "0.4", features = ["serde"] }  # For date and time handling
+stripe = "0.16"  # For Stripe API integration
+reqwest = { version = "0.11", features = ["json", "blocking"] }  # For HTTP requests
+serde_qs = "0.9"  # For query string serialization/deserialization
+tonic = "0.10"  # For gRPC support
+prost = "0.12"  # For Protocol Buffers serialization
+thiserror = "1.0"  # For error handling
+actix-web = "4.3"  # For web server functionality
 
 [profile.release]
 opt-level = 3
@@ -28,3 +42,4 @@ server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3", "pyo3-build-config"]
 lua = ["mlua"]
+

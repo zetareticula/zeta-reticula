@@ -10,6 +10,7 @@ use crossbeam::queue::SegQueue;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+
 #[derive(Error, Debug)]
 pub enum ZetaVaultError {
     #[error("IO error: {0}")]

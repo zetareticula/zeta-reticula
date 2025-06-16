@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import 'dotenv/config'; // Ensure you have dotenv configured for environment variables
-// Ensure you have the necessary types installed
-import { NextApiRequest, NextApiResponse } from 'next';
-// Import any additional types you might need for your application
-import 'next-env'; // Ensure Next.js environment variables are loaded
-// Import any styles or components you need
-import 'tailwindcss/tailwind.css'; // Assuming you're using Tailwind CSS for styling
-import 'react-toastify/dist/ReactToastify.css'; // For toast notifications if needed
-// Ensure you have axios installed for API requests
-import 'axios'; // Import axios for making HTTP requests
-import 'react'; // Import React for component creation
-
 
 const Contact: React.FC = () => {
   const [name, setName] = useState('');
@@ -26,21 +14,18 @@ const Contact: React.FC = () => {
     setSubmitted(false);
 
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/feedback`, {
+      const response = await axios.post('http://localhost:8080/feedback', {
         name,
         email,
         message,
       }, {
-        headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}` },
+        headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}` }, // Optional API key
       });
       if (response.data.status === 'success') {
         setSubmitted(true);
-        // Optional: Trigger inference request
-        await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/infer`, {
-          input: message,
-          model_name: 'ZetaModel',
-          precision: 'high',
-        });
+        setName('');
+        setEmail('');
+        setMessage('');
       }
     } catch (err) {
       setError('Failed to submit. Please try again.');
@@ -49,53 +34,49 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <section className="py-16 bg-gray-100">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-8">Contact Us</h2>
-        <form onSubmit={handleSubmit} className="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" htmlFor="name">Name</label>
+    <section className="bg-secondary text-white py-12">
+      <div className="container mx-auto px-4 text-center">
+        <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
+        {submitted ? (
+          <p className="text-lg">Thank you for your message! We’ll get back to you soon.</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
             <input
               type="text"
-              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder="Your Name"
+              className="w-full p-3 mb-4 rounded-lg"
               required
-              className="w-full px-3 py-2 border rounded"
             />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" htmlFor="email">Email</label>
             <input
               type="email"
-              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Your Email"
+              className="w-full p-3 mb-4 rounded-lg"
               required
-              className="w-full px-3 py-2 border rounded"
             />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" htmlFor="message">Message</label>
             <textarea
-              id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              required
+              placeholder="Your Message"
+              className="w-full p-3 mb-4 rounded-lg"
               rows={4}
-              className="w-full px-3 py-2 border rounded"
+              required
             />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-primary text-white py-2 rounded hover:bg-blue-600 transition"
-          >
-            Submit
-          </button>
-          {submitted && <p className="mt-4 text-green-600">Thank you for your message!</p>}
-          {error && <p className="mt-4 text-red-600">{error}</p>}
-        </form>
+            {error && <p className="text-red-300 mb-4">{error}</p>}
+            <button
+              type="submit"
+              className="bg-accent text-white px-6 py-3 rounded-lg hover:bg-yellow-500 transition"
+            >
+              Send Message
+            </button>
+          </form>
+        )}
       </div>
     </section>
   );
-}
+};
+
+export default Contact;

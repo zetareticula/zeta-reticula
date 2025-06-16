@@ -2,9 +2,15 @@
 name = "salience-engine"
 version = "0.1.1"
 edition = "2021"
+description = "A Rust-based salience engine for processing and analyzing large datasets with advanced features like WASM and Python bindings."
+license = "MIT OR Apache-2.0"
 
+
+
+# This package is part of the Zeta Reticula AI framework, which includes various components for building and deploying machine learning models.
 [lib]
-crate-type = ["cdylib"]
+# Enable WASM and Python bindings
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
 neon = "0.10"
@@ -22,8 +28,63 @@ rustc-hash = "1.1"  # For fast hash maps
 argmin = "0.8"  # For optimization algorithms
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
 mlua = { version = "0.9", optional = true }  # For Lua bindings
+proc-macro2 = "1.0"  # For procedural macros
+proc-macro = { version = "1.0", optional = true }  # For procedural macros
+validator = { version = "0.16", features = ["derive"] }  # For data validation
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+js-sys = "0.3.64"
+uuid = { version = "1.2", features = ["v4"] }  # For unique identifiers
+chrono = { version = "0.4", features = ["serde"] }  # For date and time handling
+stripe = "0.16"  # For Stripe API integration
+reqwest = { version = "0.11", features = ["json", "blocking"] }  # For HTTP requests
+serde_qs = "0.9"  # For query string serialization/deserialization
+tonic = "0.10"  # For gRPC support
+prost = "0.12"  # For Protocol Buffers serialization
+thiserror = "1.0"  # For error handling
+actix-web = "4.3"  # For web server functionality
+actix-multipart = "0.6"  # For handling multipart form data
+tokio = { version = "1.0", features = ["full"], optional = true }  # For asynchronous runtime
+futures = "0.3"  # For asynchronous programming
+sled = "0.34"  # For embedded database
+crossbeam = "0.8"  # For concurrent programming
+
+
+[dev-dependencies]
+actix-rt = "2.5"
+serde_test = "1.0"
+
+[build-dependencies]
+tonic-build = "0.10"
+pyo3-build-config = { version = "0.19", optional = true }
+
+[features]
+default = ["server"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]
+
+
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+
+[profile.wasm-release]
+# WASM-specific release profile
+opt-level = "z"  # Optimize for size
+lto = true  # Enable link-time optimization
+codegen-units = 1  # Single code generation unit for better optimization
+
+[workspace]
+members = [
+    "api",
+    "salience-engine",
+    "llm-rs",
+    "ns-router-rs",
+    "kvquant-rs",
+    "quantize-cli",
+]
