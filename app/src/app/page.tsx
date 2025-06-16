@@ -1,15 +1,19 @@
-import Hero from '@/components/Hero'
-import Features from '@/components/Features'
-import CTA from '@/components/CTA'
-import Footer from '@/components/Footer'
+import Hero from '@/components/Hero';
+import About from '@/components/About';
+import Solutions from '@/components/Solutions';
+import Contact from '@/components/Contact';
+import Subscribe from '@/components/Subscribe';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
     <div>
       <Hero />
-      <Features />
-      <CTA />
+      <About />
+      <Solutions />
+      <Contact />
+      <Subscribe />
       <Footer />
     </div>
-  )
+  );
 }

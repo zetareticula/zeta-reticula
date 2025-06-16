@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Zeta Reticula AI - Inference Quantization',
-  description: 'Optimize your AI inference with Zeta Reticula\'s advanced quantization technology.',
+  title: 'Zeta Reticula - Smarter AI Solutions',
+  description: 'Discover how Zeta Reticula transforms AI with innovative, efficient technology.',
 }
 
 export default function RootLayout({
