@@ -1,0 +1,10 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "zeta_reticula_api"
+version = "0.1.0"
+description = "Python bindings for Zeta Reticula API"
+readme = "README.md"
+requires-python = ">=3.7"

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib", "rlib"]  # Enable WASM compilation
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
 actix-web = "4.3"
@@ -27,16 +27,24 @@ wasm-bindgen-futures = "0.4.37"
 sled = "0.34"
 crossbeam = "0.8"
 dashmap = "5.4"
-ndarray = "0.15"  # For matrix operations
-half = "2.2"  # For 2-bit quantization support
+ndarray = "0.15"
+half = "2.2"
+openblas-src = { version = "0.10", optional = true }
+rustc-hash = "1.1"
+argmin = "0.8"
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
+mlua = { version = "0.9", optional = true }
 
 [build-dependencies]
 tonic-build = "0.10"
+pyo3-build-config = { version = "0.19", optional = true }
 
 [features]
 default = ["server"]
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]
 
 [profile.release]
 opt-level = 3

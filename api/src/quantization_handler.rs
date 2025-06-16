@@ -31,7 +31,7 @@ pub struct QuantizationRequest {
 
 fn validate_bit_depth(bit_depth: &str) -> Result<(), validator::ValidationError> {
     match bit_depth {
-        "2" | "4" | "8" | "16" => Ok(()), // Added 2-bit support
+        "2" | "4" | "8" | "16" => Ok(()),
         _ => Err(validator::ValidationError::new("Bit depth must be 2, 4, 8, or 16")),
     }
 }
@@ -71,18 +71,19 @@ impl QuantizationHandler {
             results.push(QuantizationResult {
                 token_id: i as u32,
                 precision: bit_depth.clone(),
-                salience_score: 0.5,
+                salience_score: *byte as f32,
                 row: i,
                 role: "quantized".to_string(),
                 role_confidence: 0.9,
             });
         }
 
-        // Apply KIVI quantization
-        let (grouped_keys, residual_keys, grouped_values, residual_values) = self.apply_kivi_quantization(&mut results, &bit_depth)?;
+        let (grouped_keys, residual_keys, grouped_values, residual_values, lora_delta) = self.apply_chunked_quantization_and_lora(&mut results, &bit_depth)?;
+        let (quantized_keys, quantized_values) = self.apply_binary_mos(&grouped_keys, &grouped_values)?;
+        let (distilled_keys, distilled_values) = self.apply_qakd(&quantized_keys, &quantized_values)?;
 
         let quantized_path = format!("quantized_{}_{}.bin", req.model_name, req.bit_depth);
-        let quantized_data = bincode::serialize(&(grouped_keys, residual_keys, grouped_values, residual_values)).unwrap();
+        let quantized_data = bincode::serialize(&(distilled_keys, residual_keys, distilled_values, residual_values, lora_delta)).unwrap();
         fs::write(&quantized_path, quantized_data).map_err(QuantizationError::Io)?;
         self.model_store.vault.store(format!("quantized_{}", req.model_name), quantized_data).await.map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
         self.model_store.add_model(quantized_path.clone(), format!("{}_{}", req.model_name, req.bit_depth), "Zeta Reticula".to_string()).await;
@@ -93,44 +94,131 @@ impl QuantizationHandler {
         }))
     }
 
-    fn apply_kivi_quantization(&self, results: &mut Vec<QuantizationResult>, bit_depth: &PrecisionLevel) -> Result<(Array2<f16>, Array2<f32>, Array2<f16>, Array2<f32>), QuantizationError> {
-        let group_size = 16;
+    fn apply_chunked_quantization_and_lora(&self, results: &mut Vec<QuantizationResult>, bit_depth: &PrecisionLevel) -> Result<(Array2<f16>, Array2<f32>, Array2<f16>, Array2<f32>, (Array2<f32>, Array2<f32>)), QuantizationError> {
+        let block_size = 64;
         let token_count = results.len();
-        let dim = 768; // Assuming a fixed dimension for simplicity
+        let dim = 768;
+        let n_blocks = (token_count * dim) / block_size;
 
-        let mut grouped_keys = Array2::<f16>::zeros((token_count / group_size, dim));
-        let mut residual_keys = Array2::<f32>::zeros(((token_count % group_size), dim));
-        for i in 0..token_count {
-            let row = i / group_size;
-            let col = i % group_size;
-            if row < grouped_keys.dim().0 {
+        let mut grouped_keys = Array2::<f16>::zeros((n_blocks, block_size));
+        let mut residual_keys = Array2::<f32>::zeros(((token_count * dim) % block_size, dim));
+        let mut grouped_values = Array2::<f16>::zeros((n_blocks, block_size));
+        let mut residual_values = Array2::<f32>::zeros(((token_count * dim) % block_size, dim));
+        let mut constants = Vec::with_capacity(n_blocks);
+
+        for i in 0..n_blocks {
+            let start = i * block_size;
+            let end = std::cmp::min((i + 1) * block_size, token_count * dim);
+            let block = (start..end).map(|j| results[j].salience_score).collect::<Vec<f32>>();
+            let c_i = block.iter().map(|&v| v.abs()).max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)).unwrap_or(1.0);
+            constants.push(c_i);
+            for j in 0..(end - start) {
                 for d in 0..dim {
-                    grouped_keys[[row, d]] = f16::from_f32(results[i].salience_score).quantize_2bit();
-                }
-            } else {
-                for d in 0..dim {
-                    residual_keys[[col, d]] = results[i].salience_score;
+                    let quantized = f16::from_f32(block[j] / c_i).quantize_2bit();
+                    grouped_keys[[i, j]] = quantized;
                 }
             }
         }
 
-        let mut grouped_values = Array2::<f16>::zeros((token_count / group_size, dim));
-        let mut residual_values = Array2::<f32>::zeros(((token_count % group_size), dim));
-        for i in 0..token_count {
-            let row = i / group_size;
-            let col = i % group_size;
-            if row < grouped_values.dim().0 {
+        let residual_start = n_blocks * block_size;
+        if residual_start < token_count * dim {
+            let residual_block = (residual_start..token_count).map(|j| results[j].salience_score).collect::<Vec<f32>>();
+            for j in 0..residual_block.len() {
                 for d in 0..dim {
-                    grouped_values[[row, d]] = f16::from_f32(results[i].salience_score).quantize_2bit();
-                }
-            } else {
-                for d in 0..dim {
-                    residual_values[[col, d]] = results[i].salience_score;
+                    residual_keys[[j, d]] = residual_block[j];
                 }
             }
         }
 
-        Ok((grouped_keys, residual_keys, grouped_values, residual_values))
+        for i in 0..n_blocks {
+            let start = i * block_size;
+            let end = std::cmp::min((i + 1) * block_size, token_count * dim);
+            for j in start..end {
+                for d in 0..dim {
+                    let quantized = f16::from_f32(results[j].salience_score / constants[i / dim]).quantize_2bit();
+                    grouped_values[[i, j - start]] = quantized;
+                }
+            }
+        }
+        if residual_start < token_count * dim {
+            let residual_block = (residual_start..token_count).map(|j| results[j].salience_score).collect::<Vec<f32>>();
+            for j in 0..residual_block.len() {
+                for d in 0..dim {
+                    residual_values[[j, d]] = residual_block[j];
+                }
+            }
+        }
+
+        let rank = 16;
+        let a = Array2::<f32>::random((dim, rank), ndarray::rand::rand_distr::Uniform::new(0.0, 1.0));
+        let b = Array2::<f32>::random((rank, dim), ndarray::rand::rand_distr::Uniform::new(0.0, 1.0));
+        let delta_w = a.dot(&b);
+
+        Ok((grouped_keys, residual_keys, grouped_values, residual_values, (delta_w, delta_w.t().to_owned())))
+    }
+
+    fn apply_binary_mos(&self, grouped_keys: &Array2<f16>, grouped_values: &Array2<f16>) -> Result<(Array2<f16>, Array2<f16>), QuantizationError> {
+        let experts = vec![1.0, 0.8, 0.6, 0.4, 0.2]; // Mock experts
+        let weights = vec![0.2, 0.3, 0.2, 0.2, 0.1]; // Mock weights
+
+        let mut combined_scaling = 0.0;
+        for (w, s) in weights.iter().zip(experts.iter()) {
+            combined_scaling += w * s;
+        }
+
+        let mut quantized_keys = grouped_keys.mapv(|v| f16::from_f32(v.to_f32() * combined_scaling));
+        let mut quantized_values = grouped_values.mapv(|v| f16::from_f32(v.to_f32() * combined_scaling));
+
+        let weight_matrix = Array2::<f16>::ones((quantized_keys.dim().1, 768));
+        let keys_output = quantized_keys.dot(&weight_matrix);
+        let values_output = quantized_values.dot(&weight_matrix);
+        quantized_keys = keys_output;
+        quantized_values = values_output;
+
+        Ok((quantized_keys, quantized_values))
+    }
+
+    fn apply_qakd(&self, quantized_keys: &Array2<f16>, quantized_values: &Array2<f16>) -> Result<(Array2<f16>, Array2<f16>), QuantizationError> {
+        // Mock teacher inference (replace with actual teacher)
+        let teacher_logits = Array2::ones((quantized_keys.dim().0, 768)).mapv(|_| 0.5); // Placeholder
+        let student_logits = quantized_keys.mapv(|v| v.to_f32()).dot(&Array2::ones((768, 768))); // Placeholder
+
+        let ce_loss = self.compute_ce_loss(&teacher_logits, &student_logits)?;
+        let optimized_keys = self.optimize_with_qakd(quantized_keys, &ce_loss)?;
+        let optimized_values = self.optimize_with_qakd(quantized_values, &ce_loss)?;
+
+        Ok((optimized_keys, optimized_values))
+    }
+
+    fn compute_ce_loss(&self, teacher_logits: &Array2<f32>, student_logits: &Array2<f32>) -> Result<f32, QuantizationError> {
+        let n_samples = teacher_logits.len_of(Axis(0)) as f32;
+        let ce_loss = -teacher_logits.mapv(|t| t.exp() / teacher_logits.sum_axis(Axis(1)).mapv(|s| s.exp()))
+            .into_iter()
+            .zip(student_logits.into_iter())
+            .map(|(t, s)| t * s.ln())
+            .sum::<f32>() / n_samples;
+        Ok(ce_loss)
+    }
+
+    fn optimize_with_qakd(&self, tensor: &Array2<f16>, loss: &f32) -> Result<Array2<f16>, QuantizationError> {
+        let problem = argmin::core::Problem::new(
+            || tensor.mapv(|v| v.to_f32()).into_raw_vec(),
+            |param: &Vec<f32>| {
+                let param_array = Array2::from_shape_vec((tensor.dim().0, tensor.dim().1), param.clone()).unwrap();
+                let new_tensor = param_array.mapv(|v| f16::from_f32(v).quantize_2bit());
+                let new_loss = self.compute_ce_loss(&Array2::ones(tensor.dim()), &new_tensor.mapv(|v| v.to_f32()))?;
+                Ok(new_loss)
+            }
+        );
+        let init_param = tensor.mapv(|v| v.to_f32()).into_raw_vec();
+        let linesearch = MoreThuenteLineSearch::new();
+        let solver = SteepestDescent::new(linesearch);
+        let res = Executor::new(problem, solver)
+            .configure(|state| state.param(init_param).max_iters(100))
+            .run()
+            .map_err(|e| QuantizationError::Optimization(e.to_string()))?;
+        let optimized = Array2::from_shape_vec(tensor.dim(), res.state.param).unwrap().mapv(|v| f16::from_f32(v));
+        Ok(optimized)
     }
 
     #[cfg(feature = "wasm")]
@@ -168,8 +256,11 @@ impl QuantizationHandler {
                 });
             }
 
-            let (grouped_keys, residual_keys, grouped_values, residual_values) = handler.apply_kivi_quantization(&mut results, &bit_depth)?;
-            let quantized_data = bincode::serialize(&(grouped_keys, residual_keys, grouped_values, residual_values)).unwrap();
+            let (grouped_keys, residual_keys, grouped_values, residual_values, lora_delta) = handler.apply_chunked_quantization_and_lora(&mut results, &bit_depth)?;
+            let (quantized_keys, quantized_values) = handler.apply_binary_mos(&grouped_keys, &grouped_values)?;
+            let (distilled_keys, distilled_values) = handler.apply_qakd(&quantized_keys, &quantized_values)?;
+
+            let quantized_data = bincode::serialize(&(distilled_keys, residual_keys, distilled_values, residual_values, lora_delta)).unwrap();
             let quantized_path = format!("quantized_{}_{}.bin", req.model_name, req.bit_depth);
             handler.model_store.vault.store(format!("quantized_{}", req.model_name), quantized_data.clone()).await.map_err(|e| js_sys::Error::new(&e.to_string()))?;
             handler.model_store.add_model(quantized_path.clone(), format!("{}_{}", req.model_name, req.bit_depth), "Zeta Reticula".to_string()).await;
