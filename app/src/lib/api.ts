@@ -27,6 +27,23 @@ interface ModelUploadResponse {
   message: string;
 }
 
+
+// Define the types for the API responses
+// and requests based on your application's needs
+// Example types for inference, usage, and model upload
+// Adjust these interfaces based on your actual API response structure
+// and request payloads
+// Ensure you have the correct types for your API requests and responses
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://your-vercel-domain.vercel.app/api';
+
+// Ensure the API URL is set correctly in your environment variables
+if (!API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL environment variable is not set');
+}
+
+
+
 const token = 'your-jwt-token'; // Replace with actual JWT token
 
 export const runInference = async (request: InferenceRequest): Promise<InferenceResponse> => {

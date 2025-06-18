@@ -18,7 +18,8 @@ pub mod symbolic;
 pub mod fusion_anns;
 
 /// Neurosymbolic Routing Plan
-/// This module defines the routing plan for neurosymbolic inference,
+/// This module defines the routing plan for neurosymbolic inference, 
+/// 
 #[derive(Serialize, Deserialize)]
 pub struct NSRoutingPlan {
     pub model_config: ModelConfig,

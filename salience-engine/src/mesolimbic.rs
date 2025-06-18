@@ -8,7 +8,24 @@ use std::collections::HashMap;
 use rand_distr::{Distribution, Normal};
 use std::sync::Mutex;
 use std::sync::RwLock;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicI32;
 
+// Represents the result of a role inference
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RoleInferenceResult {
+    pub token_id: u32,
+    pub inferred_role: String, // e.g., "subject", "verb", "object", "modifier", "negation"
+    pub confidence: f32, // Confidence score for the inferred role
+}
+
+// RoleTheory represents a theory of roles and their probabilities
+// in the context of a token's features
+// This is used to dynamically infer roles based on token features
+// and update the probabilities based on observed data.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RoleTheory {
     pub roles: Vec<String>,          // Possible roles (e.g., "subject", "verb", "object", "modifier", "negation")
@@ -25,6 +42,7 @@ pub struct TokenFeatures {
     pub role: String,  // Now dynamically inferred
 }
 
+// Represents the result of salience computation for a token
 #[derive(Serialize, Deserialize)]
 pub struct SalienceResult {
     pub token_id: u32,
@@ -161,4 +179,5 @@ impl RoleInferer {
         }).collect()
     }
 }
+
 

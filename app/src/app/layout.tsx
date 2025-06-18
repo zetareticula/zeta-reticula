@@ -30,3 +30,6 @@ export default function RootLayout({
   )
 }
 
+export const dynamic = 'force-dynamic' // This ensures the layout is always re-rendered on each request
+export const revalidate = 0 // Disable static generation caching
+export const fetchCache = 'force-no-store' // Disable caching for this layout

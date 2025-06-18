@@ -23,6 +23,12 @@ use crate::role_inference::RoleTheory;
 use crate::quantizer::{QuantizationResult, PrecisionLevel};
 
 // Represents a token's features relevant to salience
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Frame<'a> {
+    pub tokens: &'a [TokenFeatures], // Tokens in the frame
+    pub aggregated_salience: f32, // Aggregated salience score for the frame
+    pub frame_id: u32, // Unique identifier for the frame
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TokenFeatures {
@@ -86,5 +92,38 @@ impl SalienceQuantizer {
         tableau = YoungTableau::from_quantization_results(&results, dimensions);
         tableau.sparsify();
         (results, tableau)
+    }
+}
+
+// Represents the quantization results for a token
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SalienceQuantizationResult {
+    pub token_id: u32,
+    pub precision: PrecisionLevel,
+    pub salience_score: f32,
+    pub row: usize,
+    pub role: String,
+    pub role_confidence: f32,
+}
+
+impl YoungTableau {
+    pub fn new(dimensions: usize, threshold: f32) -> Self {
+        YoungTableau {
+            rows: vec![vec![]; dimensions],
+            dimensions: (dimensions, dimensions),
+            threshold,
+        }
+    }
+
+    pub fn from_quantization_results(results: &[QuantizationResult], dimensions: usize) -> Self {
+        let mut tableau = YoungTableau::new(dimensions, 0.0);
+        for result in results {
+            tableau.rows[result.row].push(result.clone());
+        }
+        tableau
+    }
+
+    pub fn sparsify(&mut self) {
+        // Implement sparsification logic here
     }
 }

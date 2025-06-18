@@ -17,12 +17,18 @@ use serde_json;
 use csv::Writer;
 use ns_router_rs::KVCacheConfig;
 use ns_router_rs::NSRoutingPlan;
+use llm_rs::InferenceOutput;
+use std::fs::OpenOptions;
+use quantize_cli::CliConfig;
+use std::error::Error;
+use std::io::Error as IoError;
 
 /// Zeta Reticula Quantize CLI
 /// This CLI quantizes LLMs using neurosymbolic salience, reading input text, quantizing tokens, routing inference requests, and outputting results in JSON or CSV format.
 /// It supports verbose logging and allows for domain-specific salience through a theory key.
 /// It integrates with the SalienceQuantizer for token quantization and NSRouter for routing inference requests.
 /// The output includes quantization results, routing plans, inference outputs, and performance metrics.
+pub mod quantize_cli;
 
 
 //// Zeta Reticula Quantize CLI Configuration
@@ -169,7 +175,18 @@ pub fn handle_error(msg: &str) -> Box<dyn Error> {
 
 }
 
+/// Custom error type for CLI operations
+pub struct CliError {
+    message: String,
+}
 
+impl CliError {
+    pub fn new(message: &str) -> Self {
+        CliError {
+            message: message.to_string(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

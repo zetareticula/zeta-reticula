@@ -18,17 +18,33 @@ use std::error::Error;
 use clap::Parser;
 use std::fmt;
 use std::default::Default;
+use config::CliConfig;
+use salience_engine::quantizer::{QuantizationResult, PrecisionLevel};
+
 
 
 // Zeta Reticula Quantize CLI
 // Main entry point for the Zeta Reticula Quantize CLI, which quantizes LLMs using neurosymbolic salience.
 //// This CLI reads input text, quantizes tokens based on salience, routes inference requests,
+//// and outputs the results in a specified format (JSON or CSV).
+/// // The CLI supports verbose logging and allows for domain-specific salience through a theory key.
+/// // It integrates with the SalienceQuantizer for token quantization and NSRouter for routing inference requests.
+/// // The output includes quantization results, routing plans, inference outputs, and performance metrics.
 
-
-
-
+mod salience_engine;
+mod ns_router_rs;
 mod config;
 mod output;
+
+/// Main function for the Zeta Reticula Quantize CLI
+/// This function initializes the logger, reads input from a file,
+/// quantizes tokens using the SalienceQuantizer,
+/// routes inference requests using the NSRouter,
+/// and writes the output to a specified file.
+/// # Arguments:
+/// * `config` - The CLI configuration containing input file, output file, theory key, user ID, and verbosity flag.
+/// # Returns:
+/// * `Result<(), std::io::Error>` - Returns Ok if successful, or an error if any operation fails.
 
 fn main() -> std::io::Result<()> {
     let config = config::CliConfig::parse_args();
@@ -97,4 +113,88 @@ fn main() -> std::io::Result<()> {
 
     info!("Quantization complete. Output written to {}", config.output_file);
     Ok(())
+}
+
+#[derive(Parser, Debug)]
+#[clap(name = "quantize-cli", version = "1.0", author = "Zeta Reticula")]
+pub struct CliConfig {
+    #[clap(long, default_value = "input.txt")]
+    pub input_file: PathBuf,
+
+    #[clap(long, default_value = "output.json")]
+    pub output_file: PathBuf,
+
+    #[clap(long, default_value = "json")]
+    pub format: String,
+
+    #[clap(long, default_value = "default")]
+    pub theory_key: String,
+
+    #[clap(long, default_value = "user123")]
+    pub user_id: String,
+
+    #[clap(short, long)]
+    pub verbose: bool,
+}
+
+impl Default for CliConfig {
+    fn default() -> Self {
+        CliConfig {
+            input_file: PathBuf::from("input.txt"),
+            output_file: PathBuf::from("output.json"),
+            format: "json".to_string(),
+            theory_key: "default".to_string(),
+            user_id: "user123".to_string(),
+            verbose: false,
+        }
+    }
+}
+
+impl fmt::Display for CliConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Input File: {}\nOutput File: {}\nFormat: {}\nTheory Key: {}\nUser ID: {}\nVerbose: {}",
+               self.input_file.display(), self.output_file.display(), self.format, self.theory_key, self.user_id, self.verbose)
+    }
+}
+
+// Output module for writing results to file
+mod output {
+    use super::*;
+    use serde_json::to_string;
+    use std::fs::File;
+    use std::io::{self, BufWriter};
+
+    #[derive(Serialize, Deserialize)]
+    pub struct CliOutput {
+        pub quantization_results: Vec<QuantizationResult>,
+        pub routing_plan: NSRoutingPlan,
+        pub inference_output: InferenceOutput,
+        pub input_tokens: usize,
+        pub throughput_mb_per_sec: f32,
+        pub sparsity_ratio: f32,
+        pub num_used: usize,
+        pub last_k_active: Vec<usize>,
+        pub anns_recall: f32,
+        pub anns_throughput: f32,
+    }
+
+    pub fn write_output(output: &CliOutput, config: &CliConfig) -> io::Result<()> {
+        let file = File::create(&config.output_file)?;
+        let mut writer = BufWriter::new(file);
+
+        if config.format == "json" {
+            let json_output = to_string(output)?;
+            writer.write_all(json_output.as_bytes())?;
+        } else if config.format == "csv" {
+            let mut csv_writer = Writer::from_writer(writer);
+            for result in &output.quantization_results {
+                csv_writer.serialize(result)?;
+            }
+            csv_writer.flush()?;
+        } else {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported format"));
+        }
+
+        Ok(())
+    }
 }

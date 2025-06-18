@@ -5,6 +5,37 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
 use rayon::prelude::*;
 use dashmap::DashMap;
+use ndarray::s;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::io::Error as IoError;
+use std::io::ErrorKind;
+use std::fs::OpenOptions;
+use std::path::PathBuf;
+use std::collections::HashSet;
+
+
+// FusionANNS is a mock implementation of a billion-scale ANN search system
+// using a combination of SSD storage, GPU HBM, and host memory for vector management.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct FusionANNSConfig {
+    pub vector_dim: usize,  // Dimension of the vectors
+    pub batch_size: usize,  // Mini-batch size for re-ranking
+    pub ssd_path: PathBuf,  // Path to SSD storage for raw vectors
+}
+
+impl FusionANNSConfig {
+    pub fn new(vector_dim: usize, batch_size: usize, ssd_path: PathBuf) -> Self {
+        FusionANNSConfig {
+            vector_dim,
+            batch_size,
+            ssd_path,
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize)]
 pub struct FusionANNS {

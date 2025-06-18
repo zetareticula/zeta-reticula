@@ -11,6 +11,37 @@ serde_json = "1.0"
 rayon = "1.8"  # For parallel processing
 log = "0.4"
 egg = "0.9"
+ndarray = "0.15"  # For numerical operations
+half = "2.2"  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = "1.1"  # For fast hash maps
+argmin = "0.8"  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
+
+[features]
+default = ["server"]
+server = ["actix-web", "actix-multipart", "tokio", "rayon", "log", "egg", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+
+[profile.dev]
+opt-level = 1
 
 [profile.release]
 opt-level = 3
+
+[workspace]
+members = [
+    "api",
+    "salience-engine",
+    "llm-rs",
+    "ns-router-rs",
+    "kvquant-rs",
+    "quantize-cli",
+    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
+]

@@ -11,7 +11,13 @@ pub struct ModelConfig {
     pub precision: Vec<PrecisionLevel>, // Precision levels for each token
 }
 
-
+#[derive(Serialize, Deserialize)]
+pub struct KVCacheConfig {
+    pub sparsity: f32, // Sparsity level for the cache
+    pub priority_tokens: Vec<u32>, // Tokens prioritized in the cache
+    pub inactive_neurons: Vec<usize>, // Neurons that are inactive
+    pub re_rank_accuracy: f32, // Accuracy improvement from re-ranking
+}
 
 
 #[derive(Serialize, Deserialize)]
@@ -99,4 +105,36 @@ impl NSStrategySelector {
             re_rank_accuracy,
         }
     }
+}
+
+// ---- Context Analysis ----
+impl NSContextAnalysis {
+    pub fn new(token_count: usize, theory_complexity: f32, symbolic_constraints: Vec<String>, salience_profile: Vec<SalienceResult>) -> Self {
+        NSContextAnalysis {
+            token_count,
+            theory_complexity,
+            symbolic_constraints,
+            salience_profile,
+        }
+    }
+}
+
+// ---- Salience Result ----
+impl SalienceResult {
+    pub fn new(token_id: u32, salience_score: f32, role: String, precision: PrecisionLevel) -> Self {
+        SalienceResult {
+            token_id,
+            salience_score,
+            role,
+            precision,
+        }
+    }
+}
+
+// ---- Precision Level ----
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub enum PrecisionLevel {
+    Bit4,
+    Bit8,
+    Bit16,
 }

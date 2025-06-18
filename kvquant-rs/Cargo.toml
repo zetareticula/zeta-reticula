@@ -3,6 +3,7 @@ name = "kvquant-rs"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
 salience-engine = { path = "../salience-engine" }
 ns-router-rs = { path = "../ns-router-rs" }
@@ -30,6 +31,11 @@ tonic = "0.10"  # For gRPC support
 prost = "0.12"  # For Protocol Buffers serialization
 thiserror = "1.0"  # For error handling
 actix-web = "4.3"  # For web server functionality
+actix-multipart = "0.6"  # For handling multipart form data
+tokio = { version = "1.0", features = ["full"], optional = true }  # For asynchronous runtime
+futures = "0.3"  # For asynchronous programming
+
+
 
 [profile.release]
 opt-level = 3
@@ -42,4 +48,11 @@ server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3", "pyo3-build-config"]
 lua = ["mlua"]
+
+[dev-dependencies]
+actix-rt = "2.5"
+serde_test = "1.0"
+
+[build-dependencies]
+tonic-build = "0.10"
 

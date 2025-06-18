@@ -4,7 +4,8 @@ use log;
 pub mod inference;
 pub mod model;
 pub mod kv_cache;
-pub mod utils;
+pub mod fusion_anns;
+
 
 #[derive(Serialize, Deserialize)]
 pub struct InferenceOutput {

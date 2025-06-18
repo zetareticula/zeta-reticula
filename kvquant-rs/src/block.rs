@@ -18,6 +18,17 @@ use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
 use crate::role_inference::RoleTheory;
 use crate::quantizer::{QuantizationResult, PrecisionLevel};
 use crate::quantizer::KVQuantConfig;
+use crate::spot::SpotManager;
+use crate::block::{DataBlock, BlockState};
+use crate::quantizer::KVQuantizer;
+
+
+// KVQuantizer is the main structure for handling key-value quantization
+// It manages data blocks, role inference, and the mesolimbic system for salience computation.
+
+#[derive(Serialize, Deserialize, Clone)]
+
+
 
 #[derive(Serialize, Deserialize)]
 pub struct KVQuantizer {
@@ -139,4 +150,98 @@ impl DataBlock {
         self.navigation_graph.clear();
         self.state = BlockState::Free;
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LogStructuredKVCache {
+    pub config: KVQuantConfig,
+    pub spots: SpotManager,
+    pub valid_bitmap: DashMap<(usize, usize), bool>, // (spot_id, block_id)
+    pub lock: Arc<Mutex<()>>,
+    pub salience_threshold: f32,
+}
+
+impl LogStructuredKVCache {
+    pub fn new(config: KVQuantConfig) -> Self {
+        LogStructuredKVCache {
+            config,
+            spots: SpotManager::new(config.spot_capacity),
+            valid_bitmap: DashMap::new(),
+            lock: Arc::new(Mutex::new(())),
+            salience_threshold: config.salience_threshold,
+        }
+    }
+
+    pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
+        let _guard = self.lock.lock().unwrap();
+        if salience_score < self.salience_threshold {
+            return;
+        }
+        let (spot_id, block_id) = self.spots.append(token_id, value, pointer, bias);
+        self.valid_bitmap.insert((spot_id, block_id), true);
+    }
+
+    pub fn invalidate_low_salience(&self, salience_scores: &[(u32, f32)]) {
+        let _guard = self.lock.lock().unwrap();
+        for &(token_id, salience) in salience_scores {
+            if salience < self.salience_threshold {
+                for entry in self.valid_bitmap.iter() {
+                    let ((spot_id, block_id), _) = entry.pair();
+                    if let Some(spot) = self.spots.get_spot(*spot_id) {
+                        if spot.blocks[*block_id].data.contains_key(&token_id) {
+                            spot.blocks[*block_id].unmap();
+                            spot.blocks[*block_id].invalidate();
+                            self.valid_bitmap.insert((*spot_id, *block_id), false);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn erase_full_spots(&self) {
+        let _guard = self.lock.lock().unwrap();
+        for spot in self.spots.iter() {
+            if spot.is_full() {
+                self.spots.erase_spot(spot.id);
+            }
+        }
+    }
+}
+
+pub fn initialize_kv_cache(config: KVQuantConfig) -> LogStructuredKVCache {
+    LogStructuredKVCache::new(config)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct KVCache {
+    pub inner: LogStructuredKVCache,
+}
+
+impl KVCache {
+    pub fn new(config: KVQuantConfig) -> Self {
+        let inner = initialize_kv_cache(config);
+        KVCache { inner }
+    }
+
+    pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
+        self.inner.update(token_id, value, salience_score, pointer, bias);
+    }
+
+    pub fn invalidate_low_salience(&self, salience_scores: &[(u32, f32)]) {
+        self.inner.invalidate_low_salience(salience_scores);
+    }
+
+    pub fn erase_full_spots(&self) {
+        self.inner.erase_full_spots();
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct KVQuantConfig {
+    pub block_size: usize,
+    pub spot_capacity: usize,
+    pub salience_threshold: f32,
+    pub precision_level: PrecisionLevel,
 }

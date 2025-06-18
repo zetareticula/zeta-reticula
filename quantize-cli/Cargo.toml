@@ -39,8 +39,9 @@ serde_test = "1.0"
 tonic-build = "0.10"
 pyo3-build-config = { version = "0.19", optional = true }
 
-[lib]
-crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+[package.metadata]
+description = "Zeta Reticula: A Rust-based AI framework for building and deploying machine learning models."
+license = "Apache-2.0"
 
 [workspace]
 members = [
@@ -50,6 +51,7 @@ members = [
     "ns-router-rs",
     "kvquant-rs",
     "quantize-cli",
+    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
 ]
 
 [patch.crates-io]
@@ -62,3 +64,9 @@ ns-router-rs = { path = "../ns-router-rs" }
 # Similarly, you can patch other dependencies if needed
 # For example, if you want to use a local version of `salience-engine`:
 salience-engine = { path = "../salience-engine" }
+# If you have a local version of `kvquant-rs`, you can patch it as well:
+kvquant-rs = { path = "../kvquant-rs" }
+# If you have a local version of `zeta-reticula`, you can patch it as well:
+zeta-reticula = { path = "../zeta-reticula" }
+
+[
