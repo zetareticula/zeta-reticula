@@ -1,6 +1,15 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Inter } from 'next/font/google'
+import React from 'react'
+import Footer from '@/components/Footer'
+import Hero from '@/components/Hero'
+import About from '@/components/About'
+import Solutions from '@/components/Solutions'
+
+'use client'
+
+
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,3 +29,4 @@ export default function RootLayout({
     </html>
   )
 }
+

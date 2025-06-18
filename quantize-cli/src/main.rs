@@ -11,10 +11,19 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 use csv::Writer;
 use std::io::Write;
+use std::path::PathBuf;
+use std::fs::OpenOptions;
+use std::io::{self, BufWriter};
+use std::error::Error;
+use clap::Parser;
+use std::fmt;
+use std::default::Default;
+
 
 // Zeta Reticula Quantize CLI
 // Main entry point for the Zeta Reticula Quantize CLI, which quantizes LLMs using neurosymbolic salience.
 //// This CLI reads input text, quantizes tokens based on salience, routes inference requests,
+
 
 
 

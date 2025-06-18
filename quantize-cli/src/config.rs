@@ -8,6 +8,21 @@ use log::info;
 use env_logger::Builder;
 use ns_router_rs::initialize_ns_router;
 use salience_engine::quantizer::{SalienceQuantizer, TokenFeatures};
+use salience_engine::quantizer::{QuantizationResult, PrecisionLevel};
+use std::fs;
+use std::io::{self, BufWriter};
+use std::path::PathBuf;
+use std::io::Write;
+use serde_json;
+use csv::Writer;
+use ns_router_rs::KVCacheConfig;
+use ns_router_rs::NSRoutingPlan;
+
+/// Zeta Reticula Quantize CLI
+/// This CLI quantizes LLMs using neurosymbolic salience, reading input text, quantizing tokens, routing inference requests, and outputting results in JSON or CSV format.
+/// It supports verbose logging and allows for domain-specific salience through a theory key.
+/// It integrates with the SalienceQuantizer for token quantization and NSRouter for routing inference requests.
+/// The output includes quantization results, routing plans, inference outputs, and performance metrics.
 
 
 //// Zeta Reticula Quantize CLI Configuration
@@ -37,6 +52,36 @@ impl CliConfig {
     pub fn parse_args() -> Self {
         CliConfig::parse()
     }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn to_csv(&self) -> Result<String, csv::Error> {
+        let mut wtr = Writer::from_writer(vec![]);
+        wtr.serialize(self)?;
+        let data = String::from_utf8(wtr.into_inner()?)?;
+        Ok(data)
+    }
+
+    pub fn write_output(&self, results: &str) -> io::Result<()> {
+        let path = PathBuf::from(&self.output_file);
+        let mut file = BufWriter::new(fs::OpenOptions::new().write(true).create(true).truncate(true).open(path)?);
+        if self.format == "json" {
+            file.write_all(results.as_bytes())?;
+        } else if self.format == "csv" {
+            let mut wtr = Writer::from_writer(file);
+            wtr.write_record(results.split(','))?;
+            wtr.flush()?;
+        } else {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported output format"));
+        }
+        Ok(())
+    }
+
+    pub fn read_input(&self) -> io::Result<String> {
+        fs::read_to_string(&self.input_file).map_err(|e| io::Error::new(io::ErrorKind::NotFound, e))
+    }
 }
 
 impl Default for CliConfig {
@@ -50,6 +95,7 @@ impl Default for CliConfig {
             verbose: false,
         }
     }
+
 }
 
 impl fmt::Display for CliConfig {
@@ -58,6 +104,9 @@ impl fmt::Display for CliConfig {
                self.input_file, self.output_file, self.format, self.theory_key, self.user_id, self.verbose)
     }
 }
+
+
+
 
 /// Initializes the logger based on the verbosity setting
 /// 
@@ -109,6 +158,18 @@ pub fn run_cli() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+/// Error handling for CLI operations
+/// /// # Arguments:
+/// /// * `msg` - The error message to display
+/// /// # Returns:
+/// /// * `Box<dyn Error>` - A boxed error containing the error message
+pub fn handle_error(msg: &str) -> Box<dyn Error> {
+    Box::new(io::Error::new(io::ErrorKind::Other, msg))
+
+}
+
+
 
 #[cfg(test)]
 mod tests {

@@ -41,7 +41,6 @@ serde_qs = "0.9"
 prost-types = "0.12"  # For Protocol Buffers types
 
 
-
 [lib]
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 

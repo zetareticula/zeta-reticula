@@ -1,6 +1,18 @@
 use crate::{ModelConfig, KVCacheConfig, PrecisionLevel};
 use rayon::prelude::*;
 use crate::symbolic::SymbolicReasoner;
+use serde::{Serialize, Deserialize};
+use crate::context::{NSContextAnalysis, SalienceResult};
+
+
+#[derive(Serialize, Deserialize)]
+pub struct ModelConfig {
+    pub size: usize, // Model size in parameters
+    pub precision: Vec<PrecisionLevel>, // Precision levels for each token
+}
+
+
+
 
 #[derive(Serialize, Deserialize)]
 pub enum ExecutionStrategy {

@@ -1,11 +1,24 @@
+use crate::strategy::{ModelConfig, KVCacheConfig, PrecisionLevel};
+use crate::context::{NSContextAnalysis, SalienceResult};
+use crate::symbolic::SymbolicReasoner;
+use crate::router::NSRouter;
+
 use serde::{Serialize, Deserialize};
 use log;
+use bumpalo::Bump;
+use rayon::prelude::*;
 
+pub mod inference;
+pub mod model;
 pub mod router;
 pub mod strategy;
 pub mod context;
 pub mod symbolic;
 
+pub mod fusion_anns;
+
+/// Neurosymbolic Routing Plan
+/// This module defines the routing plan for neurosymbolic inference,
 #[derive(Serialize, Deserialize)]
 pub struct NSRoutingPlan {
     pub model_config: ModelConfig,
