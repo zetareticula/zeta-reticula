@@ -3,12 +3,18 @@ name = "salience-engine"
 version = "0.1.1"
 edition = "2021"
 description = "A Rust-based salience engine for processing and analyzing large datasets with advanced features like WASM and Python bindings."
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
+llm-rs = { path = "../llm-rs", features = ["wasm"] }
+ns-router-rs = { path = "../ns-router-rs" }
+clap = { version = "4.5", features = ["derive"] }
+log = "0.4"
+env_logger = "0.10"  # For logging
+bincode = "1.3"  # For binary serialization
 neon = "0.10"
 rand = "0.8"
 rand_distr = "0.4"  # For stochastic search distributions
@@ -43,9 +49,12 @@ futures = "0.3"  # For asynchronous programming
 sled = "0.34"  # For embedded database
 crossbeam = "0.8"  # For concurrent programming
 
+
 [dev-dependencies]
 actix-rt = "2.5"
 serde_test = "1.0"
+
+
 
 [build-dependencies]
 tonic-build = "0.10"

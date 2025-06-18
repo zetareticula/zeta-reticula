@@ -30,7 +30,7 @@ impl Spot {
         }
         for block in &mut self.blocks {
             if block.state == BlockState::Free {
-                block.write(token_id, value, pointer, bias);
+                block.write(token_id, value, pointer, bias, 0, 0); // Assuming default values for missing arguments
                 if self.blocks.iter().all(|b| b.state != BlockState::Free) {
                     self.is_full = true;
                 }

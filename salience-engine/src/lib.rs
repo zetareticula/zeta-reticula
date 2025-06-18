@@ -5,8 +5,12 @@ use bumpalo::Bump;
 use rayon::prelude::*;
 use rand_distr::{Distribution, Normal};
 use std::mem;
+use std::collections::HashMap;
+// ---- Data Structures ----
+
 
 // ---- Core Data Structures ----
+
 
 
 impl PrecisionLevel {
@@ -191,7 +195,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     Ok(())
 }
 
-fn quantize_tokens(mut cx: FunctionContext) -> JsResult<JsString> {
+fn quantize_tokens(cx: FunctionContext) -> JsResult<JsString> {
     let input = cx.argument::<JsString>(0)?.value(&mut cx);
     let theory_key = cx.argument::<JsString>(1)?.value(&mut cx);
     let token_features: Vec<TokenFeatures> = serde_json::from_str(&input)

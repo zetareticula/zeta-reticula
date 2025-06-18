@@ -4,6 +4,19 @@ use env_logger::Builder;
 use salience_engine::quantizer::{SalienceQuantizer, TokenFeatures};
 use ns_router_rs::initialize_ns_router;
 use tokio::runtime::Runtime;
+use ns_router_rs::KVCacheConfig;
+use ns_router_rs::NSRoutingPlan;
+use llm_rs::InferenceOutput;
+use serde::{Serialize, Deserialize};
+use serde_json;
+use csv::Writer;
+use std::io::Write;
+
+// Zeta Reticula Quantize CLI
+// Main entry point for the Zeta Reticula Quantize CLI, which quantizes LLMs using neurosymbolic salience.
+//// This CLI reads input text, quantizes tokens based on salience, routes inference requests,
+
+
 
 mod config;
 mod output;
