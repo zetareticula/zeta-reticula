@@ -36,7 +36,16 @@ chrono = { version = "0.4", features = ["serde"] }
 stripe = "0.16"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 serde_qs = "0.9"
+prost-types = "0.12"  # For Protocol Buffers types
 
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+
+
+
+
+# This is the main workspace configuration for the Zeta Reticula project
 [workspace]
 members = [
     "api",
@@ -45,6 +54,8 @@ members = [
     "ns-router-rs",
     "kvquant-rs",
     "quantize-cli",
+    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
+
 ]
 
 [patch.crates-io]
@@ -56,6 +67,9 @@ llm-rs = { path = "../llm-rs" }
 ns-router-rs = { path = "../ns-router-rs" }
 # If you have a local version of `salience-engine`, you can patch it as well:
 salience-engine = { path = "../salience-engine" }
+
+
+
 
 [package.metadata]
 # This section can be used to define metadata for the package
@@ -85,9 +99,6 @@ lua = ["mlua"]
 opt-level = 3
 lto = true
 codegen-units = 1
-
-[lib]
-crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [profile.wasm-release]
 opt-level = "s"

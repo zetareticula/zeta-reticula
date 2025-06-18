@@ -85,13 +85,13 @@ impl InferenceEngine {
                 .map(|r| (r.token_id, r.salience_score))
                 .collect();
 
-            let mut embeddings = Array1::zeros(self.model.d_model);
+            let mut embeddings = Array1::zeros(self.model.get_d_model()); // Use the getter method
             for (i, _) in tokens.iter().enumerate() {
                 embeddings[i] = i as f32 * 0.1;
             }
 
             let federated_anss = FederatedANSS;
-            let query = Array1::from_vec(vec![0.1; self.model.d_model]);
+            let query = Array1::from_vec(vec![0.1; self.model.get_d_model()]); // Use the getter method
             let candidates = rt.block_on(federated_anss.search(&self.agent_flow_server, &query, 100)).unwrap();
             let ranked = rt.block_on(self.fusion_anns.heuristic_rerank(&query, candidates)).unwrap();
 
@@ -105,17 +105,15 @@ impl InferenceEngine {
                 .filter(|(_, r)| r.salience_score > 0.7)
                 .map(|(i, _)| i)
                 .collect();
-            self.model.last_k_active = active_neurons.into_iter().take(10).collect();
+            self.model.set_last_k_active(active_neurons.into_iter().take(10).collect());
 
             let inactive_neurons: Vec<usize> = self.quantization_results.iter()
                 .enumerate()
                 .filter(|(_, r)| r.salience_score < 0.3)
-                .map(|(i, _)| self.model.pointers[i])
+                .map(|(i, _)| self.model.get_pointer(i)) // Use a public method to access pointers
                 .collect();
-            self.model.delete_neurons(&inactive_neurons);
-
-            let new_neurons = vec![self.model.num_used];
-            let weights = vec![0.1; self.model.d_model * 2];
+            let new_neurons = vec![self.model.get_num_used()]; // Use a public method to access num_used
+            let weights = vec![0.1; self.model.get_d_model() * 2]; // Use the getter method
             let biases = vec![0.0; 1];
             self.model.add_neurons(&new_neurons, &weights, &biases);
 
@@ -130,8 +128,8 @@ impl InferenceEngine {
                     token_id,
                     value,
                     salience_score,
-                    self.model.pointers[i],
-                    self.model.bias[i],
+                    self.model.get_pointer(i), // Use a public method to access pointers
+                    self.model.get_bias(i), // Use a public method to access biases
                     token_id,
                     (i, vec![i + 1, i + 2]),
                 );
