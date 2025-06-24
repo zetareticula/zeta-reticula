@@ -2,116 +2,25 @@
 name = "zeta-reticula"
 version = "0.1.0"
 edition = "2021"
-description = "Zeta Reticula: A Rust-based AI framework for building and deploying machine learning models."
-
 
 [dependencies]
 actix-web = "4.3"
-actix-multipart = "0.6"
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.0", features = ["full"], optional = true }
-futures = "0.3"
+sqlx = { version = "0.7", features = ["runtime-actix-rustls", "postgres"] }
+reqwest = { version = "0.11", features = ["json"] }
+jsonwebtoken = "8.3"
+oauth2 = { version = "4.4", features = ["reqwest"] }
+prost = "0.11"
+zeta = { path = "protos" }
+tokio = { version = "1.32", features = ["full"] }
 log = "0.4"
-llm-rs = { path = "../llm-rs", features = ["wasm"] }
-salience-engine = { path = "../salience-engine", features = ["wasm"] }
-tonic = "0.10"
-prost = "0.12"
-serde_json = "1.0"
-bincode = "1.3"
-thiserror = "1.0"
-validator = { version = "0.16", features = ["derive"] }
-wasm-bindgen = "0.2.87"
-js-sys = "0.3.64"
-wasm-bindgen-futures = "0.4.37"
-sled = "0.34"
-crossbeam = "0.8"
-dashmap = "5.4"
-ndarray = "0.15"
-half = "2.2"
-openblas-src = { version = "0.10", optional = true }
-rustc-hash = "1.1"
-argmin = "0.8"
-pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
-mlua = { version = "0.9", optional = true }
-uuid = { version = "1.2", features = ["v4"] }
-chrono = { version = "0.4", features = ["serde"] }
-stripe = "0.16"
-reqwest = { version = "0.11", features = ["json", "blocking"] }
-serde_qs = "0.9"
-prost-types = "0.12"  # For Protocol Buffers types
-
-
-[lib]
-crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
-
-
-
-
-
-# This is the main workspace configuration for the Zeta Reticula project
-[workspace]
-members = [
-    "api",
-    "salience-engine",
-    "llm-rs",
-    "ns-router-rs",
-    "kvquant-rs",
-    "quantize-cli",
-    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
-
-]
-
-[patch.crates-io]
-# This section can be used to override dependencies with local paths or specific versions
-# For example, if you want to use a local version of `llm-rs`:
-llm-rs = { path = "../llm-rs" }
-# Similarly, you can patch other dependencies if needed
-# For example, if you want to use a local version of `ns-router-rs`:
-ns-router-rs = { path = "../ns-router-rs" }
-# If you have a local version of `salience-engine`, you can patch it as well:
-salience-engine = { path = "../salience-engine" }
-
-
-
-
-[package.metadata]
-# This section can be used to define metadata for the package
-# For example, you can define a description or authors
-description = "Zeta Reticula: A Rust-based AI framework for building and deploying machine learning models."
-# You can also specify authors, license, and other metadata
-license = "MIT OR Apache-2.0"
-
-
-[dev-dependencies]
-actix-rt = "2.5"
-serde_test = "1.0"
-
-[build-dependencies]
-tonic-build = "0.10"
-
-pyo3-build-config = { version = "0.19", optional = true }
+lru = "0.10"
+once_cell = "1.18"
+rlua = "0.19"  # Lua integration
+pyo3 = { version = "0.19", features = ["auto-initialize"] }  # Python integration
 
 [features]
-default = ["server"]
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
-python = ["pyo3", "pyo3-build-config"]
-lua = ["mlua"]
+enterprise = ["unlimited-inferences"]
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-
-[profile.wasm-release]
-opt-level = "s"
-
-[profile.dev]
-opt-level = 0
-
-[target.wasm32-unknown-unknown]
-opt-level = "s"
-
-[profile.wasm]
-opt-level = "s"
-
+[dev-dependencies]
+rstest = "0.18"

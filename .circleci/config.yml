@@ -1,0 +1,58 @@
+version: 2.1
+
+jobs:
+  build-and-test:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: apt-get update && apt-get install -y libssl-dev pkg-config
+      - run:
+          name: Cache Cargo
+          command: cargo fetch --manifest-path Cargo.toml
+      - restore_cache:
+          keys:
+            - cargo-cache-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Build
+          command: cargo build --all --release
+      - run:
+          name: Run Tests
+          command: cargo test --all --release
+      - save_cache:
+          paths:
+            - ~/.cargo/registry
+            - target
+          key: cargo-cache-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Lint
+          command: cargo fmt -- --check && cargo clippy -- -D warnings
+
+  deploy:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - run:
+          name: Deploy to Production
+          command: |
+            echo "Deploying to production..."
+            # Add deployment logic (e.g., rsync to server, Docker push)
+            # Example: rsync -avz -e ssh ./ target/production_server:/app/
+      - run:
+          name: Notify
+          command: |
+            curl -X POST -H "Content-Type: application/json" -d '{"message": "Deployment successful"}' https://api.example.com/webhook
+
+workflows:
+  build-test-deploy:
+    jobs:
+      - build-and-test
+      - deploy:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only: main

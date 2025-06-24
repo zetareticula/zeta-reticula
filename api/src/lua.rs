@@ -5,6 +5,18 @@ use crate::model_store::ModelStore;
 use crate::zeta_vault::{ZetaVault, VaultConfig, KVCache, CacheLayer};
 use ndarray::Array2;
 use half::f16;
+use std::sync::{Arc, RwLock};
+use serde::{Serialize, Deserialize};
+use thiserror::Error;
+
+/// Creates a Lua module for Zeta Reticula with inference and quantization handlers
+/// # Arguments:
+/// * `lua`: The Lua state to register the module in
+/// # Returns:
+/// * A Lua table containing the inference and quantization handlers
+/// # Errors:
+/// 
+/// If the Lua state cannot be created or if there are errors in the handlers, it returns an error
 
 pub fn create_lua_module(lua: &mlua::Lua) -> mlua::Result<mlua::Value> {
     let globals = lua.globals();
@@ -57,5 +69,44 @@ pub fn create_lua_module(lua: &mlua::Lua) -> mlua::Result<mlua::Value> {
         ("quantization", mlua::Value::Table(quantization_handler)),
     ])?)?;
 
+    Ok(mlua::Value::Nil)
+}
+
+
+/// Error type for Lua module creation
+/// This error type is used to handle errors that occur during the creation of the Lua module.
+/// #[derive(Debug, Error)]
+pub enum LuaModuleError {
+    #[error("Failed to create Lua state: {0}")]
+    LuaStateCreation(#[from] mlua::Error),
+    #[error("Handler error: {0}")]
+    HandlerError(String),
+}
+
+impl From<mlua::Error> for LuaModuleError {
+    fn from(err: mlua::Error) -> Self {
+        LuaModuleError::LuaStateCreation(err)
+    }
+}
+
+pub fn initialize_lua_module() -> Result<mlua::Value, LuaModuleError> {
+
+    if !cfg!(feature = "lua") {
+        return Err(LuaModuleError::HandlerError("Lua feature is not enabled".to_string()));
+    }
+
+    if cfg!(feature = "enterprise") {
+        log::warn!("Lua module is not available in enterprise mode");
+        return Err(LuaModuleError::HandlerError("Lua module is not available in enterprise mode".to_string()));
+    }
+
+    for arg in std::env::args() {
+        if arg == "--lua" {
+            log::info!("Lua module enabled");
+        }
+    }
+
+    let lua = mlua::Lua::new();
+    create_lua_module(&lua).map_err(LuaModuleError::from)
     Ok(mlua::Value::Nil)
 }

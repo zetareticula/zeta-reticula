@@ -15,8 +15,52 @@ tokio = { version = "1.0", features = ["full"] }
 dashmap = "5.5"
 log = "0.4"
 rand = "0.8"  # For differential privacy noise
+ndarray = "0.15"  # For numerical operations
+half = "2.2"  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = "1.1"  # For fast hash maps
+argmin = "0.8"  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
+validator = { version = "0.16", features = ["derive"] }  # For data validation
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+js-sys = "0.3.64"
+uuid = { version = "1.2", features = ["v4"] }  # For unique identifiers
+chrono = { version = "0.4", features = ["serde"] }  # For date and time handling
+stripe = "0.16"  # For Stripe API integration
+reqwest = { version = "0.11", features = ["json", "blocking"] }  # For HTTP requests
+serde_qs = "0.9"  # For query string serialization/deserialization
+prost = "0.12"  # For Protocol Buffers serialization
+tonic = "0.10"  # For gRPC support
+thiserror = "1.0"  # For error handling
+actix-web = "4.3"  # For web server functionality
+actix-multipart = "0.6"  # For handling multipart form data
+futures = "0.3"  # For asynchronous programming
+
+[features]
+default = ["server"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"]
+
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+
+[workspace]
+members = [
+    "api",
+    "salience-engine",
+    "llm-rs",
+    "ns-router-rs",
+    "kvquant-rs",
+    "quantize-cli",
+    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
+]

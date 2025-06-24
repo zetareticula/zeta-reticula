@@ -17,6 +17,10 @@ use log;
 // AgentFlowServer is the main server structure for managing clients and their configurations
 // It initializes clients with their respective configurations and manages their lifecycle.
 
+pub mod client;
+pub mod config;
+
+
 
 #[derive(Serialize, Deserialize)]
 pub struct AgentFlowServer {
@@ -53,3 +57,98 @@ impl AgentFlowServer {
         futures::join_all(futures).await;
     }
 }
+
+    pub async fn run(&self) {
+        let mut tasks = FuturesUnordered::new();
+        for entry in self.clients.iter() {
+            let client = entry.value().clone();
+            tasks.push(tokio::spawn(async move {
+                client.run().await;
+            }));
+        }
+        while let Some(_) = tasks.next().await {}
+    }
+
+    pub fn get_client(&self, id: usize) -> Option<Arc<Client>> {
+        self.clients.get(&id).map(|c| c.clone())
+    }
+}
+
+pub fn initialize_agent_flow_server(config: AgentFlowConfig) -> AgentFlowServer {
+    log::info!("Initializing AgentFlowServer with {} clients", config.num_clients);
+    AgentFlowServer::new(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::AgentFlowConfig;
+
+    #[tokio::test]
+    async fn test_agent_flow_server_initialization() {
+        let config = AgentFlowConfig {
+            num_clients: 5,
+            client_config: Default::default(),
+        };
+        let server = initialize_agent_flow_server(config);
+        server.initialize().await;
+        assert_eq!(server.clients.len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_agent_flow_server_run() {
+        let config = AgentFlowConfig {
+            num_clients: 3,
+            client_config: Default::default(),
+        };
+        let server = initialize_agent_flow_server(config);
+        server.initialize().await;
+        server.run().await;
+    }
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct AgentFlowConfig {
+    pub num_clients: usize,
+    pub client_config: ClientConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ClientConfig {
+    pub input_size: usize,
+    pub output_size: usize,
+    pub kv_cache_config: KVQuantConfig,
+}
+
+impl Default for AgentFlowConfig {
+    fn default() -> Self {
+        AgentFlowConfig {
+            num_clients: 1,
+            client_config: ClientConfig {
+                input_size: 768,
+                output_size: 100,
+                kv_cache_config: KVQuantConfig {
+                    block_size: 100,
+                    spot_capacity: 10,
+                },
+            },
+        }
+    }
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        ClientConfig {
+            input_size: 768,
+            output_size: 100,
+            kv_cache_config: KVQuantConfig {
+                block_size: 100,
+                spot_capacity: 10,
+            },
+        }
+    }
+}
+
+
+#[derive(Serialize, Deserialize)]

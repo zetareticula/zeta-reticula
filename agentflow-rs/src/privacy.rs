@@ -42,9 +42,26 @@ impl PrivacyGuardConfig {
     }
 }
 
+pub struct PrivacyGuardManager {
+    guards: DashMap<usize, PrivacyGuard>,
+}
 
+impl PrivacyGuardManager {
+    pub fn new() -> Self {
+        PrivacyGuardManager {
+            guards: DashMap::new(),
+        }
+    }
 
+    pub fn add_guard(&self, id: usize, epsilon: f32) {
+        let guard = PrivacyGuard::new(epsilon);
+        self.guards.insert(id, guard);
+    }
 
+    pub fn get_guard(&self, id: usize) -> Option<PrivacyGuard> {
+        self.guards.get(&id).map(|g| g.clone())
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PrivacyGuard {
@@ -64,3 +81,23 @@ impl PrivacyGuard {
         }
     }
 }
+
+
+impl PrivacyGuardManager {
+    pub fn apply_guard(&self, id: usize, data: &mut [f32]) {
+        if let Some(guard) = self.get_guard(id) {
+            guard.add_noise(data);
+        }
+    }
+}
+
+impl PrivacyGuard {
+    pub fn serialize(&self) -> String {
+        to_string(self).unwrap()
+    }
+
+    pub fn deserialize(data: &str) -> Self {
+        from_str(data).unwrap()
+    }
+}
+

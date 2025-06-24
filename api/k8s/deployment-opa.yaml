@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  labels:
+    app: opa
+spec:
+  replicas: 2 # Initial replicas for scaling
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:latest
+        args:
+        - "run"
+        - "--server"
+        - "--log-level=debug"
+        - "--metrics" # Enable Prometheus metrics
+        - "--addr=0.0.0.0:8181"
+        - "-c=/policies/auth.rego"
+        ports:
+        - containerPort: 8181 # API
+        - containerPort: 9090 # Metrics
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: opa-policies
+          mountPath: "/policies"
+      volumes:
+      - name: opa-policies
+        configMap:
+          name: opa-policies
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policies
+data:
+  auth.rego: |
+    package authz
+
+    default allow = false
+
+    allow {
+        input.attributes.subscription_status == "active"
+        input.attributes.subscription_plan >= input.resource_attrs.required_plan
+    }
+
+    allow {
+        input.attributes.subscription_status == "active"
+        input.attributes.subscription_plan >= input.resource_attrs.required_plan
+        time.now_ns() < time.parse_rfc3339_ns(input.attributes.expires_at)
+    }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: opa-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: opa
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+spec:
+  selector:
+    app: opa
+  ports:
+  - protocol: TCP
+    port: 8181
+    targetPort: 8181
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+  type: ClusterIP

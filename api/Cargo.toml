@@ -38,23 +38,63 @@ uuid = { version = "1.2", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 stripe = "0.16"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
+serde_yaml = "0.9"
+serde_cbor = "0.11"
+serde_urlencoded = "0.7"
+jsonwebtoken = "8.1"
+oauth2 = "0.9"
+prost-types = "0.12"
 serde_qs = "0.9"
+sqlx = { version = "0.7", features = ["runtime-actix-rustls", "postgres", "macros", "json"] }
+zeta = { path = "protos"}
+lru = "0.8"
+log4rs = "1.2"
+once_cell = "1.17"
+
+[features]
+enterprise = ["unlimited-inferences", "unlimited-models", "unlimited-llms"]
+unlimited-inferences = []
+default = ["server"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3", "pyo3-build-config"]
+lua = ["mlua"] # Placeholder for future features
+python-wasm = ["pyo3", "wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 
 [dev-dependencies]
 actix-rt = "2.5"
 serde_test = "1.0"
+rstest = "0.11"
+[package.metadata]
+name = "zeta-reticula-api"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.docs.rs]
+features = ["default", "server", "wasm", "python", "lua", "python-wasm"]
+
+[workspace]
+members = [
+    "protos",
+    "../llm-rs",
+    "../salience-engine",
+]
+
+[package.metadata.pyo3]
+extension-module = true
+
+[package.metadata.wasm-bindgen]
+target = "web"
+
+[package.metadata.wasm-bindgen-futures]
+target = "web"
 
 
 [build-dependencies]
 tonic-build = "0.10"
 pyo3-build-config = { version = "0.19", optional = true }
 
-[features]
-default = ["server"]
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
-python = ["pyo3", "pyo3-build-config"]
-lua = ["mlua"]
+
 
 [profile.release]
 opt-level = 3

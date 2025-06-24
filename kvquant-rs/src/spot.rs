@@ -2,6 +2,18 @@ use crate::block::{DataBlock, BlockState};
 use serde::{Serialize, Deserialize};
 use dashmap::DashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::collections::HashMap;
+use rand::Rng;
+use rand_distr::{Distribution, Normal};
+use std::sync::RwLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicI32;
+use dashmap::mapref::entry::Entry;
+use crate::block::{DataBlock, BlockState};
+use crate::quantizer::KVQuantConfig;
 
 #[derive(Serialize, Deserialize)]
 pub struct Spot {
@@ -48,6 +60,18 @@ impl Spot {
     }
 }
 
+pub struct SpotConfig {
+    pub spot_capacity: usize, // Maximum number of blocks in a spot
+}
+
+impl SpotConfig {
+    pub fn new(spot_capacity: usize) -> Self {
+        SpotConfig { spot_capacity }
+    }
+}
+
+
+
 pub struct SpotManager {
     spots: DashMap<usize, Arc<Spot>>,
     working_spot_id: usize,
@@ -84,3 +108,5 @@ impl SpotManager {
         }
     }
 }
+
+#[derive(Serialize, Deserialize)]
