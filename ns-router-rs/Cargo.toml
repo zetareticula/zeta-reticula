@@ -18,6 +18,10 @@ rustc-hash = "1.1"  # For fast hash maps
 argmin = "0.8"  # For optimization algorithms
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
 mlua = { version = "0.9", optional = true }  # For Lua bindings
+tokio = { version = "1.32", features = ["full"] }  # Async runtime
+actix-web = { version = "4.3", features = ["json", "multipart"] }  # Web server framework
+actix-multipart = "0.4"  # For handling multipart form data
+reqwest = { version = "0.11", features = ["json"] }  # HTTP client
 
 [features]
 default = ["server"]

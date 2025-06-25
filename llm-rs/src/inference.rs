@@ -152,3 +152,38 @@ impl InferenceEngine {
         }
     }
 }
+
+
+#[derive(Serialize, Deserialize)]
+pub struct InferenceOutput {
+    pub text: String,
+    pub tokens_processed: usize,
+    pub latency_ms: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_inference_engine() {
+        let rt = Runtime::new().unwrap();
+        let mut engine = rt.block_on(InferenceEngine::new(1024));
+        let routing_plan = NSRoutingPlan {
+            model_config: ModelConfig {
+                precision: vec![PrecisionLevel::FP32],
+                d_model: 768,
+            },
+            kv_cache_config: KVCacheConfig {
+                sparsity: 0.5,
+                priority_tokens: vec![],
+            },
+        };
+        let input = "Hello world";
+        let output = rt.block_on(engine.infer(input, &routing_plan));
+        assert_eq!(output.text, "Hello world");
+        assert!(output.tokens_processed > 0);
+        assert!(output.latency_ms > 0);
+    }
+}

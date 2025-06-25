@@ -245,3 +245,31 @@ pub struct KVQuantConfig {
     pub salience_threshold: f32,
     pub precision_level: PrecisionLevel,
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::thread_rng;
+
+    #[test]
+    fn test_kv_quantizer() {
+        let config = KVQuantConfig {
+            block_size: 10,
+            spot_capacity: 100,
+            salience_threshold: 0.5,
+            precision_level: PrecisionLevel::Bit32,
+        };
+        let kv_quantizer = KVQuantizer::new(config);
+
+        let token_id = 42;
+        let value = 0.8;
+        let pointer = 1;
+        let bias = 0.1;
+        let vector_id = 100;
+        let graph_entry = (0, vec![1, 2, 3]);
+
+        let result = kv_quantizer.quantize(token_id, value, pointer, bias, vector_id, graph_entry);
+        assert!(result.is_some());
+    }
+}

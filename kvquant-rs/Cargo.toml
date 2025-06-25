@@ -34,7 +34,8 @@ actix-web = "4.3"  # For web server functionality
 actix-multipart = "0.6"  # For handling multipart form data
 tokio = { version = "1.0", features = ["full"], optional = true }  # For asynchronous runtime
 futures = "0.3"  # For asynchronous programming
-
+crossbeam = { version = "0.8", optional = true }  # For concurrent programming
+llm-rs = { path = "../llm-rs", optional = true, features = ["server"] }  # For LLM support
 
 
 [profile.release]
