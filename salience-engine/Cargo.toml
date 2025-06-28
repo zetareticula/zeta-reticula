@@ -66,6 +66,7 @@ server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "ndarray", "half"]
 python = ["pyo3", "pyo3-build-config"]
 lua = ["mlua"]
+enterprise = []
 
 [profile.release]
 opt-level = 3
@@ -86,3 +87,4 @@ members = [
     "kvquant-rs",
     "quantize-cli",
 ]
+

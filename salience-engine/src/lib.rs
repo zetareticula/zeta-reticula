@@ -6,8 +6,89 @@ use rayon::prelude::*;
 use rand_distr::{Distribution, Normal};
 use std::mem;
 use std::collections::HashMap;
-// ---- Data Structures ----
+use actix_web::{web, App, HttpServer, Responder, HttpResponse};
+use serde::{Deserialize, Serialize};
+use zeta::policy::policy_distillation::PolicyDistillation;
 
+// ---- Core Data Structures ----
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum PrecisionLevel {
+    Bit4,
+    Bit8,
+    Bit16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TokenFeatures {
+    token_id: u32,
+    frequency: f32,
+    sentiment_score: f32,
+    context_relevance: f32,
+    role: String,
+}
+
+#[derive(Deserialize, Serialize)]
+struct SalienceRequest {
+    text: String,
+    user_id: String,
+}
+
+#[derive(Serialize)]
+struct SalienceResponse {
+    salient_phrases: Vec<String>,
+    upgrade_prompt: Option<String>,
+}
+
+static USAGE_TRACKER: std::sync::Mutex<Vec<(String, u32)>> = std::sync::Mutex::new(Vec::new());
+
+async fn process_salience(
+    req: web::Json<SalienceRequest>,
+) -> Result<impl Responder, actix_web::Error> {
+    let user_id = &req.user_id;
+    let mut tracker = USAGE_TRACKER.lock().unwrap();
+    let usage = tracker.iter_mut().find(|(id, _)| id == user_id).map(|(_, count)| {
+        *count += 1;
+        *count
+    }).unwrap_or_else(|| {
+        tracker.push((user_id.clone(), 1));
+        1
+    });
+
+    let upgrade_prompt = if usage > 30 && !cfg!(feature = "enterprise") {
+        Some("Upgrade to Enterprise for more salience processing!".to_string())
+    } else {
+        None
+    };
+
+    // Simulate salience extraction (replace with NLP model)
+    let salient_phrases = vec!["key".to_string(), "phrase".to_string()];
+
+    // Policy distillation simulation
+    let mut distillation = PolicyDistillation::new();
+    distillation.set_rules(vec![zeta::policy::PolicyRule {
+        resource_type: "salience".to_string(),
+        required_plan: "basic".to_string(),
+        allow: true,
+    }]);
+    distillation.set_student_id(user_id.clone());
+    distillation.set_teacher_id("opa-teacher".to_string());
+    log::info!("Distilled salience policy: {:?}", distillation);
+
+    Ok(HttpResponse::Ok().json(SalienceResponse { salient_phrases, upgrade_prompt }))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    HttpServer::new(|| {
+        App::new()
+            .service(web::resource("/salience").to(process_salience))
+    })
+    .bind(("0.0.0.0", 8083))?
+    .workers(2)
+    .run()
+    .await
+}
 
 // ---- Core Data Structures ----
 
@@ -249,5 +330,81 @@ impl SalienceQuantizer {
 
         let (results, _tableau) = self.quantize_tokens(token_features, theory_key, bump);
         Ok(results)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QuantizationResult {
+    token_id: u32,
+    precision: String,
+    salience_score: f32,
+    row: usize,
+    role: String,
+    role_confidence: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct YoungTableau {
+    rows: Vec<Vec<QuantizationResult>>,
+    dimensions: (usize, usize),
+    threshold: f32,
+}
+
+impl YoungTableau {
+    pub fn new(rows: usize, threshold: f32) -> Self {
+        YoungTableau {
+            rows: vec![Vec::with_capacity(10); rows],
+            dimensions: (rows, 10),
+            threshold,
+        }
+    }
+
+    pub fn insert(&mut self, result: QuantizationResult) {
+        if result.row < self.dimensions.0 {
+            self.rows[result.row].push(result);
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Frame<'a> {
+    tokens: &'a [TokenFeatures],
+    aggregated_salience: f32,
+    frame_id: u32,
+}
+
+
+impl<'a> Frame<'a> {
+    pub fn new(frame_id: u32, tokens: &'a [TokenFeatures]) -> Self {
+        Frame {
+            tokens,
+            aggregated_salience: 0.0,
+            frame_id,
+        }
+    }
+
+    pub fn compute_salience(&mut self, threshold: f32, bump: &Bump) {
+        let normal = Normal::new(0.0, 1.0).unwrap(); // Gaussian with mean=0, std=1
+        let mut weights = bumpalo::vec![in bump; 0.0; self.tokens.len()];
+        
+        // Compute Gaussian weights based on token position
+        for (i, weight) in weights.iter_mut().enumerate() {
+            let position = i as f32 / self.tokens.len() as f32; // Normalize position
+            *weight = normal.pdf(position);
+        }
+
+        // Normalize weights to sum to 1
+        let weight_sum: f32 = weights.iter().sum();
+        if weight_sum > 0.0 {
+            weights.iter_mut().for_each(|w| *w /= weight_sum);
+        }
+
+        // Compute weighted salience
+        self.aggregated_salience = self.tokens.iter()
+            .zip(weights.iter())
+            .filter(|(t, _)| t.frequency >= threshold)
+            .map(|(t, w)| w * t.frequency * t.sentiment_score * t.context_relevance)
+            .sum();
     }
 }

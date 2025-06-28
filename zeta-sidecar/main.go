@@ -5,11 +5,9 @@ import (
 	"log"
 	"net"
 
-	"zeta-sidecar/dsl"
-	pb "zeta-sidecar/proto"
-
-	"github.com/apache/arrow/go/v12/parquet/file"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx"
+	pb "github.com/zetareticula/zeta-reticula/zeta-sidecar/" // Adjust the import path as necessary
+	"github.com/zetareticula/zeta-sidecar/dsl"
 	"google.golang.org/grpc"
 )
 
@@ -18,9 +16,17 @@ const (
 	neonURL     = "postgres://user:password@ep-cool-name-123456.us-east-2.neon.tech/dbname?sslmode=require"
 )
 
+// Package main implements a gRPC server that provides caching and synchronization
+// functionality for vector data and quantized layers. It supports in-memory caching,
+// Parquet file storage, and synchronization with a Neon PostgreSQL database.
+// It uses a DSL schema to define vector and layer structures, allowing for flexible
+// configuration and extensibility. The server handles requests for cached data,
+// updates to the cache, and synchronization with the database. The schema can be
+// loaded from a JSON file, enabling easy modifications and additions of new vector types
+
 type server struct {
-	pb.UnimplementedSidecarServiceServer
-	cache map[string][]byte
+	pb.SidecarServiceServer
+	cache map[string][]byte // In-memory cache for vector data
 }
 
 func (s *server) GetCachedData(ctx context.Context, req *pb.CacheRequest) (*pb.CacheResponse, error) {

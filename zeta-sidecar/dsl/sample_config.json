@@ -14,7 +14,22 @@
         "vectors": ["vec_001"]
       }
     ],
-    "defaults": {
+    "defaults": [
+      {
       "vector_data": [0.0, 0.0, 0.0]
     }
+  ],
+    "operations": [
+      {
+        "id": "op_001",
+        "type": "vector_addition",
+        "input_vectors": ["vec_001"],
+        "output_vector": "vec_002"
+      }
+    ]
+
+    
   }
+
+  
+    
