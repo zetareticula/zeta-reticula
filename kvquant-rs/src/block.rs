@@ -1,54 +1,87 @@
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
-use std::vec::Vec;
 use std::sync::Arc;
 use dashmap::DashMap;
-use std::sync::Mutex;
-use std::sync::RwLock;
-use dashmap::mapref::entry::Entry;
-use rand::Rng;
-use rand_distr::{Distribution, Normal};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::AtomicI32;
-use crate::tableaux::YoungTableau;
-use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
-use crate::role_inference::RoleTheory;
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
-use crate::quantizer::KVQuantConfig;
-use crate::spot::SpotManager;
-use crate::block::{DataBlock, BlockState};
-use crate::quantizer::KVQuantizer;
 
+// Define basic types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BlockState {
+    Free,
+    Used,
+    Invalid,
+}
 
-// KVQuantizer is the main structure for handling key-value quantization
-// It manages data blocks, role inference, and the mesolimbic system for salience computation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PrecisionLevel {
+    Bit16,
+    Bit32,
+}
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct KVQuantConfig {
+    pub block_size: usize,
+    pub precision: PrecisionLevel,
+}
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DataBlock {
+    pub id: usize,
+    pub state: BlockState,
+    pub data: Vec<u8>,
+    pub size: usize,
+    pub capacity: usize,
+}
 
+impl DataBlock {
+    pub fn new(id: usize, capacity: usize) -> Self {
+        Self {
+            id,
+            state: BlockState::Free,
+            data: vec![0; capacity],
+            size: 0,
+            capacity,
+        }
+    }
+}
 
-#[derive(Serialize, Deserialize)]
+// Placeholder types for external dependencies
+pub type RoleInferer = ();
+pub type MesolimbicSystem = ();
+
+/// KVQuantizer is the main structure for handling key-value quantization
+#[derive(Clone)]
 pub struct KVQuantizer {
     pub config: KVQuantConfig,
-    pub data_blocks: DashMap<usize, DataBlock>, // Concurrent access to data blocks
-    pub role_inferer: Arc<RoleInferer>,
-    pub mesolimbic_system: Arc<MesolimbicSystem>,
+    pub data_blocks: DashMap<usize, DataBlock>,
+    role_inferer: Arc<RoleInferer>,
+    mesolimbic_system: Arc<MesolimbicSystem>,
 }
 
 impl KVQuantizer {
+    /// Create a new KVQuantizer with the given configuration
     pub fn new(config: KVQuantConfig) -> Self {
-        let role_inferer = Arc::new(RoleInferer::new(10, 5)); // 10 outer, 5 inner iterations
-        let mesolimbic_system = Arc::new(MesolimbicSystem::new());
-        KVQuantizer {
+        Self {
             config,
             data_blocks: DashMap::new(),
-            role_inferer,
-            mesolimbic_system,
+            role_inferer: Arc::new(()),
+            mesolimbic_system: Arc::new(()),
         }
     }
+    
+    /// Allocate a new data block
+    pub fn allocate_block(&self, id: usize) -> DataBlock {
+        DataBlock::new(id, self.config.block_size)
+    }
+    
+    /// Get a reference to a data block by ID
+    pub fn get_block(&self, id: usize) -> Option<DataBlock> {
+        self.data_blocks.get(&id).map(|entry| entry.clone())
+    }
+    
+    /// Insert or update a data block
+    pub fn insert_block(&self, block: DataBlock) {
+        self.data_blocks.insert(block.id, block);
+    }
+}
 
     pub fn quantize(&self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) -> Option<QuantizationResult> {
         let block_id = (token_id as usize) % self.config.block_size;
@@ -96,6 +129,7 @@ pub enum BlockState {
 }
 
 #[derive(Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct DataBlock {
     pub id: usize,
     pub state: BlockState,

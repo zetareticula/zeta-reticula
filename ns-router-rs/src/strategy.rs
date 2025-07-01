@@ -1,140 +1,160 @@
-use crate::{ModelConfig, KVCacheConfig, PrecisionLevel};
-use rayon::prelude::*;
-use crate::symbolic::SymbolicReasoner;
+//! # Strategy Selection Module
+//!
+//! This module provides functionality for selecting the optimal execution strategy
+//! based on the context analysis of an inference request. It determines the best
+//! model configuration, execution strategy, and KV cache settings for a given input.
+
 use serde::{Serialize, Deserialize};
-use crate::context::{NSContextAnalysis, SalienceResult};
+use crate::context::NSContextAnalysis;
+use shared::PrecisionLevel;
 
-
-#[derive(Serialize, Deserialize)]
+/// Configuration for a model to be used for inference
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ModelConfig {
-    pub size: usize, // Model size in parameters
-    pub precision: Vec<PrecisionLevel>, // Precision levels for each token
+    /// Size of the model in parameters
+    pub size: usize,
+    
+    /// Precision levels for the model
+    pub precision: Vec<PrecisionLevel>,
 }
 
-#[derive(Serialize, Deserialize)]
+/// Configuration for the KV cache
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KVCacheConfig {
-    pub sparsity: f32, // Sparsity level for the cache
-    pub priority_tokens: Vec<u32>, // Tokens prioritized in the cache
-    pub inactive_neurons: Vec<usize>, // Neurons that are inactive
-    pub re_rank_accuracy: f32, // Accuracy improvement from re-ranking
+    /// Sparsity level (0.0 = dense, 1.0 = fully sparse)
+    pub sparsity: f32,
+    
+    /// Tokens that should be prioritized in the cache
+    pub priority_tokens: Vec<u32>,
 }
 
-
-#[derive(Serialize, Deserialize)]
+/// Strategy for executing model inference
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum ExecutionStrategy {
+    /// Run inference locally
     Local,
+    
+    /// Run inference in a federated manner
     Federated,
+    
+    /// Distribute inference across multiple nodes
     Distributed,
 }
 
-pub struct NSStrategySelector {
-    reasoner: SymbolicReasoner,
-}
+/// Selects the optimal execution strategy based on context analysis
+#[derive(Debug, Clone)]
+pub struct NSStrategySelector;
 
 impl NSStrategySelector {
+    /// Create a new strategy selector
     pub fn new() -> Self {
-        NSStrategySelector {
-            reasoner: SymbolicReasoner::new(),
-        }
+        NSStrategySelector
     }
 
-    pub fn select_strategy(&self, context: &NSContextAnalysis) -> (ModelConfig, ExecutionStrategy, KVCacheConfig, Vec<String>) {
-        let symbolic_rules = self.reasoner.apply_constraints(&context.symbolic_constraints, &context.salience_profile);
-
-        let sparsity_threshold = 0.5;
-        let priority_tokens: Vec<u32> = context.salience_profile.iter()
-            .filter(|r| r.salience_score > sparsity_threshold)
-            .map(|r| r.token_id)
-            .collect();
-
-        let inactive_neurons: Vec<usize> = context.salience_profile.iter()
-            .enumerate()
-            .filter(|(_, r)| r.salience_score < 0.3)
-            .map(|(i, _)| i)
-            .collect();
-
-        // Mock re-ranking feedback
-        let re_rank_accuracy_improvement = 0.05; // Example feedback
-
-        rayon::scope(|s| {
-            let (model_config, strategy, kv_cache) = rayon::join(
-                || Self::choose_model_config(context, &symbolic_rules),
-                || Self::choose_execution_strategy(context),
-                || Self::choose_kv_cache_config(context, &symbolic_rules, priority_tokens, inactive_neurons, re_rank_accuracy_improvement),
-            );
-
-            (model_config, strategy, kv_cache, symbolic_rules)
-        })
-    }
-
-    fn choose_model_config(context: &NSContextAnalysis, rules: &[String]) -> ModelConfig {
-        let size = if context.theory_complexity > 0.7 { 7_000_000_000 } else { 3_000_000_000 };
-        let mut precision = context.salience_profile.iter()
-            .map(|r| r.precision.clone())
-            .collect::<Vec<_>>();
-
-        for (i, result) in context.salience_profile.iter().enumerate() {
-            if result.role == "negation" && rules.contains(&"negations require Bit16 precision".to_string()) {
-                precision[i] = PrecisionLevel::Bit16;
-            }
-        }
-
-        ModelConfig { size, precision }
-    }
-
-    fn choose_execution_strategy(context: &NSContextAnalysis) -> ExecutionStrategy {
-        if context.token_count > 1000 { ExecutionStrategy::Distributed } else { ExecutionStrategy::Local }
-    }
-
-    fn choose_kv_cache_config(context: &NSContextAnalysis, rules: &[String], priority_tokens: Vec<u32>, inactive_neurons: Vec<usize>, re_rank_accuracy: f32) -> KVCacheConfig {
-        let sparsity = if re_rank_accuracy > 0.01 { 0.3 } else { 0.7 }; // Adjust sparsity based on feedback
-        let mut final_priority_tokens = priority_tokens;
-
-        if rules.contains(&"subjects > modifiers in salience".to_string()) {
-            final_priority_tokens.extend(context.salience_profile.iter()
-                .filter(|r| r.role == "subject")
-                .map(|r| r.token_id));
-            final_priority_tokens.sort();
-            final_priority_tokens.dedup();
-        }
-
-        KVCacheConfig {
-            sparsity,
-            priority_tokens: final_priority_tokens,
-            inactive_neurons,
-            re_rank_accuracy,
-        }
-    }
-}
-
-// ---- Context Analysis ----
-impl NSContextAnalysis {
-    pub fn new(token_count: usize, theory_complexity: f32, symbolic_constraints: Vec<String>, salience_profile: Vec<SalienceResult>) -> Self {
-        NSContextAnalysis {
-            token_count,
-            theory_complexity,
-            symbolic_constraints,
-            salience_profile,
-        }
-    }
-}
-
-// ---- Salience Result ----
-impl SalienceResult {
-    pub fn new(token_id: u32, salience_score: f32, role: String, precision: PrecisionLevel) -> Self {
-        SalienceResult {
-            token_id,
-            salience_score,
-            role,
+    /// Select the best strategy based on context analysis
+    /// 
+    /// # Arguments
+    /// * `context` - The analyzed context of the inference request
+    /// 
+    /// # Returns
+    /// A tuple containing:
+    /// 1. The selected model configuration
+    /// 2. The execution strategy
+    /// 3. The KV cache configuration
+    /// 4. Any symbolic rules to apply
+    pub fn select_strategy(
+        &self, 
+        context: &NSContextAnalysis
+    ) -> (ModelConfig, ExecutionStrategy, KVCacheConfig, Vec<String>) {
+        // Simple strategy selection based on input length and tokens
+        let input_len = context.token_features.len();
+        
+        // Count subjects and modifiers
+        let subject_count = context.token_features.iter()
+            .filter(|t| t.role == "subject")
+            .count();
+        
+        // Choose model size based on input length
+        let model_size = match input_len {
+            0..=10 => 100_000_000,  // 100M parameters
+            11..=50 => 500_000_000,  // 500M parameters
+            _ => 1_000_000_000,      // 1B parameters
+        };
+        
+        // Choose precision based on subject count
+        let precision = if subject_count > 2 {
+            vec![PrecisionLevel::Bit16]
+        } else {
+            vec![PrecisionLevel::Bit32]
+        };
+        
+        // Create model config
+        let model_config = ModelConfig {
+            size: model_size,
             precision,
-        }
+        };
+        
+        // Simple execution strategy based on input length
+        let execution_strategy = match input_len {
+            0..=20 => ExecutionStrategy::Local,
+            21..=100 => ExecutionStrategy::Federated,
+            _ => ExecutionStrategy::Distributed,
+        };
+        
+        // Simple KV cache config
+        let kv_cache_config = KVCacheConfig {
+            sparsity: 0.5,
+            priority_tokens: vec![0, 1],  // BOS and EOS tokens
+        };
+        
+        // No symbolic rules for now
+        let symbolic_rules = vec![];
+        
+        (model_config, execution_strategy, kv_cache_config, symbolic_rules)
     }
 }
 
-// ---- Precision Level ----
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
-pub enum PrecisionLevel {
-    Bit4,
-    Bit8,
-    Bit16,
+impl Default for NSStrategySelector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TokenFeatures;
+
+    #[test]
+    fn test_strategy_selection() {
+        let selector = NSStrategySelector::new();
+        let context = NSContextAnalysis {
+            input: "test input".to_string(),
+            token_features: vec![
+                TokenFeatures {
+                    token_id: 1,
+                    frequency: 0.5,
+                    sentiment_score: 0.0,
+                    context_relevance: 1.0,
+                    role: "subject".to_string(),
+                },
+                TokenFeatures {
+                    token_id: 2,
+                    frequency: 0.5,
+                    sentiment_score: 0.0,
+                    context_relevance: 1.0,
+                    role: "modifier".to_string(),
+                },
+            ],
+            token_count: 2,
+            salience_profile: vec![],
+            theory_complexity: 0.0,
+            symbolic_constraints: vec![],
+        };
+
+        let (model_config, strategy, _, _) = selector.select_strategy(&context);
+        assert!(model_config.size > 0);
+        assert!(!model_config.precision.is_empty());
+        assert!(matches!(strategy, ExecutionStrategy::Local));
+    }
 }

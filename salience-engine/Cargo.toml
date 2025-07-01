@@ -9,7 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
-llm-rs = { path = "../llm-rs", features = ["wasm"] }
+llm-rs = { path = "../llm-rs", features = ["wasm"], optional = true }
 ns-router-rs = { path = "../ns-router-rs" }
 clap = { version = "4.5", features = ["derive"] }
 log = "0.4"

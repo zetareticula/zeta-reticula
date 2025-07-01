@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared" }
-ns-router-rs = { path = "../ns-router-rs" }
+ns-router-rs = { path = "../ns-router-rs", optional = true }
 kvquant-rs = { path = "../kvquant-rs" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -19,6 +19,7 @@ wasm-bindgen-futures = { version = "0.4.37", optional = true }
 js-sys = { version = "0.3.64", optional = true }
 actix-web = { version = "4.11", optional = true }
 actix-multipart = { version = "0.6", optional = true }
+
 
 [profile.release]
 opt-level = 3

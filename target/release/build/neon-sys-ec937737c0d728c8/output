@@ -1,0 +1,36 @@
+Skipping node-gyp installation as part of npm install.
+cargo:node_arch=arm
+OUT_DIR = Some(/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/release/build/neon-sys-ec937737c0d728c8/out)
+TARGET = Some(aarch64-apple-darwin)
+HOST = Some(aarch64-apple-darwin)
+cargo:rerun-if-env-changed=AR_aarch64-apple-darwin
+AR_aarch64-apple-darwin = None
+cargo:rerun-if-env-changed=AR_aarch64_apple_darwin
+AR_aarch64_apple_darwin = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_aarch64_apple_darwin
+ARFLAGS_aarch64_apple_darwin = None
+cargo:rerun-if-env-changed=ARFLAGS_aarch64-apple-darwin
+ARFLAGS_aarch64-apple-darwin = None
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+cargo:rustc-link-lib=static=neon
+cargo:rustc-link-search=native=/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/release/build/neon-sys-ec937737c0d728c8/out
+cargo:rerun-if-env-changed=CXXSTDLIB_aarch64-apple-darwin
+CXXSTDLIB_aarch64-apple-darwin = None
+cargo:rerun-if-env-changed=CXXSTDLIB_aarch64_apple_darwin
+CXXSTDLIB_aarch64_apple_darwin = None
+cargo:rerun-if-env-changed=HOST_CXXSTDLIB
+HOST_CXXSTDLIB = None
+cargo:rerun-if-env-changed=CXXSTDLIB
+CXXSTDLIB = None
+cargo:rustc-link-lib=c++
+cargo:rerun-if-env-changed=npm_config_target
+cargo:rerun-if-env-changed=npm_config_arch
+cargo:rerun-if-env-changed=npm_config_target_arch

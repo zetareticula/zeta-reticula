@@ -86,10 +86,25 @@ pub mod block;
 pub mod spot;
 pub mod kv_cache;
 
-#[derive(Serialize, Deserialize)]
+/// Configuration for the KVQuant system
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KVQuantConfig {
-    pub block_size: usize,  // Tokens per block
-    pub spot_capacity: usize,  // Blocks per spot
+    /// Maximum number of spots in the cache
+    pub spot_capacity: usize,
+    /// Size of each block in the cache
+    pub block_size: usize,
+    /// Threshold for salience score to consider a token valid
+    pub salience_threshold: f32,
+}
+
+impl Default for KVQuantConfig {
+    fn default() -> Self {
+        Self {
+            spot_capacity: 1000,
+            block_size: 1024,
+            salience_threshold: 0.7,
+        }
+    }
 }
 
 pub fn initialize_kv_cache(config: KVQuantConfig) -> kv_cache::LogStructuredKVCache {

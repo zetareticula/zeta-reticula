@@ -2,7 +2,6 @@ use crate::spot::SpotManager;
 use serde::{Serialize, Deserialize};
 use dashmap::DashMap;
 use std::sync::Mutex;
-use crate::block::KVQuantConfig;
 use std::sync::Arc;
 use std::collections::HashMap;
 use rand::Rng;
@@ -10,14 +9,7 @@ use std::sync::RwLock;
 use crate::block::{DataBlock, BlockState};
 use dashmap::mapref::entry::Entry;
 use rand_distr::{Distribution, Normal};
-
-// KVQuantConfig defines the configuration for the KVQuant system
-#[derive(Serialize, Deserialize, Clone)]
-pub struct KVQuantConfig {
-    pub spot_capacity: usize, // Maximum number of spots
-    pub block_size: usize,    // Size of each block in the cache
-    pub salience_threshold: f32, // Threshold for salience score to consider a token valid
-}
+use crate::KVQuantConfig;
 
 // LogStructuredKVCache implements a log-structured key-value cache
 #[derive(Serialize, Deserialize)]

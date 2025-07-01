@@ -1,0 +1,43 @@
+[package]
+name = "ns-router-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+salience-engine = { path = "../salience-engine", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+actix-web = { version = "4.11", optional = true }  # Web server framework
+actix-multipart = { version = "0.6", optional = true }  # For handling multipart form data
+tokio = { version = "1.32", features = ["full"], optional = true }  # Async runtime
+rayon = { version = "1.8", optional = true }  # For parallel processing
+log = { version = "0.4", optional = true }
+egg = { version = "0.9", optional = true }
+ndarray = { version = "0.15", optional = true }  # For numerical operations
+half = { version = "2.2", optional = true }  # For half-precision floating point support
+openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
+rustc-hash = { version = "1.1", optional = true }  # For fast hash maps
+argmin = { version = "0.8", optional = true }  # For optimization algorithms
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
+reqwest = { version = "0.11", features = ["json"] }  # HTTP client
+wasm-bindgen = { version = "0.2.87", optional = true }
+wasm-bindgen-futures = { version = "0.4.37", optional = true }
+js-sys = { version = "0.3.64", optional = true }
+
+[features]
+default = ["server"]
+server = ["actix-web", "actix-multipart", "tokio", "rayon", "log", "egg", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "salience-engine", "salience-engine/wasm", "ndarray", "half"]
+python = ["pyo3"]
+lua = ["mlua"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3

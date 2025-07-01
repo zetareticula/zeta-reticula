@@ -1,0 +1,11 @@
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libserde_qs-cf9bb81809ba9559.rmeta: /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/mod.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/parse.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/ser.rs
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libserde_qs-cf9bb81809ba9559.rlib: /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/mod.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/parse.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/ser.rs
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/serde_qs-cf9bb81809ba9559.d: /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/mod.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/parse.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/ser.rs
+
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/lib.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/mod.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/de/parse.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/error.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde_qs-0.9.2/src/ser.rs:

@@ -1,49 +1,68 @@
-use crate::strategy::{ModelConfig, KVCacheConfig};
-use crate::context::NSContextAnalysis;
-use crate::router::NSRouter;
-use shared::PrecisionLevel;
+//! # NS Router
+//! 
+//! A neurosymbolic router for inference requests that combines neural and symbolic approaches
+//! to optimize model selection and execution strategy.
 
-use serde::{Serialize, Deserialize};
+#![warn(missing_docs)]
+
 use log;
-use bumpalo::Bump;
-use rayon::prelude::*;
+use serde::{Serialize, Deserialize};
 
-pub mod inference;
-pub mod model;
+// Re-export commonly used types
+pub use shared::{QuantizationResult, PrecisionLevel};
+
+// Export modules
+pub mod context;
 pub mod router;
 pub mod strategy;
-pub mod context;
-pub mod symbolic;
 
-pub mod fusion_anns;
+// Re-export commonly used items
+pub use context::{NSContextAnalysis, NSContextAnalyzer};
+pub use router::{NSRouter, TokenFeatures};
+pub use strategy::{ExecutionStrategy, ModelConfig, KVCacheConfig};
 
 /// Neurosymbolic Routing Plan
-/// This module defines the routing plan for neurosymbolic inference, 
 /// 
-#[derive(Serialize, Deserialize)]
+/// Defines how an inference request should be routed, including model configuration,
+/// execution strategy, and KV cache settings.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NSRoutingPlan {
+    /// Configuration for the model to use
     pub model_config: ModelConfig,
+    
+    /// Strategy for executing the model
     pub execution_strategy: String,
+    
+    /// Configuration for the KV cache
     pub kv_cache_config: KVCacheConfig,
-    pub symbolic_rules: Vec<String>,  // Symbolic constraints applied
+    
+    /// Symbolic rules to apply during inference
+    pub symbolic_rules: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ModelConfig {
-    pub size: usize,
-    pub precision: Vec<PrecisionLevel>,
+/// Initialize a new NSRouter instance
+/// 
+/// # Returns
+/// A new instance of `NSRouter` ready to handle routing requests.
+///
+/// # Examples
+/// ```
+/// use ns_router_rs::initialize_ns_router;
+///
+/// let router = initialize_ns_router();
+/// ```
+pub fn initialize_ns_router() -> NSRouter {
+    log::info!("Initializing NS Router");
+    NSRouter::new()
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct KVCacheConfig {
-    pub sparsity: f32,
-    pub priority_tokens: Vec<u32>,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-// Re-export the PrecisionLevel from the shared crate
-pub use shared::PrecisionLevel;
-
-pub fn initialize_ns_router() -> router::NSRouter {
-    log::info!("Initializing ns-router-rs with neurosymbolic capabilities");
-    router::NSRouter::new()
+    #[test]
+    fn test_router_initialization() {
+        let router = initialize_ns_router();
+        assert!(router.route_inference("test input", "user1").is_ok());
+    }
 }

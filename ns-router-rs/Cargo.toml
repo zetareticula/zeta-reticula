@@ -2,17 +2,31 @@
 name = "ns-router-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "A neurosymbolic router for inference requests that combines neural and symbolic approaches"
+repository = "https://github.com/yourusername/ns-router-rs"
+homepage = "https://github.com/yourusername/ns-router-rs"
+documentation = "https://docs.rs/ns-router-rs"
+keywords = ["neurosymbolic", "router", "inference", "nlp"]
+categories = ["algorithms", "api-bindings", "artificial-intelligence"]
 
 [dependencies]
+# Core dependencies
 shared = { path = "../shared" }
-salience-engine = { path = "../salience-engine", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-actix-web = { version = "4.11", optional = true }  # Web server framework
+thiserror = "1.0"  # For better error types
+log = "0.4"  # Required for logging
+
+# Web server dependencies (optional)
+actix-web = { version = "4.11", optional = true, features = ["macros"] }  # Web server framework
 actix-multipart = { version = "0.6", optional = true }  # For handling multipart form data
+
+# Async runtime (optional)
 tokio = { version = "1.32", features = ["full"], optional = true }  # Async runtime
+
+# Parallel processing (optional)
 rayon = { version = "1.8", optional = true }  # For parallel processing
-log = { version = "0.4", optional = true }
 egg = { version = "0.9", optional = true }
 ndarray = { version = "0.15", optional = true }  # For numerical operations
 half = { version = "2.2", optional = true }  # For half-precision floating point support
@@ -26,10 +40,16 @@ wasm-bindgen = { version = "0.2.87", optional = true }
 wasm-bindgen-futures = { version = "0.4.37", optional = true }
 js-sys = { version = "0.3.64", optional = true }
 
+[dev-dependencies]
+pretty_assertions = "1.4"
+rstest = "0.18"  # For parameterized tests
+tempfile = "3.3"  # For tests that need temporary files
+criterion = { version = "0.5", features = ["html_reports"] }  # For benchmarking
+
 [features]
 default = ["server"]
-server = ["actix-web", "actix-multipart", "tokio", "rayon", "log", "egg", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "salience-engine", "salience-engine/wasm", "ndarray", "half"]
+server = ["actix-web", "actix-multipart", "tokio", "rayon", "egg", "ndarray", "half", "openblas-src", "argmin"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "ndarray", "half"]
 python = ["pyo3"]
 lua = ["mlua"]
 
