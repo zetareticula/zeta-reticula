@@ -4,18 +4,27 @@ version = "0.1.2"
 edition = "2021"
 
 [dependencies]
-salience-engine = { path = "../salience-engine" }
+shared = { path = "../shared" }
 ns-router-rs = { path = "../ns-router-rs" }
 kvquant-rs = { path = "../kvquant-rs" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rayon = "1.8"
-ndarray = "0.15"
-log = "0.4"
-dashmap = "5.5"
-tokio = { version = "1.0", features = ["fs", "io-util"] }
+rayon = { version = "1.8", optional = true }
+ndarray = { version = "0.15", optional = true }
+log = { version = "0.4", optional = true }
+dashmap = { version = "5.5", optional = true }
+tokio = { version = "1.0", features = ["fs", "io-util"], optional = true }
+wasm-bindgen = { version = "0.2.87", optional = true }
+wasm-bindgen-futures = { version = "0.4.37", optional = true }
+js-sys = { version = "0.3.64", optional = true }
+actix-web = { version = "4.11", optional = true }
+actix-multipart = { version = "0.6", optional = true }
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[features]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys"]
+server = ["actix-web", "actix-multipart", "tokio", "rayon", "log", "dashmap", "ndarray"]

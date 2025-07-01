@@ -1,11 +1,11 @@
 use crate::{NSRoutingPlan, ModelConfig, KVCacheConfig, PrecisionLevel, context::NSContextAnalyzer, strategy::NSStrategySelector};
-use salience_engine::quantizer::{SalienceQuantizer, TokenFeatures};
+use crate::context::NSContextAnalysis;
 use llm_rs::InferenceEngine;
-use crate::context::{NSContextAnalysis, SalienceResult};
 use serde::{Serialize, Deserialize};
 use crate::symbolic::SymbolicReasoner;
 use log;
 use rayon::prelude::*;
+use shared::QuantizationResult;
 
 #[derive(Serialize, Deserialize)]
 pub struct NSRoutingPlan {
@@ -27,7 +27,8 @@ pub struct TokenFeatures {
 pub struct NSRouter {
     analyzer: NSContextAnalyzer,
     selector: NSStrategySelector,
-    quantizer: SalienceQuantizer,
+    // Placeholder for future functionality
+    _placeholder: (),
 }
 
 impl NSRouter {
@@ -35,7 +36,7 @@ impl NSRouter {
         NSRouter {
             analyzer: NSContextAnalyzer::new(),
             selector: NSStrategySelector::new(),
-            quantizer: SalienceQuantizer::new(0.7),
+            _placeholder: (),
         }
     }
 
@@ -90,8 +91,10 @@ pub mod context {
 
         pub fn analyze(&self, input: &str, token_features: Vec<TokenFeatures>) -> NSContextAnalysis {
             NSContextAnalysis {
-                input: input.to_string(),
-                token_features,
+                token_count: input.split_whitespace().count(),
+                salience_profile: vec![QuantizationResult::new(0.0, 0.0, 1.0, None, PrecisionLevel::Bit32)],
+                theory_complexity: 0.0,   // Placeholder for actual complexity analysis
+                symbolic_constraints: vec![],
             }
         }
     }
@@ -150,7 +153,7 @@ pub mod symbolic {
             SymbolicReasoner
         }
 
-        pub fn apply_constraints(&self, constraints: &[String], salience_profile: &[SalienceResult]) -> Vec<String> {
+        pub fn apply_constraints(&self, constraints: &[String], salience_profile: &[QuantizationResult]) -> Vec<String> {
             // Mock symbolic reasoning logic
             constraints.iter().filter(|c| c.contains("subjects")).cloned().collect()
         }

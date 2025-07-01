@@ -18,6 +18,7 @@ openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS suppor
 rustc-hash = "1.1"  # For fast hash maps
 argmin = "0.8"  # For optimization algorithms
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
+mlua = { version = "0.9", optional = true }  # For Lua bindings
 
 [profile.release]
 opt-level = 3
@@ -25,10 +26,8 @@ lto = true
 codegen-units = 1
 
 [features]
-default = ["server"]
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
-python = ["pyo3", "pyo3-build-config"]
+default = []
+python = ["pyo3"]
 lua = ["mlua"]
 
 [dev-dependencies]
@@ -42,31 +41,3 @@ pyo3-build-config = { version = "0.19", optional = true }
 [package.metadata]
 description = "Zeta Reticula: A Rust-based AI framework for building and deploying machine learning models."
 license = "Apache-2.0"
-
-[workspace]
-members = [
-    "api",
-    "salience-engine",
-    "llm-rs",
-    "ns-router-rs",
-    "kvquant-rs",
-    "quantize-cli",
-    "zeta-reticula",  # This is the main crate for the Zeta Reticula project
-]
-
-[patch.crates-io]
-# This section can be used to override dependencies with local paths or specific versions
-# For example, if you want to use a local version of `llm-rs`:
-llm-rs = { path = "../llm-rs" }
-# Similarly, you can patch other dependencies if needed
-# For example, if you want to use a local version of `ns-router-rs`:
-ns-router-rs = { path = "../ns-router-rs" }
-# Similarly, you can patch other dependencies if needed
-# For example, if you want to use a local version of `salience-engine`:
-salience-engine = { path = "../salience-engine" }
-# If you have a local version of `kvquant-rs`, you can patch it as well:
-kvquant-rs = { path = "../kvquant-rs" }
-# If you have a local version of `zeta-reticula`, you can patch it as well:
-zeta-reticula = { path = "../zeta-reticula" }
-
-[

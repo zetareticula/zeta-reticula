@@ -1,4 +1,4 @@
-use salience_engine::quantizer::{PrecisionLevel, QuantizationResult};
+use shared::{PrecisionLevel, QuantizationResult};
 use serde::{Serialize, Deserialize};
 use ndarray::{Array2, Array1, Axis};
 use rayon::prelude::*;

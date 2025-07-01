@@ -1,4 +1,4 @@
-use salience_engine::quantizer::{QuantizationResult, PrecisionLevel};
+use shared::{QuantizationResult, PrecisionLevel};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]

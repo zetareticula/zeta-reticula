@@ -1,0 +1,13 @@
+[package]
+name = "zeta-protos"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "zeta"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+prost = "0.12"
+prost-types = "0.12"
+prost-build = "0.12"

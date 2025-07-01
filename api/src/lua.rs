@@ -8,6 +8,7 @@ use half::f16;
 use std::sync::{Arc, RwLock};
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
+use actix_web::web;
 
 /// Creates a Lua module for Zeta Reticula with inference and quantization handlers
 /// # Arguments:
@@ -36,12 +37,12 @@ pub fn create_lua_module(lua: &mlua::Lua) -> mlua::Result<mlua::Value> {
         if let Err(e) = req.validate() {
             return Err(mlua::Error::RuntimeError(e.to_string()));
         }
-        let resp = handler.get::<_, InferenceHandler>("handler")?.infer(&web::Json(req)).map_err(|e| mlua::Error::RuntimeError(e.to_string()))?;
-        let json = resp.json::<crate::inference_handler::InferenceResponse>().map_err(|e| mlua::Error::RuntimeError(e.to_string()))?;
+        let handler = handler.get::<_, InferenceHandler>("handler")?;
+        let resp = handler.infer(&req).map_err(|e| mlua::Error::RuntimeError(e.to_string()))?;
         Ok(mlua::Value::Table(lua.create_table_from([
-            ("text", mlua::Value::String(lua.create_string(&json.text)?)),
-            ("tokens_processed", mlua::Value::Integer(json.tokens_processed as i64)),
-            ("latency_ms", mlua::Value::Number(json.latency_ms)),
+            ("text", mlua::Value::String(lua.create_string(&resp.text)?)),
+            ("tokens_processed", mlua::Value::Integer(resp.tokens_processed as i64)),
+            ("latency_ms", mlua::Value::Number(resp.latency_ms)),
         ])?))
     })?)?;
 

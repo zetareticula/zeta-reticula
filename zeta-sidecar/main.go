@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/jackc/pgx"
-	pb "github.com/zetareticula/zeta-reticula/zeta-sidecar/" // Adjust the import path as necessary
+	"github.com/jackc/pgx/v5/pgxpool"
+	pb "github.com/zetareticula/zeta-sidecar/pb/proto" // Generated protobuf package
 	"github.com/zetareticula/zeta-sidecar/dsl"
 	"google.golang.org/grpc"
 )
@@ -44,30 +44,34 @@ func (s *server) UpdateCache(ctx context.Context, req *pb.CacheUpdate) (*pb.Upda
 	return &pb.UpdateResponse{Status: "OK"}, nil
 }
 
-func saveToParquet(cache map[string][]byte) {
-	// Simplified Parquet writing (requires schema definition)
-	// In practice, use arrow.Record to build and write Parquet files
-	// This is a mock implementation
-	f, err := file.NewParquetWriter(parquetPath, nil, file.WithCompression(file.CompressionCodec_SNAPPY))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	// Add logic to convert cache to Parquet rows
+// saveToParquet is currently not implemented as it requires additional dependencies
+// and proper schema definition for Parquet files.
+// This function is kept as a placeholder for future implementation.
+var saveToParquet = func(cache map[string][]byte) {
+    log.Println("Parquet export not implemented")
 }
 
 func syncWithNeon(vectorID string, data []byte) {
-	conn, err := pgx.Connect(context.Background(), neonURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+    // Create a connection pool
+    config, err := pgxpool.ParseConfig(neonURL)
+    if err != nil {
+        log.Fatalf("Unable to parse connection config: %v", err)
+    }
+    
+    // Create a connection pool
+    pool, err := pgxpool.NewWithConfig(context.Background(), config)
+    if err != nil {
+        log.Fatalf("Unable to create connection pool: %v", err)
+    }
+    defer pool.Close()
 
-	_, err = conn.Exec(context.Background(), "INSERT INTO cache (vector_id, data) VALUES ($1, $2) ON CONFLICT (vector_id) DO UPDATE SET data = $2", vectorID, data)
-	if err != nil {
-		log.Fatal(err)
-	}
+    // Execute the query
+    _, err = pool.Exec(context.Background(), 
+        "INSERT INTO cache (vector_id, data) VALUES ($1, $2) ON CONFLICT (vector_id) DO UPDATE SET data = $2", 
+        vectorID, data)
+    if err != nil {
+        log.Fatalf("Error executing query: %v", err)
+    }
 }
 
 func main() {

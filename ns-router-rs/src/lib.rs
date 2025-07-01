@@ -1,7 +1,7 @@
-use crate::strategy::{ModelConfig, KVCacheConfig, PrecisionLevel};
-use crate::context::{NSContextAnalysis, SalienceResult};
-use crate::symbolic::SymbolicReasoner;
+use crate::strategy::{ModelConfig, KVCacheConfig};
+use crate::context::NSContextAnalysis;
 use crate::router::NSRouter;
+use shared::PrecisionLevel;
 
 use serde::{Serialize, Deserialize};
 use log;
@@ -40,12 +40,8 @@ pub struct KVCacheConfig {
     pub priority_tokens: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum PrecisionLevel {
-    Bit4,
-    Bit8,
-    Bit16,
-}
+// Re-export the PrecisionLevel from the shared crate
+pub use shared::PrecisionLevel;
 
 pub fn initialize_ns_router() -> router::NSRouter {
     log::info!("Initializing ns-router-rs with neurosymbolic capabilities");

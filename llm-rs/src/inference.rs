@@ -2,8 +2,8 @@ use crate::model::Model;
 use crate::kv_cache::KVCache;
 use crate::fusion_anns::FusionANNS;
 use crate::utils::measure_latency;
-use salience_engine::quantizer::{SalienceQuantizer, QuantizationResult, TokenFeatures, PrecisionLevel};
-use salience_engine::tableaux::YoungTableau;
+use shared::{QuantizationResult, PrecisionLevel};
+use crate::token_features::TokenFeatures;
 use ns_router_rs::{NSRoutingPlan, ModelConfig, KVCacheConfig};
 use agentflow_rs::{initialize_agent_flow, AgentFlowConfig, FederatedANSS, DistributedCache, DistributedIO, FederatedRoleInference};
 use serde::{Serialize, Deserialize};
@@ -23,7 +23,8 @@ pub struct InferenceEngine {
     agent_flow_server: agentflow_rs::server::AgentFlowServer,
     quantization_results: Vec<QuantizationResult>,
     sidecar_client: pb::sidecar_service_client::SidecarServiceClient<Channel>,
-    tableau: YoungTableau,
+    // Placeholder for future tableau functionality
+    _tableau_placeholder: (),
 }
 
 impl InferenceEngine {
@@ -34,7 +35,8 @@ impl InferenceEngine {
         let agent_flow_config = AgentFlowConfig { num_clients: 4, privacy_epsilon: 1.0 };
         let agent_flow_server = initialize_agent_flow(agent_flow_config);
         let sidecar_client = pb::sidecar_service_client::SidecarServiceClient::connect("http://localhost:50051").await.unwrap();
-        let tableau = YoungTableau::new(768, 0.7); // Initial tableau
+        // Placeholder for future tableau functionality
+        let _tableau_placeholder = ();
         InferenceEngine {
             model,
             kv_cache,
@@ -42,7 +44,7 @@ impl InferenceEngine {
             agent_flow_server,
             quantization_results: vec![],
             sidecar_client,
-            tableau,
+            _tableau_placeholder,
         }
     }
 
