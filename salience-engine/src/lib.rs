@@ -1,4 +1,4 @@
-use neon::prelude::*;
+use shared::quantization::{QuantizationResult, PrecisionLevel};
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, RwLock};
 use bumpalo::Bump;

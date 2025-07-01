@@ -17,3 +17,8 @@ WORKDIR /app
 COPY --from=builder /app/zeta-sidecar /usr/local/bin/zeta-sidecar
 
 CMD ["zeta-sidecar"]
+
+EXPOSE 50051
+
+ENTRYPOINT ["/bin/sh", "-c", "zeta-sidecar"]
+

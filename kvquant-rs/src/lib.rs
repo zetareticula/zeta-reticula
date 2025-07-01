@@ -16,6 +16,29 @@ use crate::role_inference::RoleTheory;
 use crate::quantizer::KVQuantConfig;
 use crate::quantizer::KVQuantizer;
 
+mod pb {
+    tonic::include_proto!("sidecar"); // Generated from zeta-sidecar/proto/sidecar.proto
+}
+
+pub struct KVQuantService {
+    if let Some(ref config) = self.config {
+        
+        for (key, value) in config {
+            if key == "block_size" {
+                block_size = value.parse().unwrap();
+            }
+        }
+    }
+    let block_size = 1024;
+    let quantizer = KVQuantizer::new(KVQuantConfig { block_size });
+    let service = KVQuantService { quantizer };
+
+    if let Err(e) = service.start() {
+        log::error!("Failed to start KVQuantService: {}", e);
+    }
+}
+
+
 // KVQuantizer is the main structure for handling key-value quantization
 #[derive(Serialize, Deserialize, Clone)]
 pub struct KVQuantizer {
