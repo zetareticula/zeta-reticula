@@ -15,28 +15,73 @@ use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
 use crate::role_inference::RoleTheory;
 use crate::quantizer::KVQuantConfig;
 use crate::quantizer::KVQuantizer;
+use crate::pb::kv_quant_service_server::KVQuantServiceServer;
+use crate::pb::{KVQuantRequest, KVQuantResponse};
+use tonic::{Request, Response, Status};
+use tonic::transport::Server;
+use dashmap::DashMap;
+use dashmap::mapref::entry::Entry;
+use crate::pb::KVQuantServiceClient;
+
+
+
+// This module provides the main functionality for the KVQuant service
+// It includes the KVQuantizer, KVQuantService, and related configurations
+// It also handles the initialization of various components like KVCache, SpotManager, and BlockManager
+// The KVQuantService is the main entry point for handling requests and managing the quantization process
+
+pub struct KVQuantServiceServerImpl {
+    service: KVQuantService,
+}
+
+impl KVQuantServiceServerImpl {
+    pub fn new(service: KVQuantService) -> Self {
+        KVQuantServiceServerImpl { service }
+    }
+}
+
+
+
+// Ensure the tonic build script is executed
+fn build() {
+    tonic_build::compile_protos("proto/sidecar.proto").unwrap();
+}
+
+tonic_build::compile_protos("proto/sidecar.proto").unwrap(); // Ensure the proto files are compiled
 
 mod pb {
-    tonic::include_proto!("sidecar"); // Generated from zeta-sidecar/proto/sidecar.proto
+    tonic::include_proto!("kvquant"); // The proto package name
+    pub use kv_quant_service_server::KVQuantServiceServer;
+}
+    pub use kv_quant_service_client::KVQuantServiceClient;
+    pub use kv_quant_service::KVQuantService;
 }
 
 pub struct KVQuantService {
-    if let Some(ref config) = self.config {
-        
-        for (key, value) in config {
-            if key == "block_size" {
+    config: Option<HashMap<String, String>>, // Assuming config is a HashMap
+}
+
+impl KVQuantService {
+    pub fn new(config: Option<HashMap<String, String>>) -> Self {
+        let mut block_size = 1024; // Default value
+        if let Some(ref config) = config {
+            if let Some(value) = config.get("block_size") {
                 block_size = value.parse().unwrap();
             }
         }
+        let quantizer = KVQuantizer::new(KVQuantConfig { block_size, spot_capacity: todo!(), salience_threshold: todo!() });
+        KVQuantService { config }
     }
-    let block_size = 1024;
-    let quantizer = KVQuantizer::new(KVQuantConfig { block_size });
-    let service = KVQuantService { quantizer };
 
-    if let Err(e) = service.start() {
-        log::error!("Failed to start KVQuantService: {}", e);
+
+    pub fn run_service(service: KVQuantService) {
+        if let Err(e) = service.start() {
+            log::error!("Failed to start KVQuantService: {}", e);
+        }
     }
 }
+
+
 
 
 // KVQuantizer is the main structure for handling key-value quantization
@@ -86,6 +131,8 @@ pub mod block;
 pub mod spot;
 pub mod kv_cache;
 
+
+
 /// Configuration for the KVQuant system
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KVQuantConfig {
@@ -131,11 +178,47 @@ pub fn initialize_mesolimbic_system() -> Arc<MesolimbicSystem> {
 }
 
 pub fn initialize_role_inferer(outer_iterations: usize, inner_iterations: usize) -> Arc<RoleInferer> {
+
+    if let Some(iterations) = outer_iterations.checked_sub(1) {
+        if iterations == 0 {
+            log::warn!("Outer iterations must be greater than 0, setting to 1");
+            return Arc::new(RoleInferer::new(1, inner_iterations));
+        }
+    } else {
+        log::error!("Invalid outer iterations provided, defaulting to 1");
+        return Arc::new(RoleInferer::new(1, inner_iterations));
+    }
+
+    if let Some(inner_iterations) = inner_iterations.checked_sub(1) {
+        if inner_iterations == 0 {
+            log::warn!("Inner iterations must be greater than 0, setting to 1");
+            return Arc::new(RoleInferer::new(outer_iterations, 1));
+        }
+    } else {
+        log::error!("Invalid inner iterations provided, defaulting to 1");
+        return Arc::new(RoleInferer::new(outer_iterations, 1));
+    }
+
     log::info!("Initializing RoleInferer with outer iterations: {}, inner iterations: {}", outer_iterations, inner_iterations);
+
     Arc::new(RoleInferer::new(outer_iterations, inner_iterations))
 }
 
 pub fn initialize_young_tableau(dimensions: usize, threshold: f32) -> YoungTableau {
+    if let Some(dimensions) = dimensions.checked_sub(1) {
+        if dimensions == 0 {
+            log::warn!("Dimensions must be greater than 0, setting to 1");
+            return YoungTableau::new(1, threshold);
+        }
+    } else {
+        log::error!("Invalid dimensions provided, defaulting to 1");
+        return YoungTableau::new(1, threshold);
+    }
+
+    if threshold < 0.0 || threshold > 1.0 {
+        log::warn!("Threshold must be between 0 and 1, setting to 0.5");
+        return YoungTableau::new(dimensions, 0.5);
+    }
     log::info!("Initializing YoungTableau with dimensions: {}, threshold: {}", dimensions, threshold);
     YoungTableau::new(dimensions, threshold)
 }
@@ -149,5 +232,6 @@ pub fn initialize_quantization_result(token_id: u32, precision: PrecisionLevel, 
         row,
         role,
         role_confidence,
+
     }
 }

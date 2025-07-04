@@ -1,9 +1,49 @@
+mod inference;
+pub mod kv_cache;
+mod fusion_anns;
+
 use std::time::Instant;
 use ndarray::{Array2, ArrayView2};
 use half::f16;
 use serde::{Deserialize, Serialize};
 use log;
 use rayon::prelude::*; // For parallel computation
+use ns_router_rs::NSRoutingPlan;
+// Mock inference output structure
+// This structure represents the output of an inference operation
+// It includes the generated text, number of tokens processed, and latency in milliseconds.
+//
+// The `InferenceOutput` struct is used to encapsulate the results of an inference operation.
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, BufReader};
+use std::io::Error as IoError;
+use std::io::ErrorKind;
+use std::path::PathBuf;
+
+
+
+// InferenceConfig defines the configuration for the inference engine.
+// It includes model dimension, maximum number of neurons, chunk size for processing, and precision level.
+// This configuration is used to initialize the inference engine and control its behavior during inference.
+
+pub fn get_default_inference_config() -> InferenceConfig {
+    InferenceConfig {
+        d_model: 768, // Example dimension
+        max_neurons: 1024, // Example maximum neurons
+        chunk_size: 32 * 1024, // 32KiB chunks
+        precision: "f16".to_string(), // Default precision
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct InferenceConfig {
+    pub d_model: usize, // Model dimension
+    pub max_neurons: usize, // Maximum number of neurons
+    pub chunk_size: usize, // Chunk size for processing
+    pub precision: String, // Precision level (e.g., "f16", "f32")
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InferenceOutput {
@@ -115,6 +155,33 @@ impl InferenceEngine {
     }
 }
 
+pub mod mesolimbic_system {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct MesolimbicSystem {
+        pub reward_threshold: f32,
+        pub dopamine_release_rate: f32,
+    }
+
+    impl MesolimbicSystem {
+        pub fn new(reward_threshold: f32, dopamine_release_rate: f32) -> Self {
+            MesolimbicSystem {
+                reward_threshold,
+                dopamine_release_rate,
+            }
+        }
+
+        pub fn process_reward(&self, reward: f32) -> f32 {
+            if reward >= self.reward_threshold {
+                self.dopamine_release_rate * reward
+            } else {
+                0.0
+            }
+        }
+    }
+}
+
 pub mod ns_router_rs {
     use serde::{Deserialize, Serialize};
 
@@ -181,5 +248,37 @@ pub mod quantizer {
         Bit4,
         Bit8,
         Bit16,
+    }
+}
+
+mod pb {
+    pub mod sidecar_service_client {
+        use tonic::transport::Channel;
+
+        #[derive(Clone)]
+        pub struct SidecarServiceClient<T> {
+            inner: T,
+        }
+
+        impl SidecarServiceClient<Channel> {
+            pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+            where
+                D: Into<String>,
+            {
+                let inner = Channel::from_shared(dst.into())?.connect().await?;
+                Ok(SidecarServiceClient { inner })
+            }
+        }
+    }
+}
+
+// Placeholder for future tableau functionality
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tableau {
+    pub data: Vec<u8>, // Placeholder for tableau data
+}
+impl Default for Tableau {
+    fn default() -> Self {
+        Tableau { data: vec![] }
     }
 }

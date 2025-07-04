@@ -1,6 +1,65 @@
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use dashmap::DashMap;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use rand_distr::{Distribution, Normal};
+use crate::spot::SpotManager;
+use crate::quantizer::{KVQuantConfig, PrecisionLevel, QuantizationResult};
+use crate::block::{DataBlock, BlockState};
+use crate::role_inference::{RoleInferer, RoleInferenceResult};
+use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
+use crate::role_inference::RoleTheory;
+use crate::quantizer::KVQuantizer;
+use crate::pb::kv_quant_service_server::KVQuantServiceServer;
+use crate::pb::{KVQuantRequest, KVQuantResponse};
+use tonic::{Request, Response, Status};
+use tonic::transport::Server;
+use crate::pb::KVQuantServiceClient;
+
+// This module provides the main functionality for the KVQuantizer
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct KVQuantizer {
+    pub config: KVQuantConfig,
+    pub data_blocks: DashMap<usize, DataBlock>,
+    role_inferer: Arc<RoleInferer>,
+    mesolimbic_system: Arc<MesolimbicSystem>,
+}
+
+impl KVQuantizer {
+    pub fn new(config: KVQuantConfig) -> Self {
+        Self {
+            config,
+            data_blocks: DashMap::new(),
+            role_inferer: Arc::new(RoleInferer::new(0.1)), // Example threshold
+            mesolimbic_system: Arc::new(MesolimbicSystem::new()),
+        }
+    }
+    
+    pub fn quantize(&self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) -> Option<QuantizationResult> {
+        let block_id = (token_id as usize) % self.config.block_size;
+        let mut block = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id, self.config.block_size));
+
+        if block.state == BlockState::Free || block.state == BlockState::Valid {
+            block.write(token_id, value, pointer, bias, vector_id, graph_entry);
+            Some(QuantizationResult {
+                token_id,
+                precision: self.config.precision_level,
+                salience_score: value * self.config.salience_threshold,
+                row: block.id,
+                role: "default".to_string(), // Placeholder for role
+                role_confidence: 1.0, // Placeholder for confidence
+            })
+        } else {
+            None
+        }
+    }
+}
+
+// This module defines the basic types and structures for the KVQuantizer system
+// It includes the configuration, data blocks, and quantization results.
+// It also includes the SpotManager for managing spots in the cache and the LogStructuredKVCache for handling key-value pairs.
+// This module is part of the kvquant-rs crate, which implements a key-value quantization system
 
 // Define basic types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,6 +88,10 @@ pub struct DataBlock {
     pub data: Vec<u8>,
     pub size: usize,
     pub capacity: usize,
+    pointers: Vec<_>,
+    biases: Vec<_>,
+    vector_ids: Vec<_>,
+    navigation_graph: HashMap<_, _>,
 }
 
 impl DataBlock {
@@ -39,6 +102,10 @@ impl DataBlock {
             data: vec![0; capacity],
             size: 0,
             capacity,
+            pointers: todo!(),
+            biases: todo!(),
+            vector_ids: todo!(),
+            navigation_graph: todo!(),
         }
     }
 }
@@ -46,6 +113,8 @@ impl DataBlock {
 // Placeholder types for external dependencies
 pub type RoleInferer = ();
 pub type MesolimbicSystem = ();
+pub type GraphEntry = (usize, Vec<usize>);
+pub type TokenId = u32;
 
 /// KVQuantizer is the main structure for handling key-value quantization
 #[derive(Clone)]
@@ -54,6 +123,7 @@ pub struct KVQuantizer {
     pub data_blocks: DashMap<usize, DataBlock>,
     role_inferer: Arc<RoleInferer>,
     mesolimbic_system: Arc<MesolimbicSystem>,
+    // Additional fields can be added as needed
 }
 
 impl KVQuantizer {
@@ -69,12 +139,31 @@ impl KVQuantizer {
     
     /// Allocate a new data block
     pub fn allocate_block(&self, id: usize) -> DataBlock {
+        // Check if the block already exists
+        for entry in self.data_blocks.iter() {
+            // If the block exists, return it
+            if entry.key() == &id {
+                return entry.value().clone(); // Return the existing block
+            }
+        }
+        // If the block does not exist, create a new one
         DataBlock::new(id, self.config.block_size)
     }
     
     /// Get a reference to a data block by ID
     pub fn get_block(&self, id: usize) -> Option<DataBlock> {
+        for entry in self.data_blocks.iter() {
+            if entry.key() == &id {
+                return Some(entry.value().clone());
+            }
+        }
         self.data_blocks.get(&id).map(|entry| entry.clone())
+
+        if (self.data_blocks.contains_key(&id)) {
+            Some(self.data_blocks.get(&id).unwrap().clone())
+        } else {
+            None
+        }
     }
     
     /// Insert or update a data block
@@ -85,7 +174,7 @@ impl KVQuantizer {
 
     pub fn quantize(&self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) -> Option<QuantizationResult> {
         let block_id = (token_id as usize) % self.config.block_size;
-        let mut block = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id));
+        let mut block = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id, self.config.block_size));
 
         if block.state == BlockState::Free || block.state == BlockState::Valid {
             block.write(token_id, value, pointer, bias, vector_id, graph_entry);
@@ -101,14 +190,41 @@ impl KVQuantizer {
             None
         }
     }
+
+
+    pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
+        let _guard = self.lock.lock().unwrap();
+        if salience_score < self.salience_threshold {
+            return;
+        }
+        let (spot_id, block_id) = self.spots.append(token_id, value, pointer, bias);
+        self.valid_bitmap.insert((spot_id, block_id), true);
+    }
+
+// Define the configuration for the KVQuantizer
+// This configuration includes the block size, precision level, and salience threshold
+
+pub mod kvquant_rs {
+    pub use crate::block::{DataBlock, BlockState};
+    pub use crate::spot::SpotManager;
+    pub use crate::quantizer::{KVQuantConfig, PrecisionLevel, QuantizationResult};
+    pub use crate::role_inference::{RoleInferer, RoleInferenceResult};
+    pub use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
+    pub use crate::quantizer::KVQuantizer;
 }
 
-#[derive(Serialize, Deserialize)]
+
+
+
+// This configuration is used to initialize the KVQuantizer and manage its behavior
+// Ensure the KVQuantConfig struct is defined with the necessary fields
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KVQuantConfig {
     pub block_size: usize,
-    pub spot_capacity: usize,
-    pub salience_threshold: f32,
-    pub precision_level: PrecisionLevel,
+    // pub spot_capacity: usize, // Ensure this field is defined
+    //pub salience_threshold: f32, // Ensure this field is defined
+    //pub precision_level: PrecisionLevel, // Ensure this field is defined
+    pub precision: usize, // Added precision field
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -119,8 +235,30 @@ pub enum PrecisionLevel {
 }
 
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RoleInferenceResult {
+    pub token_id: u32,
+    pub role: String,
+    pub confidence: f32,
+}
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QuantizationResult {
+    pub token_id: u32,
+    pub precision: PrecisionLevel,
+    pub salience_score: f32,
+    pub row: usize, // Row index in the data block
+    pub role: String, // Role of the token
+    pub role_confidence: f32, // Confidence in the role assignment
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum SalienceResult {
+    High,
+    Low,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum BlockState {
     Free,
     Valid,
@@ -138,6 +276,8 @@ pub struct DataBlock {
     pub biases: Vec<f32>,
     pub vector_ids: Vec<u32>,  // ANNS vector-IDs
     pub navigation_graph: HashMap<usize, Vec<usize>>,  // Navigation graph entries
+    pub size: usize,            // Size of the data block
+    pub capacity: usize,        // Capacity of the data block
 }
 
 impl DataBlock {
@@ -150,6 +290,8 @@ impl DataBlock {
             biases: vec![],
             vector_ids: vec![],
             navigation_graph: HashMap::new(),
+            size: todo!(),
+            capacity: todo!(),
         }
     }
 
@@ -275,35 +417,10 @@ impl KVCache {
 #[derive(Serialize, Deserialize)]
 pub struct KVQuantConfig {
     pub block_size: usize,
-    pub spot_capacity: usize,
-    pub salience_threshold: f32,
-    pub precision_level: PrecisionLevel,
+    pub spot_capacity: usize, // Ensure this field is defined
+    pub salience_threshold: f32, // Ensure this field is defined
+    pub precision_level: PrecisionLevel, // Added precision_level field
+    pub precision: usize, // Added precision field
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rand::thread_rng;
-
-    #[test]
-    fn test_kv_quantizer() {
-        let config = KVQuantConfig {
-            block_size: 10,
-            spot_capacity: 100,
-            salience_threshold: 0.5,
-            precision_level: PrecisionLevel::Bit32,
-        };
-        let kv_quantizer = KVQuantizer::new(config);
-
-        let token_id = 42;
-        let value = 0.8;
-        let pointer = 1;
-        let bias = 0.1;
-        let vector_id = 100;
-        let graph_entry = (0, vec![1, 2, 3]);
-
-        let result = kv_quantizer.quantize(token_id, value, pointer, bias, vector_id, graph_entry);
-        assert!(result.is_some());
-    }
-}

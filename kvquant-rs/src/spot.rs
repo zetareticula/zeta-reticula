@@ -15,6 +15,25 @@ use dashmap::mapref::entry::Entry;
 use crate::block::{DataBlock, BlockState};
 use crate::quantizer::KVQuantConfig;
 
+// Spot represents a collection of data blocks in the cache
+// Each spot can hold a fixed number of blocks and tracks whether it is full
+// It provides methods to append new blocks, erase existing blocks, and manage the state of the spot
+//                             
+// The blocks within a spot are managed as a vector, and the spot can be marked as full when all blocks are occupied
+// The `append_block` method attempts to add a new block with the given parameters, returning the block ID if successful
+// If the spot is full, it returns None
+// The `erase` method clears all blocks in the spot and resets its full state
+// The `Spot` struct is serialized and deserialized for persistence
+
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BlockState {
+    Free,
+    Occupied,
+    Invalidated,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Spot {
     pub id: usize,
@@ -110,3 +129,60 @@ impl SpotManager {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct LogStructuredKVCache {
+    pub spots: SpotManager,
+    pub block_size: usize,
+    pub valid_bitmap: DashMap<(usize, usize), bool>, // (spot_id, block_id)
+    pub salience_threshold: f32,
+    lock: Mutex<()>,
+}
+
+
+impl LogStructuredKVCache {
+    pub fn new(config: KVQuantConfig) -> Self {
+        LogStructuredKVCache {
+            spots: SpotManager::new(config.spot_capacity),
+            block_size: config.block_size,
+            valid_bitmap: DashMap::new(),
+            salience_threshold: config.salience_threshold,
+            lock: Mutex::new(()),
+        }
+    }
+
+    pub fn update(&self, token_id: u32, value: f32, salience_score: f32, pointer: usize, bias: f32) {
+        let _guard = self.lock.lock().unwrap();
+        if salience_score < self.salience_threshold {
+            return;
+        }
+        let (spot_id, block_id) = self.spots.append(token_id, value, pointer, bias);
+        self.valid_bitmap.insert((spot_id, block_id), true);
+    }
+
+    pub fn invalidate_low_salience(&self, salience_scores: &[(u32, f32)]) {
+        let _guard = self.lock.lock().unwrap();
+        for &(token_id, salience) in salience_scores {
+            if salience < self.salience_threshold {
+                for entry in self.valid_bitmap.iter() {
+                    let ((spot_id, block_id), _) = entry.pair();
+                    if let Some(spot) = self.spots.spots.get(spot_id) {
+                        if spot.blocks[*block_id].data.contains_key(&token_id) {
+                            spot.blocks[*block_id].unmap();
+                            spot.blocks[*block_id].invalidate();
+                            self.valid_bitmap.insert((*spot_id, *block_id), false);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn erase_full_spots(&self) {
+        let _guard = self.lock.lock().unwrap();
+        for spot in self.spots.spots.iter() {
+            if spot.is_full {
+                self.spots.erase_spot(spot.id);
+            }
+        }
+    }
+}

@@ -25,6 +25,14 @@ rayon = "1.8"
 rand_distr = "0.4"
 rand = "0.8"
 neon = { version = "0.10", optional = true }
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
+mlua = { version = "0.9", optional = true }
+validator = { version = "0.16", features = ["derive"] }
+wasm-bindgen = { version = "0.2.87", optional = true }
+wasm-bindgen-futures = { version = "0.4.37", optional = true }
+js-sys = { version = "0.3.64", optional = true }
+tonic = "0.10"
+prost = "0.12"
 
 [features]
 default = []

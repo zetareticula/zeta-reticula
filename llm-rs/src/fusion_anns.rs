@@ -1,4 +1,3 @@
-use serde::{Serialize, Deserialize};
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 use tokio::fs::File;
@@ -6,13 +5,7 @@ use tokio::io::{AsyncReadExt, BufReader};
 use rayon::prelude::*;
 use dashmap::DashMap;
 use ndarray::s;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::io::Error as IoError;
-use std::io::ErrorKind;
-use std::fs::OpenOptions;
 use std::path::PathBuf;
-use std::collections::HashSet;
 
 // FusionANNSConfig defines the configuration for the FusionANNS system.
 
