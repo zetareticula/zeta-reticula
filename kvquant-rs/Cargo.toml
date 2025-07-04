@@ -2,41 +2,42 @@
 name = "kvquant-rs"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
+
+[build-dependencies]
+tonic-build = "0.10"
+prost-build = "0.12"
 
 [dependencies]
-# Temporarily commented out to break circular dependency
-# salience-engine = { path = "../salience-engine" }
-# ns-router-rs = { path = "../ns-router-rs" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-dashmap = { version = "5.5", features = ["serde"] }
-log = "0.4"
-ndarray = "0.15"
-half = "2.2"
-rustc-hash = "1.1"
-argmin = "0.8"
-uuid = { version = "1.2", features = ["v4"] }
-chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["json", "blocking"] }
-serde_qs = "0.9"
-thiserror = "1.0"
-bumpalo = "3.0"
-rayon = "1.8"
-rand_distr = "0.4"
-rand = "0.8"
-neon = { version = "0.10", optional = true }
-pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
-mlua = { version = "0.9", optional = true }
-validator = { version = "0.16", features = ["derive"] }
-wasm-bindgen = { version = "0.2.87", optional = true }
-wasm-bindgen-futures = { version = "0.4.37", optional = true }
-js-sys = { version = "0.3.64", optional = true }
+# Core dependencies
 tonic = "0.10"
 prost = "0.12"
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+dashmap = "5.5"
+log = "0.4"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
+# Optional features for future use
 [features]
 default = []
 node = ["neon"]
+
+# For building Python bindings
+pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
+
+# For building Node.js bindings
+neon = { version = "0.10", optional = true }
+
+# For Lua scripting
+mlua = { version = "0.9", optional = true }
+
+# For WebAssembly support
+wasm-bindgen = { version = "0.2.87", optional = true }
+wasm-bindgen-futures = { version = "0.4.37", optional = true }
+js-sys = { version = "0.3.64", optional = true }
 
 [lib]
 path = "src/lib.rs"

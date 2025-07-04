@@ -1,5 +1,4 @@
 use egg::{EGraph, Rewrite, Runner, SymbolLang};
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct SymbolicReasoner {

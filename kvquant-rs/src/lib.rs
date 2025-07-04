@@ -1,26 +1,43 @@
-use serde::{Serialize, Deserialize};
-use log;
-use bumpalo::Bump;
-use rayon::prelude::*;
-use rand_distr::{Distribution, Normal};
-use std::mem;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use neon::prelude::*;
-use crate::block::DataBlock;
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
-use crate::tableaux::YoungTableau;
-use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
-use crate::role_inference::RoleTheory;
-use crate::quantizer::KVQuantConfig;
-use crate::quantizer::KVQuantizer;
-use crate::pb::kv_quant_service_server::KVQuantServiceServer;
-use crate::pb::{KVQuantRequest, KVQuantResponse};
-use tonic::{Request, Response, Status};
-use tonic::transport::Server;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use dashmap::DashMap;
-use dashmap::mapref::entry::Entry;
+use tonic::{Request, Response, Status, transport::Server};
+use async_trait::async_trait;
+use log::{info, error, debug};
+use serde::Serialize;
+use thiserror::Error;
+
+// Include the generated protobuf code
+pub mod sidecar {
+    tonic::include_proto!("sidecar");
+}
+
+// Re-export the service traits and types for convenience
+pub use sidecar::{
+    sidecar_service_server::{SidecarService, SidecarServiceServer},
+    sidecar_service_client::SidecarServiceClient,
+    CacheRequest, CacheResponse, CacheUpdate, UpdateResponse,
+};
+
+// Custom error type for the KVQuant service
+#[derive(Error, Debug)]
+pub enum KVQuantError {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    
+    #[error("Tonic transport error: {0}")]
+    Transport(#[from] tonic::transport::Error),
+    
+    #[error("Invalid configuration: {0}")]
+    Config(String),
+    
+    #[error("Cache error: {0}")]
+    Cache(String),
+}
+
+// Type alias for Result<T, KVQuantError>
+pub type Result<T> = std::result::Result<T, KVQuantError>;
 use crate::pb::KVQuantServiceClient;
 
 
@@ -42,57 +59,158 @@ impl KVQuantServiceServerImpl {
 
 
 
-// Ensure the tonic build script is executed
-fn build() {
-    tonic_build::compile_protos("proto/sidecar.proto").unwrap();
+// Include the generated protobuf code
+pub mod sidecar {
+    tonic::include_proto!("sidecar");
 }
 
-tonic_build::compile_protos("proto/sidecar.proto").unwrap(); // Ensure the proto files are compiled
-
-mod pb {
-    tonic::include_proto!("kvquant"); // The proto package name
-    pub use kv_quant_service_server::KVQuantServiceServer;
-}
-    pub use kv_quant_service_client::KVQuantServiceClient;
-    pub use kv_quant_service::KVQuantService;
-}
-
+// Re-export the service traits and types for convenience
 pub struct KVQuantService {
-    config: Option<HashMap<String, String>>, // Assuming config is a HashMap
+    /// Service configuration
+    config: KVQuantConfig,
+    /// In-memory cache for key-value storage
+    cache: DashMap<String, Vec<u8>>,
+    /// Metrics for monitoring
+    metrics: ServiceMetrics,
+}
+
+/// Service metrics for monitoring
+#[derive(Debug, Default)]
+struct ServiceMetrics {
+    total_requests: std::sync::atomic::AtomicU64,
+    cache_hits: std::sync::atomic::AtomicU64,
+    cache_misses: std::sync::atomic::AtomicU64,
+}
+
+/// Snapshot of service metrics for monitoring
+#[derive(Debug, Clone, Serialize)]
+pub struct ServiceMetricsSnapshot {
+    /// Total number of requests processed
+    pub total_requests: u64,
+    /// Number of cache hits
+    pub cache_hits: u64,
+    /// Number of cache misses
+    pub cache_misses: u64,
+    /// Current number of items in the cache
+    pub cache_size: u64,
+}
+
+#[tonic::async_trait]
+impl SidecarService for KVQuantService {
+    async fn get_cached_data(
+        &self,
+        request: Request<CacheRequest>,
+    ) -> Result<Response<CacheResponse>, Status> {
+        self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        
+        let req = request.into_inner();
+        let cache_key = format!("{}:{}", req.vector_id, req.layer_id);
+        
+        if self.config.enable_debug_logging {
+            debug!("Looking up cache key: {}", cache_key);
+        }
+        
+        match self.cache.get(&cache_key) {
+            Some(data) => {
+                self.metrics.cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                
+                if self.config.enable_debug_logging {
+                    debug!("Cache hit for key: {} ({} bytes)", cache_key, data.len());
+                }
+                
+                let response = CacheResponse {
+                    data: data.value().clone(),
+                    status: "OK".to_string(),
+                };
+                Ok(Response::new(response))
+            }
+            None => {
+                self.metrics.cache_misses.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                
+                if self.config.enable_debug_logging {
+                    debug!("Cache miss for key: {}", cache_key);
+                }
+                
+                let response = CacheResponse {
+                    data: Vec::new(),
+                    status: "Not Found".to_string(),
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn update_cache(
+        &self,
+        request: Request<CacheUpdate>,
+    ) -> Result<Response<UpdateResponse>, Status> {
+        self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        
+        let req = request.into_inner();
+        
+        // Check if we need to evict old entries to make space
+        if self.cache.len() >= self.config.max_cache_items {
+            // Simple eviction strategy: remove the first item
+            if let Some(entry) = self.cache.iter().next() {
+                let key = entry.key().clone();
+                self.cache.remove(&key);
+                
+                if self.config.enable_debug_logging {
+                    debug!("Evicted key from cache: {}", key);
+                }
+            }
+        }
+        
+        if self.config.enable_debug_logging {
+            debug!("Updating cache for vector_id: {} ({} bytes)", 
+                  req.vector_id, req.data.len());
+        }
+        
+        self.cache.insert(req.vector_id.clone(), req.data);
+        
+        let response = UpdateResponse {
+            status: "OK".to_string(),
+        };
+        
+        Ok(Response::new(response))
+    }
 }
 
 impl KVQuantService {
-    pub fn new(config: Option<HashMap<String, String>>) -> Self {
-        let mut block_size = 1024; // Default value
-        if let Some(ref config) = config {
-            if let Some(value) = config.get("block_size") {
-                block_size = value.parse().unwrap();
-            }
-        }
-        let quantizer = KVQuantizer::new(KVQuantConfig { block_size, spot_capacity: todo!(), salience_threshold: todo!() });
-        KVQuantService { config }
-    }
-
-
-    pub fn run_service(service: KVQuantService) {
-        if let Err(e) = service.start() {
-            log::error!("Failed to start KVQuantService: {}", e);
+    /// Creates a new instance of KVQuantService with the given configuration
+    pub fn new(config: Option<KVQuantConfig>) -> Self {
+        let config = config.unwrap_or_default();
+        
+        info!("Initializing KVQuantService with config: {:?}", config);
+        
+        Self {
+            config,
+            cache: DashMap::with_capacity(config.max_cache_items.min(1000)),
+            metrics: ServiceMetrics::default(),
         }
     }
-}
 
-
-
-
-// KVQuantizer is the main structure for handling key-value quantization
-#[derive(Serialize, Deserialize, Clone)]
-pub struct KVQuantizer {
-    pub config: KVQuantConfig,
-    pub data_blocks: DashMap<usize, DataBlock>, // Concurrent access to data blocks
-    pub role_inferer: Arc<RoleInferer>,
-    pub mesolimbic_system: Arc<MesolimbicSystem>,
-}
-
+    /// Runs the KVQuantService gRPC server
+    pub async fn run_service(addr: &str) -> Result<(), KVQuantError> {
+        let service = KVQuantService::new(None);
+        let addr: SocketAddr = addr.parse()
+            .map_err(|e| KVQuantError::Config(format!("Invalid address: {}", e)))?;
+        
+        info!("Starting KVQuantService on {}", addr);
+        
+        Server::builder()
+            .add_service(SidecarServiceServer::new(service))
+            .serve(addr)
+            .await
+            .map_err(KVQuantError::Transport)?;
+        
+        info!("KVQuantService shutdown complete");
+        Ok(())
+    }
+    
+    /// Returns the current cache size
+    pub fn cache_size(&self) -> usize {
+        self.cache.len()
 impl KVQuantizer {
     pub fn new(config: KVQuantConfig) -> Self {
         let role_inferer = Arc::new(RoleInferer::new(10, 5)); // 10 outer, 5 inner iterations

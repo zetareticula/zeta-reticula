@@ -1,5 +1,4 @@
 use clap::Parser;
-use serde::{Serialize, Deserialize};
 use std::default::Default;
 use std::fmt;
 use std::error::Error;
@@ -8,28 +7,31 @@ use log::info;
 use env_logger::Builder;
 use ns_router_rs::initialize_ns_router;
 use salience_engine::quantizer::{SalienceQuantizer, TokenFeatures};
-use salience_engine::quantizer::{QuantizationResult, PrecisionLevel};
 use std::fs;
 use std::io::{self, BufWriter};
 use std::path::PathBuf;
 use std::io::Write;
 use serde_json;
 use csv::Writer;
-use ns_router_rs::KVCacheConfig;
-use ns_router_rs::NSRoutingPlan;
 use llm_rs::InferenceOutput;
 use std::fs::OpenOptions;
 use quantize_cli::CliConfig;
 use std::error::Error;
-use std::io::Error as IoError;
+use serde::{Serialize, Deserialize};
+use std::fs;
+use std::io;
+use std::io::BufWriter;
+use std::path::PathBuf;
+use std::fs::File;
+use std::io::{self, Write};
+use std::default::Default;
+use clap::Parser;
+use log::{info, LevelFilter};
+use env_logger::Builder;
 
-/// Zeta Reticula Quantize CLI
-/// This CLI quantizes LLMs using neurosymbolic salience, reading input text, quantizing tokens, routing inference requests, and outputting results in JSON or CSV format.
-/// It supports verbose logging and allows for domain-specific salience through a theory key.
-/// It integrates with the SalienceQuantizer for token quantization and NSRouter for routing inference requests.
-/// The output includes quantization results, routing plans, inference outputs, and performance metrics.
-pub mod quantize_cli;
-
+#[macro_use]
+#[allow(unused_imports)]
+extern crate log;
 
 //// Zeta Reticula Quantize CLI Configuration
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -128,6 +130,8 @@ impl fmt::Display for CliConfig {
 /// Main entry point for the Zeta Reticula Quantize CLI
 /// /// # Returns:
 /// /// * `Result<(), Box<dyn Error>>` - Ok if successful, Err if there was an error
+/// /// # Errors:
+/// /// * `Box<dyn Error>` - If there was an error reading the input file or quantizing the tokens  
 
 pub fn run_cli() -> Result<(), Box<dyn Error>> {
     let config = CliConfig::parse_args();
@@ -141,6 +145,7 @@ pub fn run_cli() -> Result<(), Box<dyn Error>> {
     let quantizer = SalienceQuantizer::new(0.7);
     let router = initialize_ns_router();
 
+    //Token features are initialized with default values, frequency and context relevance are set to 0.5, sentiment score is set to 0.0, role is set to empty string
     let token_features: Vec<TokenFeatures> = input.split_whitespace()
         .enumerate()
         .map(|(idx, _)| TokenFeatures {

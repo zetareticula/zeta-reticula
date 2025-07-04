@@ -1,22 +1,8 @@
-use serde::{Serialize, Deserialize};
 use crate::tableaux::YoungTableau;
 use crate::quantizer::{QuantizationResult, PrecisionLevel};
-use std::sync::Arc;
-use dashmap::DashMap;
-use rand::Rng;
-use rand_distr::{Distribution, Normal};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::sync::RwLock;
-use std::collections::HashSet;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::AtomicI32;
 
 use crate::tableaux::YoungTableau;
 use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
 use crate::role_inference::RoleTheory;
 
 // TokenFeatures represents the features of a token used for salience quantization
@@ -109,9 +95,13 @@ pub struct SalienceQuantizationResult {
 impl YoungTableau {
     pub fn new(dimensions: usize, threshold: f32) -> Self {
         YoungTableau {
-            rows: vec![vec![]; dimensions],
+            rows: vec![vec![]; dimensions], // Ensure this field exists in the YoungTableau struct
             dimensions: (dimensions, dimensions),
             threshold,
+            data: todo!(),
+            salience_threshold: todo!(),
+            vector_ids: todo!(),
+            layer_ids: todo!(),
         }
     }
 

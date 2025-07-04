@@ -1,20 +1,41 @@
 use dashmap::DashMap;
 use rayon::prelude::*;
+use serde_json::map;
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
-use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::sync::RwLock;
-use std::mem;
 use bumpalo::Bump;
-use std::io::{Error as IoError, ErrorKind};
+use serde::{Serialize, Deserialize};
+use ndarray::s;
+use ndarray::Array2;
+use crate::role_inference::{RoleInferer, RoleInferenceResult};
+use crate::quantization::{QuantizationResult, PrecisionLevel};
+
+
 // ---- Salience Optimization Engine ----
 // This module provides an optimized computation of salience scores for tokens
 // using a Young tableau structure and parallel processing with caching.
 // It leverages Gaussian weighting for frame-based convolution and supports dynamic role inference.
 // It is designed to handle large-scale token processing efficiently.
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SalienceEngine {
+    pub role_inferer: Arc<RoleInferer>, // Role inference engine
+    pub salience_optimizer: SalienceOptimizer, // Optimizer for salience computation
+}
+
+impl SalienceEngine {
+    pub fn new(outer_iterations: usize, inner_iterations: usize) -> Self {
+        SalienceEngine {
+            role_inferer: Arc::new(RoleInferer::new(outer_iterations, inner_iterations)),
+            salience_optimizer: SalienceOptimizer::new(),
+        }
+    }
+
+    pub fn compute_salience(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<RoleInferenceResult> {
+        // Infer roles using the role inferer
+        self.role_inferer.infer_roles(features, theory_key)
+    }
+}
 
 // ---- Data Structures ----
 // Represents a token's features relevant to salience

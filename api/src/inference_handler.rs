@@ -43,7 +43,7 @@ enum InferenceError {
 #[derive(Validate, Deserialize)]
 pub struct InferenceRequest {
     #[validate(length(min = 1, message = "Input cannot be empty"))]
-    input: String,
+    pub(crate) input: String,
     #[validate(length(min = 1, message = "Model name is required"))]
     model_name: String,
     #[validate(custom = "validate_precision")]
@@ -283,7 +283,7 @@ impl InferenceHandler {
         }
 
         let attention_scores = self.compute_attention_scores(&grouped_keys, &grouped_values, &residual_keys, &residual_values)?;
-        tableau.data = attention_scores.mapv(|v| v as f32);
+        tableau.data = attention_scores.mapv(|v| v.to_f32());
 
         Ok((grouped_keys, residual_keys, grouped_values, residual_values))
     }

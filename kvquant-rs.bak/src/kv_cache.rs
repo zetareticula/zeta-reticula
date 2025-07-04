@@ -53,6 +53,7 @@ impl LogStructuredKVCache {
         self.valid_bitmap.insert((spot_id, block_id), true);
     }
 
+    // invalidate_low_salience invalidates tokens with low salience scores
     pub fn invalidate_low_salience(&self, salience_scores: &[(u32, f32)]) {
         let _guard = self.lock.lock().unwrap();
         for &(token_id, salience) in salience_scores {

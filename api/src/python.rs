@@ -5,6 +5,43 @@ use crate::model_store::ModelStore;
 use crate::zeta_vault::{ZetaVault, VaultConfig, KVCache, CacheLayer};
 use ndarray::Array2;
 use half::f16;
+use std::sync::Arc;
+use std::sync::Mutex;
+use actix_web::{web, App, HttpServer, Responder, HttpResponse, Error};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use validator::Validate;
+
+#[pyclass]
+#[derive(Debug, Serialize, Deserialize)]
+struct NeuronMatrix {
+    matrix: Array2<f16>,
+    pointers: Vec<usize>,
+    bias: Vec<f32>,
+}
+
+#[pymethods]
+impl NeuronMatrix {
+    #[new]
+    fn new(matrix: Vec<Vec<f16>>, pointers: Vec<usize>, bias: Vec<f32>) -> PyResult<Self> {
+        let array_matrix = Array2::from_shape_vec((matrix.len(), matrix[0].len()), matrix.into_iter().flatten().collect())
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        Ok(NeuronMatrix {
+            matrix: array_matrix,
+            pointers,
+            bias,
+        })
+    }
+}
+
+
+#[pyclass]
+#[derive(Debug, Serialize, Deserialize)]
+struct CompactionRequest {
+    model_id: String,
+    level: usize,
+    data: Vec<u8>,
+}
 
 #[pyclass]
 struct PyInferenceHandler {
@@ -14,7 +51,7 @@ struct PyInferenceHandler {
 #[pymethods]
 impl PyInferenceHandler {
     #[new]
-    fn new() -> PyResult<Self> {
+    async fn new() -> PyResult<Self> {
         let model_store = ModelStore::new().await;
         let handler = InferenceHandler::new(model_store).await;
         Ok(PyInferenceHandler { handler })
@@ -25,6 +62,7 @@ impl PyInferenceHandler {
             input,
             model_name,
             precision,
+            user_id: todo!(),
         };
         if let Err(e) = req.validate() {
             return Err(pyo3::exceptions::PyValueError::new_err(e.to_string()));

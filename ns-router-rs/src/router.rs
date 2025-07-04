@@ -3,6 +3,12 @@
 //! The main router that handles inference requests and routes them based on
 //! neurosymbolic analysis of the input and context.
 
+use log;
+
+// Re-export commonly used types
+use shared::{QuantizationResult, PrecisionLevel};
+
+//Temperature check
 use serde::{Serialize, Deserialize};
 use crate::{
     NSRoutingPlan,
@@ -120,6 +126,63 @@ impl NSRouter {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct NSRoutingPlan {
+    pub model_config: ModelConfig,
+    pub execution_strategy: String,
+    pub kv_cache_config: KVQuantConfig,
+    pub symbolic_rules: Vec<String>,
+}
+
+impl NSRoutingPlan {
+    pub fn new(model_config: ModelConfig, execution_strategy: String, kv_cache_config: KVQuantConfig, symbolic_rules: Vec<String>) -> Self {
+        NSRoutingPlan {
+            model_config,
+            execution_strategy,
+            kv_cache_config,
+            symbolic_rules,
+        }
+    }
+}
+
+enum ExecutionStrategy {
+    Local,
+    Federated,
+    Distributed,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ModelConfig {
+    pub size: usize,
+    pub precision: Vec<PrecisionLevel>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct KVQuantConfig {
+    pub spot_capacity: usize,
+    pub block_size: usize,
+    pub salience_threshold: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SymbolicRule {
+    pub name: String,
+    pub description: String,
+    pub conditions: Vec<String>,
+    pub actions: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SymbolicRules {
+    pub rules: Vec<SymbolicRule>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NSContextAnalysis {
+    pub context: String,
+    pub token_features: Vec<TokenFeatures>,
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -218,3 +281,5 @@ mod tests {
         assert!(result.is_ok(), "Should handle long input gracefully");
     }
 }
+
+

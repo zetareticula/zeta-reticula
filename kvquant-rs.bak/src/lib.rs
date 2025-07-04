@@ -23,6 +23,20 @@ pub struct KVQuantizer {
     pub data_blocks: DashMap<usize, DataBlock>, // Concurrent access to data blocks
     pub role_inferer: Arc<RoleInferer>,
     pub mesolimbic_system: Arc<MesolimbicSystem>,
+    pub spot_manager: Arc<SpotManager>,
+    pub kv_cache: Arc<KVCache>,
+    pub block_manager: Arc<BlockManager>,
+
+    if spot_manager.is_full() {
+        spot_manager.erase_spot(spot_manager.working_spot_id);
+        for block in &mut spot_manager.spots {
+            block.erase();
+        }
+        spot_manager.working_spot_id = 0;
+        spot_manager.spots.insert(0, Arc::new(Spot::new(0, spot_manager.spot_capacity)));
+    }
+        
+    
 }
 
 impl KVQuantizer {
@@ -70,6 +84,39 @@ pub struct KVQuantConfig {
 }
 
 pub fn initialize_kv_cache(config: KVQuantConfig) -> kv_cache::LogStructuredKVCache {
+    let mut kv_cache = kv_cache::LogStructuredKVCache::new(config);
+    for block in &mut kv_cache.blocks {
+        block.erase();
+    }
+
+    let spot_manager = initialize_spot_manager(config);
+    let block_manager = initialize_block_manager(config.block_size);
+    let role_inferer = initialize_role_inferer(config.block_size, config.spot_capacity);
+    let mesolimbic_system = initialize_mesolimbic_system();
+
+    if spot_manager.is_full() {
+        spot_manager.erase_spot(spot_manager.working_spot_id);
+        for block in &mut spot_manager.spots {
+            block.erase();
+        }
+        spot_manager.working_spot_id = 0;
+        spot_manager.spots.insert(0, Arc::new(Spot::new(0, spot_manager.spot_capacity)));
+    }
+
+    if block_manager.is_full() {
+        block_manager.erase();
+    }
+
+    let kv_quantizer = KVQuantizer {
+        config,
+        data_blocks: DashMap::new(),
+        role_inferer,
+        mesolimbic_system,
+        spot_manager,
+        block_manager,
+    };
+
+    //initialize kv_cache
     log::info!("Initializing kvquant-rs with block size: {}, spot capacity: {}", config.block_size, config.spot_capacity);
     kv_cache::LogStructuredKVCache::new(config)
 }

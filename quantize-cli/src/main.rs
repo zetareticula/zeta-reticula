@@ -1,3 +1,6 @@
+mod config;
+pub mod output;
+
 use std::fs;
 use log::{info, LevelFilter};
 use env_logger::Builder;
@@ -31,10 +34,17 @@ use salience_engine::quantizer::{QuantizationResult, PrecisionLevel};
 /// // It integrates with the SalienceQuantizer for token quantization and NSRouter for routing inference requests.
 /// // The output includes quantization results, routing plans, inference outputs, and performance metrics.
 
-mod salience_engine;
-mod ns_router_rs;
-mod config;
-mod output;
+
+
+/// # Zeta Reticula Quantize CLI
+/// This CLI tool is designed to quantize tokens for large language models (LLMs) using neurosymbolic salience.
+/// It reads input text from a file, quantizes the tokens based on their salience,
+/// routes inference requests using a neurosymbolic router,
+/// and writes the output to a specified file in JSON or CSV format.
+
+
+
+
 
 /// Main function for the Zeta Reticula Quantize CLI
 /// This function initializes the logger, reads input from a file,

@@ -15,12 +15,39 @@ use dashmap::mapref::entry::Entry;
 use crate::block::{DataBlock, BlockState};
 use crate::quantizer::KVQuantConfig;
 
-#[derive(Serialize, Deserialize)]
+//bring crates forward
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Spot {
     pub id: usize,
     pub blocks: Vec<DataBlock>,
     pub is_full: bool,
     pub capacity: usize,
+}
+
+let spot_capacity = 1024;
+
+if spot_capacity % 2 != 0 {
+    panic!("Spot capacity must be even");
+}
+
+//initialize blocks
+for i in 0..spot_capacity {
+    let block = DataBlock::new(i);
+
+    if block.state == BlockState::Free {
+        
+    for let block in &mut self.blocks {
+        if block.state == BlockState::Free {
+            block.write(token_id, value, pointer, bias, 0, 0); // Assuming default values for missing arguments
+            if self.blocks.iter().all(|b| b.state != BlockState::Free) {
+                self.is_full = true;
+            } else {
+                self.is_full = false;
+            }
+            return Some(block.id); //return block id
+        }
+    }
+    None
 }
 
 impl Spot {

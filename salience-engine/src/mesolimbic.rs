@@ -1,18 +1,9 @@
 use rand::Rng;
-use serde::{Serialize, Deserialize};
 use crate::role_inference::{RoleInferer, RoleInferenceResult};
 use std::sync::Arc;
 use dashmap::DashMap;
-use std::collections::HashMap;
 
 use rand_distr::{Distribution, Normal};
-use std::sync::Mutex;
-use std::sync::RwLock;
-use std::collections::HashSet;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::AtomicI32;
 
 // Represents the result of a role inference
 #[derive(Serialize, Deserialize, Clone)]

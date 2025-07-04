@@ -50,10 +50,12 @@ impl InferenceEngine {
     pub async fn infer(&mut self, input: &str, routing_plan: &NSRoutingPlan) -> InferenceOutput {
         log::info!("Starting inference for input: {}", input);
 
+        // Agent flow initialization
         self.agent_flow_server.initialize().await;
         self.model.load_from_flash("model_weights.bin").await;
         self.fusion_anns.initialize().await;
 
+        // Model quantization
         self.model.quantize(&routing_plan.model_config.precision);
         self.kv_cache = KVCache::new(
             routing_plan.kv_cache_config.sparsity,
@@ -61,6 +63,7 @@ impl InferenceEngine {
         );
         self.quantization_results = routing_plan.model_config.precision.clone();
 
+        // Tokenization and salience quantization
         let tokens: Vec<&str> = input.split_whitespace().collect();
         let token_count = tokens.len();
         let mut output_text = String::new();

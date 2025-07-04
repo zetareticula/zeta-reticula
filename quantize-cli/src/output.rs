@@ -1,10 +1,8 @@
-use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
 use csv::Writer;
 use salience_engine::quantizer::QuantizationResult;
 use llm_rs::InferenceOutput;
-use ns_router_rs::KVCacheConfig;
 
 #[derive(Serialize)]
 pub struct CliOutput {

@@ -1,0 +1,22 @@
+name: Rust CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to CoreWeave Kubernetes
+        run: |
+          mkdir -p ~/.kube
+          echo ${{ secrets.COREWEAVE_KUBE_CONFIG }} | base64 -d > ~/.kube/config
+          cd api/k8s
+          kubectl apply -f deployment-opa.yaml
+          kubectl apply -f deployment-billing.yaml
+          kubectl apply -f hpa-billing.yaml
+          kubectl apply -f service-billing.yaml
+          kubectl rollout status deployment/opa
+          kubectl rollout status deployment/billing-service

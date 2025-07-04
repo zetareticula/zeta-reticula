@@ -1,8 +1,32 @@
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use serde::{Serialize, Deserialize};
 use dashmap::DashMap;
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
+use crate::quantization::QuantizationResult;
+use crate::quantization::PrecisionLevel;
+use crate::role_inference::{RoleInferer, RoleInferenceResult};
+use crate::role_inference::RoleTheory;
+use crate::role_inference::TokenFeatures;
+
+// Represents a token's features relevant to salience
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TokenFeatures {
+    pub token_id: u32,
+    pub frequency: f32,
+    pub sentiment_score: f32,
+    pub context_relevance: f32,
+    pub role: String, // Now dynamically inferred
+}
+
+// Represents the result of salience computation for a token
+#[derive(Serialize, Deserialize)]
+pub struct SalienceResult {
+    pub token_id: u32,
+    pub salience_score: f32,
+    pub role: String,
+    pub role_confidence: f32,
+}
 
 
 // Role inference state
@@ -20,9 +44,9 @@ pub struct RoleInferenceResult {
 }
 
 pub struct RoleInferer {
-    theories: DashMap<String, RoleTheory>, // Concurrent theory storage
-    outer_loop_iterations: usize,
-    inner_loop_iterations: usize,
+    pub(crate) theories: DashMap<String, RoleTheory>, // Concurrent theory storage
+    pub(crate) outer_loop_iterations: usize,
+    pub(crate) inner_loop_iterations: usize,
 }
 
 impl RoleInferer {

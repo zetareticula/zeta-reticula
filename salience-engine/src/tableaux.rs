@@ -1,23 +1,18 @@
-use serde::{Serialize, Deserialize};
-use ndarray::{Array2, Array1};
+use ndarray::Array2;
 use tonic::{transport::Channel, Request, Status};
 use log;
 use crate::quantizer::QuantizationResult;
-// Importing necessary modules for the gRPC client
-use crate::quantizer::PrecisionLevel;
-// Importing the protobuf definitions for the sidecar service
-use crate::quantizer::TokenFeatures;
-
+use serde::{Serialize, Deserialize};
+use ndarray::s;
+use ndarray::ArrayViewMut2;
+use std::sync::Arc;
+use zeta_vault::ZetaVault;
+use zeta_vault::VaultConfig;
 
 
 
 // This module implements the Young Tableau structure for managing salience quantization results
 // and caching them to a sidecar service for further processing.
-
-
-
-
-
 
 // This attribute allows the module inception warning to be ignored
 // It should be placed at the top of the file, before any items
@@ -26,16 +21,25 @@ use crate::quantizer::TokenFeatures;
 
 
 // gRPC client for zeta-sidecar
-mod pb {
-    tonic::include_proto!("sidecar"); // Generated from zeta-sidecar/proto/sidecar.proto
+pub mod pb {
+    tonic::include_proto!("pb"); // The string specified here must match the proto package name
+}
+
+// Ensure you have a build.rs file with the following content:
+// FILEPATH: /Users/xaxpmore/Documents/GitHub/zeta-reticula/salience-engine/build.rs
+fn main() {
+    tonic_build::compile_protos("proto/sidecar.proto").unwrap();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct YoungTableau {
-    data: Array2<f32>, // Sparse matrix representing the tableau
-    salience_threshold: f32,
-    vector_ids: Vec<String>,
-    layer_ids: Vec<String>,
+    pub(crate) data: Array2<f32>, // Sparse matrix representing the tableau
+    pub(crate) salience_threshold: f32,
+    pub(crate) vector_ids: Vec<String>,
+    pub(crate) layer_ids: Vec<String>,
+    pub(crate) dimensions: (usize, usize),
+    pub(crate) threshold: f32,
+    pub(crate) rows: Vec<Vec<_>>,
 }
 
 impl YoungTableau {
@@ -46,6 +50,9 @@ impl YoungTableau {
             salience_threshold,
             vector_ids: Vec::new(),
             layer_ids: Vec::new(),
+            dimensions: todo!(),
+            threshold: todo!(),
+            rows: todo!(),
         }
     }
 

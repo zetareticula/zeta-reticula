@@ -17,6 +17,7 @@ pub enum ModelStoreError {
     Io(#[from] std::io::Error),
     #[error("Serialization error: {0}")]
     Serialization(#[from] bincode::Error),
+
 }
 
 macro_rules! privileged_store {
@@ -63,15 +64,7 @@ pub struct NeuronMatrix {
 
 impl ModelStore {
     pub fn new() -> Self {
-        let vault = ZetaVault::new();
-        let secret_store = if cfg!(feature = "enterprise") {
-            Some(SecretStore::new(VaultConfig::default()).await.unwrap_or_else(|e| {
-                log::error!("SecretStore init failed: {:?}", e);
-                std::process::exit(1)
-            }))
-        } else {
-            None
-        };
+        pub async fn new() -> Self {
         ModelStore {
             models: Arc::new(RwLock::new(Vec::new())),
             vault,

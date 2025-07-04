@@ -7,6 +7,32 @@
 use shared::{QuantizationResult, PrecisionLevel};
 use serde::{Serialize, Deserialize};
 use super::TokenFeatures;
+use log;
+use crate::model::Model;
+use crate::kv_cache::KVCache;
+use crate::fusion_anns::FusionANNS;
+use agentflow_rs::server::AgentFlowServer;
+use tonic::transport::Channel;
+use ns_router_rs::pb;
+
+
+
+
+
+//bring crates forward
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NSContextAnalyzer {
+    //branch off
+    let mut model: Model;
+    let mut kv_cache: KVCache;
+    let mut fusion_anns: FusionANNS;
+    let mut agent_flow_server: agentflow_rs::server::AgentFlowServer;
+    let mut quantization_results: Vec<QuantizationResult>;
+    let mut sidecar_client: pb::sidecar_service_client::SidecarServiceClient<Channel>;
+    // Placeholder for future tableau functionality
+    let mut _tableau_placeholder: ();
+}
+
 
 /// Analysis of the context for neurosymbolic routing
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,6 +55,27 @@ pub struct NSContextAnalysis {
     /// Any symbolic constraints derived from the input
     pub symbolic_constraints: Vec<String>,
 }
+
+impl NSContextAnalysis {
+    pub fn new() -> Self {
+        NSContextAnalysis {
+            input: String::new(),
+            token_features: Vec::new(),
+            token_count: 0,
+            salience_profile: Vec::new(),
+            theory_complexity: 0.0,
+            symbolic_constraints: Vec::new(),
+        }
+    }
+}
+
+impl Default for NSContextAnalysis {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 
 /// Analyzes the context of an inference request
 #[derive(Debug, Clone)]
@@ -58,3 +105,5 @@ impl Default for NSContextAnalyzer {
         Self::new()
     }
 }
+
+

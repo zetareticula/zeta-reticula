@@ -1,3 +1,9 @@
+mod mesolimbic;
+mod optimization;
+mod quantizer;
+mod role_inference;
+mod tableaux;
+
 use shared::quantization::{QuantizationResult, PrecisionLevel};
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, RwLock};

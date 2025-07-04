@@ -15,6 +15,7 @@ pub use shared::{QuantizationResult, PrecisionLevel};
 pub mod context;
 pub mod router;
 pub mod strategy;
+pub mod symbolic;
 
 // Re-export commonly used items
 pub use context::{NSContextAnalysis, NSContextAnalyzer};
