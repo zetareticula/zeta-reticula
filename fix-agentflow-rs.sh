@@ -68,7 +68,7 @@ log = { version = "0.4", optional = true }
 rand = { version = "0.8", optional = true }
 ndarray = { version = "0.15", optional = true }
 half = { version = "2.2", optional = true }
-openblas-src = { version = "0.10", optional = true }
+openblas-src = { version = "0.10.12" }
 rustc-hash = { version = "1.1", optional = true }
 argmin = { version = "0.8", optional = true }
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
