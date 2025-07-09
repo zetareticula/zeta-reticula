@@ -1,0 +1,10 @@
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libterm-e2e99a8ffcd776bb.rmeta: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/mod.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/searcher.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/compiled.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/names.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parm.rs
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/term-e2e99a8ffcd776bb.d: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/mod.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/searcher.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/compiled.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/names.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parm.rs
+
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/lib.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/mod.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/searcher.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/compiled.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parser/names.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/term-0.7.0/src/terminfo/parm.rs:

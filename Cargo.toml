@@ -1,28 +1,11 @@
 [workspace]
 members = [
     "api",
-    "llm-rs",
-    "kvquant-rs",
-    "ns-router-rs",
     "salience-engine",
-    "protos",
-    "quantize-cli"
-, "shared"]
+    "llm-rs",
+    "ns-router-rs",
+    "kvquant-rs",
+    "quantize-cli",
+    "agentflow-rs",
+]
 resolver = "2"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-debug = false
-incremental = false
-rpath = false
-strip = true
-panic = "abort"
-overflow-checks = false
-
-[profile.dev]
-opt-level = 1
-debug = true
-incremental = true
-overflow-checks = true

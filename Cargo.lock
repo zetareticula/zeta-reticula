@@ -241,6 +241,49 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "agentflow-rs"
+version = "0.1.0"
+dependencies = [
+ "actix-multipart",
+ "actix-web",
+ "argmin",
+ "bumpalo",
+ "chrono",
+ "crossbeam",
+ "dashmap",
+ "futures",
+ "half 2.6.0",
+ "js-sys",
+ "kvquant-rs",
+ "llm-rs",
+ "log",
+ "mlua",
+ "ndarray",
+ "ns-router-rs",
+ "openblas-src",
+ "prost",
+ "pyo3",
+ "rand 0.8.5",
+ "rand_distr",
+ "rayon",
+ "reqwest 0.11.27",
+ "rustc-hash 1.1.0",
+ "salience-engine",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "sled",
+ "stripe",
+ "thiserror 1.0.69",
+ "tokio",
+ "tonic",
+ "uuid",
+ "validator",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
