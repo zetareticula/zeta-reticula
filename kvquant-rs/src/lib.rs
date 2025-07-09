@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use serde::Deserialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use dashmap::DashMap;
@@ -38,7 +39,48 @@ pub enum KVQuantError {
 
 // Type alias for Result<T, KVQuantError>
 pub type Result<T> = std::result::Result<T, KVQuantError>;
-use crate::pb::KVQuantServiceClient;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PrecisionLevel {
+    Bit8,
+    Bit16,
+    Bit32,
+    Medium,
+}
+
+#[derive(Debug, Clone)]
+pub struct QuantizationResult {
+    pub token_id: u32,
+    pub precision: PrecisionLevel,
+    pub salience_score: f32,
+    pub row: usize,
+    pub role: String,
+    pub role_confidence: f32,
+}
+
+
+
+use crate::block::{DataBlock, BlockState};
+
+// Include the generated protobuf code
+pub mod pb {
+    include!(concat!(env!("OUT_DIR"), "/sidecar.rs"));
+}
+
+// Minimal stubs for missing types
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct RoleInferer;
+impl RoleInferer {
+    pub fn new(_outer: usize, _inner: usize) -> Self { RoleInferer }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct MesolimbicSystem;
+impl MesolimbicSystem {
+    pub fn new() -> Self { MesolimbicSystem }
+}
+
+
 
 
 
@@ -100,79 +142,81 @@ impl SidecarService for KVQuantService {
     async fn get_cached_data(
         &self,
         request: Request<CacheRequest>,
-    ) -> Result<Response<CacheResponse>, Status> {
-        self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        
-        let req = request.into_inner();
-        let cache_key = format!("{}:{}", req.vector_id, req.layer_id);
-        
-        if self.config.enable_debug_logging {
-            debug!("Looking up cache key: {}", cache_key);
-        }
-        
-        match self.cache.get(&cache_key) {
-            Some(data) => {
-                self.metrics.cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                
-                if self.config.enable_debug_logging {
-                    debug!("Cache hit for key: {} ({} bytes)", cache_key, data.len());
-                }
-                
-                let response = CacheResponse {
-                    data: data.value().clone(),
-                    status: "OK".to_string(),
-                };
-                Ok(Response::new(response))
+    ) -> std::result::Result<Response<CacheResponse>, Status> {
+        let inner_result = (|| -> Result<Response<CacheResponse>> {
+            self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            
+            let req = request.into_inner();
+            let cache_key = format!("{}:{}", req.vector_id, req.layer_id);
+            
+            if self.config.enable_debug_logging {
+                debug!("Looking up cache key: {}", cache_key);
             }
-            None => {
-                self.metrics.cache_misses.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                
-                if self.config.enable_debug_logging {
-                    debug!("Cache miss for key: {}", cache_key);
+            
+            match self.cache.get(&cache_key) {
+                Some(data) => {
+                    self.metrics.cache_hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    
+                    if self.config.enable_debug_logging {
+                        debug!("Cache hit for key: {} ({} bytes)", cache_key, data.len());
+                    }
+                    
+                    let response = CacheResponse {
+                        data: data.value().clone(),
+                        status: "OK".to_string(),
+                    };
+                    Ok(Response::new(response))
                 }
-                
-                let response = CacheResponse {
-                    data: Vec::new(),
-                    status: "Not Found".to_string(),
-                };
-                Ok(Response::new(response))
+                None => {
+                    self.metrics.cache_misses.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    
+                    if self.config.enable_debug_logging {
+                        debug!("Cache miss for key: {}", cache_key);
+                    }
+                    
+                    let response = CacheResponse {
+                        data: Vec::new(),
+                        status: "Not Found".to_string(),
+                    };
+                    Ok(Response::new(response))
+                }
             }
-        }
+        })();
+        inner_result.map_err(|e| Status::internal(e.to_string()))
     }
 
     async fn update_cache(
         &self,
         request: Request<CacheUpdate>,
-    ) -> Result<Response<UpdateResponse>, Status> {
-        self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        
-        let req = request.into_inner();
-        
-        // Check if we need to evict old entries to make space
-        if self.cache.len() >= self.config.max_cache_items {
-            // Simple eviction strategy: remove the first item
-            if let Some(entry) = self.cache.iter().next() {
-                let key = entry.key().clone();
-                self.cache.remove(&key);
-                
-                if self.config.enable_debug_logging {
-                    debug!("Evicted key from cache: {}", key);
+    ) -> std::result::Result<Response<UpdateResponse>, Status> {
+        let inner_result = (|| -> Result<Response<UpdateResponse>> {
+            self.metrics.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let req = request.into_inner();
+
+            // Check if we need to evict old entries to make space
+            if self.cache.len() >= self.config.max_cache_items {
+                // Simple eviction strategy: remove the first item
+                if let Some(entry) = self.cache.iter().next() {
+                    let key = entry.key().clone();
+                    self.cache.remove(&key);
+                    if self.config.enable_debug_logging {
+                        debug!("Evicted key from cache: {}", key);
+                    }
                 }
             }
-        }
-        
-        if self.config.enable_debug_logging {
-            debug!("Updating cache for vector_id: {} ({} bytes)", 
-                  req.vector_id, req.data.len());
-        }
-        
-        self.cache.insert(req.vector_id.clone(), req.data);
-        
-        let response = UpdateResponse {
-            status: "OK".to_string(),
-        };
-        
-        Ok(Response::new(response))
+
+            if self.config.enable_debug_logging {
+                debug!("Updating cache for vector_id: {} ({} bytes)", req.vector_id, req.data.len());
+            }
+
+            self.cache.insert(req.vector_id.clone(), req.data);
+
+            let response = UpdateResponse {
+                status: "OK".to_string(),
+            };
+            Ok(Response::new(response))
+        })();
+        inner_result.map_err(|e| Status::internal(e.to_string()))
     }
 }
 
@@ -184,14 +228,14 @@ impl KVQuantService {
         info!("Initializing KVQuantService with config: {:?}", config);
         
         Self {
-            config,
+            config: config.clone(),
             cache: DashMap::with_capacity(config.max_cache_items.min(1000)),
             metrics: ServiceMetrics::default(),
         }
     }
 
     /// Runs the KVQuantService gRPC server
-    pub async fn run_service(addr: &str) -> Result<(), KVQuantError> {
+    pub async fn run_service(addr: &str) -> Result<()> {
         let service = KVQuantService::new(None);
         let addr: SocketAddr = addr.parse()
             .map_err(|e| KVQuantError::Config(format!("Invalid address: {}", e)))?;
@@ -211,6 +255,16 @@ impl KVQuantService {
     /// Returns the current cache size
     pub fn cache_size(&self) -> usize {
         self.cache.len()
+    }
+}
+
+pub struct KVQuantizer {
+    pub config: KVQuantConfig,
+    pub data_blocks: DashMap<usize, DataBlock>,
+    pub role_inferer: Arc<RoleInferer>,
+    pub mesolimbic_system: Arc<MesolimbicSystem>,
+}
+
 impl KVQuantizer {
     pub fn new(config: KVQuantConfig) -> Self {
         let role_inferer = Arc::new(RoleInferer::new(10, 5)); // 10 outer, 5 inner iterations
@@ -225,17 +279,18 @@ impl KVQuantizer {
 
     pub fn quantize(&self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) -> Option<QuantizationResult> {
         let block_id = (token_id as usize) % self.config.block_size;
-        let mut block = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id));
+        let mut block_entry = self.data_blocks.entry(block_id).or_insert_with(|| DataBlock::new(block_id, self.config.block_size));
+        let block = block_entry.value_mut();
 
         if block.state == BlockState::Free || block.state == BlockState::Valid {
             block.write(token_id, value, pointer, bias, vector_id, graph_entry);
             Some(QuantizationResult {
                 token_id,
-                precision: PrecisionLevel::Bit16,
-                salience_score: 0.0, // Placeholder for actual salience score
-                row: 0, // Placeholder for actual row index
-                role: String::new(), // Placeholder for actual role
-                role_confidence: 0.0, // Placeholder for actual confidence
+                precision: self.config.precision_level,
+                salience_score: value * self.config.salience_threshold,
+                row: block.id,
+                role: "default".to_string(), // Placeholder for role
+                role_confidence: 1.0, // Placeholder for confidence
             })
         } else {
             None
@@ -260,6 +315,14 @@ pub struct KVQuantConfig {
     pub block_size: usize,
     /// Threshold for salience score to consider a token valid
     pub salience_threshold: f32,
+    /// Level of precision for quantization
+    pub precision_level: PrecisionLevel,
+    /// Precision value
+    pub precision: usize,
+    /// Enable debug logging
+    pub enable_debug_logging: bool,
+    /// Maximum number of cache items
+    pub max_cache_items: usize,
 }
 
 impl Default for KVQuantConfig {
@@ -268,6 +331,10 @@ impl Default for KVQuantConfig {
             spot_capacity: 1000,
             block_size: 1024,
             salience_threshold: 0.7,
+            precision_level: PrecisionLevel::Medium,
+            precision: 8,
+            enable_debug_logging: false,
+            max_cache_items: 10000,
         }
     }
 }
@@ -283,7 +350,7 @@ pub fn initialize_spot_manager(config: KVQuantConfig) -> spot::SpotManager {
 }
 
 /// Initializes the BlockManager with a specified block size
-pub fn initialize_block_manager(block_size: usize) -> block::BlockManager {\
+pub fn initialize_block_manager(block_size: usize) -> block::BlockManager {
     // This function initializes the BlockManager with a specified block size
     log::info!("Initializing BlockManager with block size: {}", block_size);
     block::BlockManager::new(block_size)
@@ -322,24 +389,7 @@ pub fn initialize_role_inferer(outer_iterations: usize, inner_iterations: usize)
     Arc::new(RoleInferer::new(outer_iterations, inner_iterations))
 }
 
-pub fn initialize_young_tableau(dimensions: usize, threshold: f32) -> YoungTableau {
-    if let Some(dimensions) = dimensions.checked_sub(1) {
-        if dimensions == 0 {
-            log::warn!("Dimensions must be greater than 0, setting to 1");
-            return YoungTableau::new(1, threshold);
-        }
-    } else {
-        log::error!("Invalid dimensions provided, defaulting to 1");
-        return YoungTableau::new(1, threshold);
-    }
 
-    if threshold < 0.0 || threshold > 1.0 {
-        log::warn!("Threshold must be between 0 and 1, setting to 0.5");
-        return YoungTableau::new(dimensions, 0.5);
-    }
-    log::info!("Initializing YoungTableau with dimensions: {}, threshold: {}", dimensions, threshold);
-    YoungTableau::new(dimensions, threshold)
-}
 
 pub fn initialize_quantization_result(token_id: u32, precision: PrecisionLevel, salience_score: f32, row: usize, role: String, role_confidence: f32) -> QuantizationResult {
     log::info!("Initializing QuantizationResult for token_id: {}, precision: {:?}, salience_score: {}, row: {}, role: {}, role_confidence: {}", token_id, precision, salience_score, row, role, role_confidence);

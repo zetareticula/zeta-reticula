@@ -1,0 +1,1 @@
+ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>>: Serialize

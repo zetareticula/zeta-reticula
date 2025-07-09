@@ -9,24 +9,16 @@ use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
-use crate::kv_cache::KVQuantCache;
-use crate::role_inference::RoleInferer;
-use crate::mesolimbic::MesolimbicSystem;
-use crate::KVQuantConfig;
-use crate::tableaux::YoungTableau;
+use crate::{KVQuantConfig, RoleInferer, MesolimbicSystem, PrecisionLevel, QuantizationResult};
 use crate::block::DataBlock;
-use crate::role_inference::RoleInferenceResult;
-use crate::mesolimbic::SalienceResult;
-use crate::pb::kv_quant_service_server::KVQuantServiceServer;
-use crate::pb::{KVQuantRequest, KVQuantResponse};
+use crate::pb::sidecar_service_server::{SidecarService, SidecarServiceServer};
+use crate::pb::{CacheRequest, CacheResponse, CacheUpdate, UpdateResponse};
 use tonic::{Request, Response, Status};
-use tonic::transport::Server;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use neon::prelude::*;
-use crate::pb::KVQuantService;
-use crate::pb::KVQuantServiceClient;
+
+// Re-export the client for use in other modules
+pub use crate::pb::sidecar_service_client::SidecarServiceClient;
 
 #[derive(Serialize, Deserialize)]
 pub struct KVQuantModel {
@@ -55,7 +47,7 @@ impl KVQuantModel {
             num_used: 0,
             last_k_active: vec![],
             precision_config: quantization_results.iter().map(|r| r.precision.clone()).collect(),
-            predictor: RoleInferer::new(0.1), // Example threshold
+            predictor: RoleInferer::new(1, 1), // Example threshold values; adjust as needed
             chunk_size: 32 * 1024,
             d_model,
         }
@@ -72,15 +64,15 @@ impl KVQuantModel {
     }
 }
 
-    pub fn predict_active_neurons(&self, preactivations: &Array1<f32>) -> Vec<bool> {
-        self.predictor.predict_active_neurons(preactivations)
-    }
+    // pub fn predict_active_neurons(&self, preactivations: &Array1<f32>) -> Vec<bool> {
+    //     self.predictor.predict_active_neurons(preactivations)
+    // }
 
 // KVQuantService is the gRPC service for KVQuant operations
 #[derive(Default)]
 pub struct KVQuantService {
     pub config: Option<HashMap<String, String>>,
-    pub kv_cache: Arc<RwLock<KVQuantCache>>,
+    // pub kv_cache: Arc<RwLock<KVQuantCache>>, // Removed: KVQuantCache not defined
     pub role_inferer: Arc<RoleInferer>,
     pub mesolimbic_system: Arc<MesolimbicSystem>,
 }

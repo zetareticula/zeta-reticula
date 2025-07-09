@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-salience-engine = { path = "../salience-engine" }
+salience-engine = { path = "../salience-engine", default-features = false }
 ns-router-rs = { path = "../ns-router-rs" }
 clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }

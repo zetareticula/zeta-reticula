@@ -1,193 +1,133 @@
-use crate::model::Model;
-use crate::kv_cache::KVCache;
-use crate::fusion_anns::FusionANNS;
-use crate::utils::measure_latency;
-use shared::{QuantizationResult, PrecisionLevel};
-use crate::token_features::TokenFeatures;
-use ns_router_rs::{NSRoutingPlan, ModelConfig, KVCacheConfig};
-use agentflow_rs::{initialize_agent_flow, AgentFlowConfig, FederatedANSS, DistributedCache, DistributedIO, FederatedRoleInference};
-use ndarray::Array1;
-use tonic::{transport::Channel, Request};
-use log;
+use ndarray::{Array1, Array2, s};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, BufReader};
+use dashmap::DashMap;
+use serde::{Serialize, Deserialize};
+use std::cmp::Ordering;
 
-mod pb {
-    tonic::include_proto!("sidecar"); // Generated from zeta-sidecar/proto/sidecar.proto
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct FusionANNSConfig {
+    pub vector_dim: usize,
+    pub batch_size: usize,
+    pub ssd_path: PathBuf,
+}
+
+impl FusionANNSConfig {
+    pub fn new(vector_dim: usize, batch_size: usize, ssd_path: PathBuf) -> Self {
+        FusionANNSConfig {
+            vector_dim,
+            batch_size,
+            ssd_path,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InferenceEngine {
-    model: Model,
-    kv_cache: KVCache,
-    fusion_anns: FusionANNS,
-    agent_flow_server: agentflow_rs::server::AgentFlowServer,
-    quantization_results: Vec<QuantizationResult>,
-    sidecar_client: pb::sidecar_service_client::SidecarServiceClient<Channel>,
-    // Placeholder for future tableau functionality
-    _tableau_placeholder: (),
+pub struct FusionANNS {
+    raw_vectors_path: PathBuf,
+    pq_vectors: Array2<f32>,
+    vector_ids: DashMap<usize, Vec<u32>>,
+    navigation_graph: HashMap<usize, Vec<usize>>,
+    vector_dim: usize,
+    batch_size: usize,
 }
 
-impl InferenceEngine {
-    pub async fn new(model_size: usize) -> Self {
-        let model = Model::new(model_size, &[]);
-        let kv_cache = KVCache::new(0.5, vec![]);
-        let fusion_anns = FusionANNS::new(768, 100);
-        let agent_flow_config = AgentFlowConfig { num_clients: 4, privacy_epsilon: 1.0 };
-        let agent_flow_server = initialize_agent_flow(agent_flow_config);
-        let sidecar_client = pb::sidecar_service_client::SidecarServiceClient::connect("http://localhost:50051").await.unwrap();
-        // Placeholder for future tableau functionality
-        let _tableau_placeholder = ();
-        InferenceEngine {
-            model,
-            kv_cache,
-            fusion_anns,
-            agent_flow_server,
-            quantization_results: vec![],
-            sidecar_client,
-            _tableau_placeholder,
+impl FusionANNS {
+    pub fn new(config: FusionANNSConfig) -> Self {
+        let num_vectors = 1_000_000_000 / config.vector_dim;
+        FusionANNS {
+            raw_vectors_path: config.ssd_path,
+            pq_vectors: Array2::zeros((num_vectors, config.vector_dim)),
+            vector_ids: DashMap::new(),
+            navigation_graph: HashMap::new(),
+            vector_dim: config.vector_dim,
+            batch_size: config.batch_size,
         }
     }
 
-    pub async fn infer(&mut self, input: &str, routing_plan: &NSRoutingPlan) -> InferenceOutput {
-        log::info!("Starting inference for input: {}", input);
+    pub async fn initialize(&mut self) {
+        for i in 0..1000 {
+            self.navigation_graph.insert(i, vec![(i + 1) % 1000, (i + 2) % 1000]);
+            self.vector_ids.insert(i, vec![(i as u32) * 1000; 10]);
+        }
 
-        // Agent flow initialization
-        self.agent_flow_server.initialize().await;
-        self.model.load_from_flash("model_weights.bin").await;
-        self.fusion_anns.initialize().await;
+        for ((i, j), value) in self.pq_vectors.indexed_iter_mut() {
+            *value = (i * j) as f32 * 0.01;
+        }
+    }
 
-        // Model quantization
-        self.model.quantize(&routing_plan.model_config.precision);
-        self.kv_cache = KVCache::new(
-            routing_plan.kv_cache_config.sparsity,
-            routing_plan.kv_cache_config.priority_tokens.clone(),
-        );
-        self.quantization_results = routing_plan.model_config.precision.clone();
+    pub fn collaborative_filter(&self, query: &Array1<f32>, top_m: usize) -> Vec<u32> {
+        let mut current = 0;
+        let mut visited = vec![false; 1000];
+        let mut nearest_lists = vec![];
 
-        // Tokenization and salience quantization
-        let tokens: Vec<&str> = input.split_whitespace().collect();
-        let token_count = tokens.len();
-        let mut output_text = String::new();
-
-        let quantizer = SalienceQuantizer::new(0.7);
-        let token_features: Vec<TokenFeatures> = tokens.iter()
-            .enumerate()
-            .map(|(i, _)| TokenFeatures {
-                token_id: i as u32,
-                frequency: 0.5,
-                sentiment_score: 0.0,
-                context_relevance: 0.5,
-                role: "".to_string(),
-            })
-            .collect();
-        let (results, mut tableau) = quantizer.quantize_tokens(token_features, "default");
-        self.quantization_results = results;
-        self.tableau = tableau;
-        self.tableau.cache_to_sidecar(&mut self.sidecar_client).await.unwrap();
-
-        let (processed_text, latency) = measure_latency(|| {
-            let salience_scores: Vec<(u32, f32)> = self.quantization_results.iter()
-                .map(|r| (r.token_id, r.salience_score))
-                .collect();
-
-            let mut embeddings = Array1::zeros(self.model.get_d_model()); // Use the getter method
-            for (i, _) in tokens.iter().enumerate() {
-                embeddings[i] = i as f32 * 0.1;
+        for _ in 0..top_m {
+            visited[current] = true;
+            nearest_lists.push(current);
+            if let Some(neighbors) = self.navigation_graph.get(&current) {
+                current = *neighbors.iter()
+                    .filter(|&&n| !visited[n])
+                    .min_by(|&&a, &&b| {
+                        let a_score = self.pq_vectors.slice(s![a, ..]).dot(query);
+                        let b_score = self.pq_vectors.slice(s![b, ..]).dot(query);
+                        a_score.partial_cmp(&b_score).unwrap_or(Ordering::Equal)
+                    })
+                    .unwrap_or(&0);
             }
+        }
 
-            let federated_anss = FederatedANSS;
-            let query = Array1::from_vec(vec![0.1; self.model.get_d_model()]); // Use the getter method
-            let candidates = rt.block_on(federated_anss.search(&self.agent_flow_server, &query, 100)).unwrap();
-            let ranked = rt.block_on(self.fusion_anns.heuristic_rerank(&query, candidates)).unwrap();
+        let mut candidates: Vec<u32> = nearest_lists.iter()
+            .flat_map(|&list_id| self.vector_ids.get(&list_id).map(|ids| ids.clone()).unwrap_or_default())
+            .collect();
 
-            let distributed_io = DistributedIO;
-            let _data = rt.block_on(distributed_io.parallel_read(&self.agent_flow_server, 32 * 1024)).unwrap();
+        candidates.sort_by(|&a, &b| {
+            let dist_a = self.pq_vectors.slice(s![a as usize, ..]).dot(query);
+            let dist_b = self.pq_vectors.slice(s![b as usize, ..]).dot(query);
+            dist_a.partial_cmp(&dist_b).unwrap_or(Ordering::Equal)
+        });
 
-            let ffn_output = self.model.compute_ffn(&embeddings);
+        candidates.truncate(top_m);
+        candidates
+    }
 
-            let active_neurons: Vec<usize> = self.quantization_results.iter()
-                .enumerate()
-                .filter(|(_, r)| r.salience_score > 0.7)
-                .map(|(i, _)| i)
-                .collect();
-            self.model.set_last_k_active(active_neurons.into_iter().take(10).collect());
+    pub async fn heuristic_rerank(&self, query: &Array1<f32>, candidates: Vec<u32>) -> Vec<u32> {
+        let mut ranked = vec![];
+        let mut prev_accuracy = 0.0;
+        let file = File::open(&self.raw_vectors_path).await.unwrap();
+        let mut reader = BufReader::new(file);
 
-            let inactive_neurons: Vec<usize> = self.quantization_results.iter()
-                .enumerate()
-                .filter(|(_, r)| r.salience_score < 0.3)
-                .map(|(i, _)| self.model.get_pointer(i)) // Use a public method to access pointers
-                .collect();
-            let new_neurons = vec![self.model.get_num_used()]; // Use a public method to access num_used
-            let weights = vec![0.1; self.model.get_d_model() * 2]; // Use the getter method
-            let biases = vec![0.0; 1];
-            self.model.add_neurons(&new_neurons, &weights, &biases);
+        for batch in candidates.chunks(self.batch_size) {
+            let mut raw_vectors = Array2::zeros((batch.len(), self.vector_dim));
+            let mut buffer = vec![0u8; batch.len() * self.vector_dim * 4];
 
-            let distributed_cache = DistributedCache;
-            for (i, token) in tokens.iter().enumerate() {
-                let token_id = i as u32;
-                let layer = 0;
-                let value = ffn_output[i];
-                let salience_score = self.quantization_results[i].salience_score;
-                distributed_cache.update(
-                    &self.agent_flow_server,
-                    token_id,
-                    value,
-                    salience_score,
-                    self.model.get_pointer(i), // Use a public method to access pointers
-                    self.model.get_bias(i), // Use a public method to access biases
-                    token_id,
-                    (i, vec![i + 1, i + 2]),
-                );
-                output_text.push_str(token);
-                if i < tokens.len() - 1 {
-                    output_text.push(' ');
+            reader.read_exact(&mut buffer).await.unwrap();
+            for (i, chunk) in buffer.chunks(self.vector_dim * 4).enumerate() {
+                for (j, val) in chunk.chunks(4).enumerate() {
+                    if val.len() == 4 {
+                        raw_vectors[[i, j]] = f32::from_le_bytes([val[0], val[1], val[2], val[3]]);
+                    }
                 }
             }
 
-            distributed_cache.invalidate_low_salience(&self.agent_flow_server, &salience_scores);
-            distributed_cache.erase_full_spots(&self.agent_flow_server);
+            let mut batch_results: Vec<(u32, f32)> = batch.iter().enumerate()
+                .map(|(i, &id)| (id, raw_vectors.slice(s![i, ..]).dot(query)))
+                .collect();
 
-            output_text.clone()
-        });
+            batch_results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Equal));
+            ranked.extend(batch_results.iter().map(|&(id, _)| id));
 
-        InferenceOutput {
-            text: processed_text,
-            tokens_processed: token_count,
-            latency_ms: latency,
+            let current_accuracy: f32 = batch_results.iter().map(|&(_, dist)| dist).sum::<f32>() / batch.len() as f32;
+            if (current_accuracy - prev_accuracy).abs() < 0.01 {
+                break;
+            }
+            prev_accuracy = current_accuracy;
         }
-    }
-}
 
-
-#[derive(Serialize, Deserialize)]
-pub struct InferenceOutput {
-    pub text: String,
-    pub tokens_processed: usize,
-    pub latency_ms: u64,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::runtime::Runtime;
-
-    #[test]
-    fn test_inference_engine() {
-        let rt = Runtime::new().unwrap();
-        let mut engine = rt.block_on(InferenceEngine::new(1024));
-        let routing_plan = NSRoutingPlan {
-            model_config: ModelConfig {
-                precision: vec![PrecisionLevel::FP32],
-                d_model: 768,
-            },
-            kv_cache_config: KVCacheConfig {
-                sparsity: 0.5,
-                priority_tokens: vec![],
-            },
-        };
-        let input = "Hello world";
-        let output = rt.block_on(engine.infer(input, &routing_plan));
-        assert_eq!(output.text, "Hello world");
-        assert!(output.tokens_processed > 0);
-        assert!(output.latency_ms > 0);
+        ranked
     }
 }

@@ -12,7 +12,6 @@ use rand_distr::{Distribution, Normal};
 use crate::KVQuantConfig;
 
 // LogStructuredKVCache implements a log-structured key-value cache
-#[derive(Serialize, Deserialize)]
 pub struct LogStructuredKVCache {
     spots: SpotManager,
     block_size: usize,
@@ -51,8 +50,9 @@ impl LogStructuredKVCache {
             if salience < self.salience_threshold {
                 for entry in self.valid_bitmap.iter() {
                     let ((spot_id, block_id), _) = entry.pair();
-                    if let Some(spot) = self.spots.get_spot(spot_id) {
-                        if spot.blocks[*block_id].data.contains_key(&token_id) {
+                    if let Some(spot_arc) = self.spots.get_spot(spot_id) {
+                        let mut spot = spot_arc.lock().unwrap();
+                        if spot.blocks[*block_id].data.contains(&token_id) {
                             spot.blocks[*block_id].unmap();
                             spot.blocks[*block_id].invalidate();
                             self.valid_bitmap.insert((*spot_id, *block_id), false);
@@ -66,7 +66,8 @@ impl LogStructuredKVCache {
 
     pub fn erase_full_spots(&self) {
         let _guard = self.lock.lock().unwrap();
-        for spot in self.spots.iter() {
+        for spot_arc in self.spots.iter() {
+            let spot = spot_arc.lock().unwrap();
             if spot.is_full {
                 self.spots.erase_spot(spot.id);
             }
@@ -78,7 +79,6 @@ pub fn initialize_kv_cache(config: KVQuantConfig) -> LogStructuredKVCache {
     LogStructuredKVCache::new(config)
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct KVCache {
     inner: LogStructuredKVCache,
 }

@@ -1002,7 +1002,6 @@ dependencies = [
  "lock_api",
  "once_cell",
  "parking_lot_core 0.9.11",
- "serde",
 ]
 
 [[package]]
@@ -2094,30 +2093,25 @@ dependencies = [
 name = "kvquant-rs"
 version = "0.1.0"
 dependencies = [
- "argmin",
- "bumpalo",
- "chrono",
+ "async-trait",
+ "bincode",
  "dashmap",
- "half 2.6.0",
  "js-sys",
  "log",
  "mlua",
  "ndarray",
  "neon",
  "prost",
+ "prost-build",
  "pyo3",
  "rand 0.8.5",
  "rand_distr",
- "rayon",
- "reqwest 0.11.27",
- "rustc-hash 1.1.0",
  "serde",
  "serde_json",
- "serde_qs",
  "thiserror 1.0.69",
+ "tokio",
  "tonic",
- "uuid",
- "validator",
+ "tonic-build",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]
@@ -2428,6 +2422,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rawpointer",
+ "serde",
 ]
 
 [[package]]

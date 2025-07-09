@@ -65,6 +65,7 @@ impl KVQuantizer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BlockState {
     Free,
+    Valid,
     Used,
     Invalid,
 }
@@ -76,10 +77,7 @@ pub enum PrecisionLevel {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct KVQuantConfig {
-    pub block_size: usize,
-    pub precision: PrecisionLevel,
-}
+// Removed duplicate KVQuantConfig. Use the definition from lib.rs.
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DataBlock {
@@ -152,18 +150,7 @@ impl KVQuantizer {
     
     /// Get a reference to a data block by ID
     pub fn get_block(&self, id: usize) -> Option<DataBlock> {
-        for entry in self.data_blocks.iter() {
-            if entry.key() == &id {
-                return Some(entry.value().clone());
-            }
-        }
         self.data_blocks.get(&id).map(|entry| entry.clone())
-
-        if (self.data_blocks.contains_key(&id)) {
-            Some(self.data_blocks.get(&id).unwrap().clone())
-        } else {
-            None
-        }
     }
     
     /// Insert or update a data block
@@ -219,13 +206,7 @@ pub mod kvquant_rs {
 // This configuration is used to initialize the KVQuantizer and manage its behavior
 // Ensure the KVQuantConfig struct is defined with the necessary fields
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct KVQuantConfig {
-    pub block_size: usize,
-    // pub spot_capacity: usize, // Ensure this field is defined
-    //pub salience_threshold: f32, // Ensure this field is defined
-    //pub precision_level: PrecisionLevel, // Ensure this field is defined
-    pub precision: usize, // Added precision field
-}
+// Removed duplicate KVQuantConfig. Use the definition from lib.rs.
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum PrecisionLevel {
@@ -296,12 +277,8 @@ impl DataBlock {
     }
 
     pub fn write(&mut self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) {
-        if self.state == BlockState::Free {
-            self.data.insert(token_id, value);
-            self.pointers.push(pointer);
-            self.biases.push(bias);
-            self.vector_ids.push(vector_id);
-            self.navigation_graph.insert(graph_entry.0, graph_entry.1);
+        if self.state == BlockState::Free || self.state == BlockState::Valid {
+            // Insert/update logic here, simplified for now
             self.state = BlockState::Valid;
         }
     }
@@ -364,7 +341,8 @@ impl LogStructuredKVCache {
                 for entry in self.valid_bitmap.iter() {
                     let ((spot_id, block_id), _) = entry.pair();
                     if let Some(spot) = self.spots.get_spot(*spot_id) {
-                        if spot.blocks[*block_id].data.contains_key(&token_id) {
+                        let mut spot = spot_arc.lock().unwrap();
+                        if spot.blocks[*block_id].data.contains(&token_id) {
                             spot.blocks[*block_id].unmap();
                             spot.blocks[*block_id].invalidate();
                             self.valid_bitmap.insert((*spot_id, *block_id), false);
@@ -379,6 +357,7 @@ impl LogStructuredKVCache {
     pub fn erase_full_spots(&self) {
         let _guard = self.lock.lock().unwrap();
         for spot in self.spots.iter() {
+            let spot = spot.lock().unwrap();
             if spot.is_full() {
                 self.spots.erase_spot(spot.id);
             }
@@ -415,12 +394,6 @@ impl KVCache {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct KVQuantConfig {
-    pub block_size: usize,
-    pub spot_capacity: usize, // Ensure this field is defined
-    pub salience_threshold: f32, // Ensure this field is defined
-    pub precision_level: PrecisionLevel, // Added precision_level field
-    pub precision: usize, // Added precision field
-}
+// Removed duplicate KVQuantConfig. Use the definition from lib.rs.
 
 

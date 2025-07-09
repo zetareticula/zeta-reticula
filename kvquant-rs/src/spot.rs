@@ -13,7 +13,7 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::AtomicI32;
 use dashmap::mapref::entry::Entry;
 use crate::block::{DataBlock, BlockState};
-use crate::quantizer::KVQuantConfig;
+use crate::KVQuantConfig;
 
 // Spot represents a collection of data blocks in the cache
 // Each spot can hold a fixed number of blocks and tracks whether it is full
@@ -92,7 +92,8 @@ impl SpotConfig {
 
 
 pub struct SpotManager {
-    spots: DashMap<usize, Arc<Spot>>,
+    spots: DashMap<usize, Arc<Mutex<Spot>>>,
+
     working_spot_id: usize,
     spot_capacity: usize,
 }
@@ -100,7 +101,7 @@ pub struct SpotManager {
 impl SpotManager {
     pub fn new(spot_capacity: usize) -> Self {
         let spots = DashMap::new();
-        spots.insert(0, Arc::new(Spot::new(0, spot_capacity)));
+        spots.insert(0, Arc::new(Mutex::new(Spot::new(0, spot_capacity))));
         SpotManager {
             spots,
             working_spot_id: 0,
@@ -109,26 +110,36 @@ impl SpotManager {
     }
 
     pub fn append(&self, token_id: u32, value: f32, pointer: usize, bias: f32) -> (usize, usize) {
-        let mut working_spot = self.spots.get_mut(&self.working_spot_id).unwrap();
+        let working_spot_arc = self.spots.get(&self.working_spot_id).unwrap();
+        let mut working_spot = working_spot_arc.lock().unwrap();
         if let Some(block_id) = working_spot.append_block(token_id, value, pointer, bias) {
             return (self.working_spot_id, block_id);
         }
 
         let new_spot_id = self.working_spot_id + 1;
-        self.spots.insert(new_spot_id, Arc::new(Spot::new(new_spot_id, self.spot_capacity)));
-        let mut new_spot = self.spots.get_mut(&new_spot_id).unwrap();
+        self.spots.insert(new_spot_id, Arc::new(Mutex::new(Spot::new(new_spot_id, self.spot_capacity))));
+        let new_spot_arc = self.spots.get(&new_spot_id).unwrap();
+        let mut new_spot = new_spot_arc.lock().unwrap();
         let block_id = new_spot.append_block(token_id, value, pointer, bias).unwrap();
         (new_spot_id, block_id)
     }
 
     pub fn erase_spot(&self, spot_id: usize) {
-        if let Some(mut spot) = self.spots.get_mut(&spot_id) {
+        if let Some(spot_arc) = self.spots.get(&spot_id) {
+            let mut spot = spot_arc.lock().unwrap();
             spot.erase();
         }
     }
+
+    pub fn get_spot(&self, spot_id: &usize) -> Option<Arc<Mutex<Spot>>> {
+        self.spots.get(spot_id).map(|entry| Arc::clone(&*entry))
+    }
+
+    pub fn iter(&self) -> Vec<Arc<Mutex<Spot>>> {
+        self.spots.iter().map(|entry| Arc::clone(entry.value())).collect()
+    }
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct LogStructuredKVCache {
     pub spots: SpotManager,
     pub block_size: usize,
@@ -164,8 +175,9 @@ impl LogStructuredKVCache {
             if salience < self.salience_threshold {
                 for entry in self.valid_bitmap.iter() {
                     let ((spot_id, block_id), _) = entry.pair();
-                    if let Some(spot) = self.spots.spots.get(spot_id) {
-                        if spot.blocks[*block_id].data.contains_key(&token_id) {
+                    if let Some(spot_arc) = self.spots.spots.get(spot_id) {
+                        let mut spot = spot_arc.lock().unwrap();
+                        if spot.blocks[*block_id].data.contains(&token_id) {
                             spot.blocks[*block_id].unmap();
                             spot.blocks[*block_id].invalidate();
                             self.valid_bitmap.insert((*spot_id, *block_id), false);
@@ -179,7 +191,8 @@ impl LogStructuredKVCache {
 
     pub fn erase_full_spots(&self) {
         let _guard = self.lock.lock().unwrap();
-        for spot in self.spots.spots.iter() {
+        for spot_arc in self.spots.spots.iter() {
+            let spot = spot_arc.value().lock().unwrap();
             if spot.is_full {
                 self.spots.erase_spot(spot.id);
             }
