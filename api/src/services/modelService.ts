@@ -1,8 +1,10 @@
 import { saveFile, validateModelFile } from '../utils/fileUtils';
 import { calculateUploadCost } from '../utils/billing';
 import { addModel } from '../models/modelMetadata';
+import type { ModelMetadata } from '../models/modelMetadata';
 import { addUsage } from '../models/userUsage';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
 
 export const uploadModel = async (file: Express.Multer.File, userId: string): Promise<{ modelId: string; cost: number }> => {
   const error = validateModelFile(file);

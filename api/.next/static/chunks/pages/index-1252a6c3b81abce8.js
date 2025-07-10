@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[332],{5356:(e,n,_)=>{"use strict";_.r(n),_.d(n,{default:()=>u});var r=_(7876);function u(){return(0,r.jsx)("div",{children:"Hello from Next.js minimal page!"})}},9206:(e,n,_)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/",function(){return _(5356)}])}},e=>{var n=n=>e(e.s=n);e.O(0,[593,636,792],()=>n(9206)),_N_E=e.O()}]);

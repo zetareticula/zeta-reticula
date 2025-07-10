@@ -63,12 +63,11 @@ pub struct NeuronMatrix {
 }
 
 impl ModelStore {
-    pub fn new() -> Self {
-        pub async fn new() -> Self {
+    pub async fn new() -> Self {
         ModelStore {
             models: Arc::new(RwLock::new(Vec::new())),
-            vault,
-            secret_store,
+            vault: todo!(), // Need to initialize vault
+            secret_store: todo!(), // Need to initialize secret_store
             chunk_size: 32 * 1024,
             neuron_matrices: Arc::new(RwLock::new(Vec::new())),
             compaction_queue: Arc::new(RwLock::new(Vec::new())),

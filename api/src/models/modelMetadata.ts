@@ -1,6 +1,6 @@
 import { query } from '../db';
 
-interface ModelMetadata {
+export interface ModelMetadata {
   model_id: string;
   user_id: string;
   file_name: string;

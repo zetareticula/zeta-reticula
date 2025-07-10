@@ -19,6 +19,7 @@
         "uuid": "^9.0.1"
     },
     "devDependencies": {
+        "@astrojs/react": "^4.2.7",
         "@types/axios": "^0.14.0",
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.23",
