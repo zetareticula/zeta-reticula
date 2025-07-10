@@ -1,13 +1,13 @@
 [package]
-name = "agentflow-rs"
+name = "agentflow_rs"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-salience-engine = { path = "../salience-engine", optional = true }
+salience-engine = { path = "../salience-engine", optional = true, features = ["wasm"], package = "salience-engine" }
 ns-router-rs = { path = "../ns-router-rs", optional = true }
-kvquant-rs = { path = "../kvquant-rs", optional = true }
-llm-rs = { path = "../llm-rs", optional = true }
+kvquant_rs = { path = "../kvquant-rs", optional = true }
+llm_rs = { path = "../llm-rs", optional = true, features = ["wasm"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 rayon = { version = "1.8", optional = true }
@@ -45,7 +45,7 @@ rand_distr = { version = "0.4", optional = true }
 [features]
 default = ["server"]
 server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm_rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3"]
 lua = ["mlua"]
 

@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use crate::server::AgentFlowServer;
 use std::sync::Arc;
-use kvquant-rs::LogStructuredKVCache;
+use kvquant_rs::LogStructuredKVCache;
 
 #[derive(Serialize, Deserialize)]
 pub struct DistributedCache;

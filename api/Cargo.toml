@@ -13,7 +13,7 @@ serde = { version = "1.0", optional = true, features = ["derive"] }
 tokio = { version = "1.0", features = ["full"], optional = true }
 futures = { version = "0.3", optional = true }
 log = { version = "0.4", optional = true }
-llm-rs = { path = "../llm-rs", features = ["wasm"], optional = true }
+llm_rs = { path = "../llm-rs", features = ["wasm"], optional = true }
 salience-engine = { path = "../salience-engine", features = ["wasm"], optional = true }
 tonic = { version = "0.10", optional = true }
 prost = { version = "0.12", optional = true }
@@ -56,10 +56,10 @@ enterprise = []
 unlimited-inferences = []
 default = ["server"]
 server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "js-sys", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+wasm = ["wasm-bindgen", "js-sys", "wasm-bindgen-futures", "llm_rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3", "pyo3-build-config"]
 lua = ["mlua"]
-python-wasm = ["pyo3", "wasm-bindgen", "js-sys", "wasm-bindgen-futures", "llm-rs/wasm", "salience-engine/wasm", "ndarray", "half"]
+python-wasm = ["pyo3", "wasm-bindgen", "js-sys", "wasm-bindgen-futures", "llm_rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 
 [dev-dependencies]
 actix-rt = "2.5"

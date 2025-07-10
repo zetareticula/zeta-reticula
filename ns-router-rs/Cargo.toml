@@ -16,18 +16,22 @@ shared = { path = "../shared" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"  # For better error types
-log = "0.4"  # Required for logging
+log = { version = "0.4", features = ["std"] }  # Required for logging
+lazy_static = "1.4"  # For static initialization and rule definitions
+tokio = { version = "1.32", features = ["rt-multi-thread", "sync", "full"] }  # Async runtime
+lru = "0.10"  # For LRU cache
+futures = "0.3"  # For async/await support
+
+# Symbolic reasoning
+egg = { version = "0.9", features = ["serde-1"], optional = true }  # For symbolic reasoning
+regex = "1.10"  # For pattern matching in symbolic rules
 
 # Web server dependencies (optional)
 actix-web = { version = "4.11", optional = true, features = ["macros"] }  # Web server framework
 actix-multipart = { version = "0.6", optional = true }  # For handling multipart form data
 
-# Async runtime (optional)
-tokio = { version = "1.32", features = ["full"], optional = true }  # Async runtime
-
 # Parallel processing (optional)
 rayon = { version = "1.8", optional = true }  # For parallel processing
-egg = { version = "0.9", optional = true }
 ndarray = { version = "0.15", optional = true }  # For numerical operations
 half = { version = "2.2", optional = true }  # For half-precision floating point support
 openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
@@ -48,7 +52,7 @@ criterion = { version = "0.5", features = ["html_reports"] }  # For benchmarking
 
 [features]
 default = ["server"]
-server = ["actix-web", "actix-multipart", "tokio", "rayon", "egg", "ndarray", "half", "openblas-src", "argmin"]
+server = ["actix-web", "actix-multipart", "rayon", "egg", "ndarray", "half", "openblas-src", "argmin"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "ndarray", "half"]
 python = ["pyo3"]
 lua = ["mlua"]
