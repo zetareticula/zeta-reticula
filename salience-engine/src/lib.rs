@@ -1,99 +1,89 @@
-mod mesolimbic;
-mod optimization;
-mod quantizer;
-mod role_inference;
-mod tableaux;
-
-use shared::quantization::{QuantizationResult, PrecisionLevel};
-use serde::{Serialize, Deserialize};
-use std::sync::{Arc, RwLock};
-use bumpalo::Bump;
-use rayon::prelude::*;
-use rand_distr::{Distribution, Normal};
-use std::mem;
-use std::collections::HashMap;
 use actix_web::{web, App, HttpServer, Responder, HttpResponse};
 use serde::{Deserialize, Serialize};
-use zeta::policy::policy_distillation::PolicyDistillation;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use log::info;
 
 // ---- Core Data Structures ----
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum PrecisionLevel {
-    Bit4,
-    Bit8,
-    Bit16,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct TokenFeatures {
-    token_id: u32,
-    frequency: f32,
-    sentiment_score: f32,
-    context_relevance: f32,
-    role: String,
+pub struct TokenFeatures {
+    pub token_id: u32,
+    pub frequency: f32,
+    pub sentiment_score: f32,
+    pub context_relevance: f32,
+    pub role: String,
 }
 
 #[derive(Deserialize, Serialize)]
-struct SalienceRequest {
-    text: String,
-    user_id: String,
+pub struct SalienceRequest {
+    pub text: String,
+    pub user_id: String,
 }
 
 #[derive(Serialize)]
-struct SalienceResponse {
-    salient_phrases: Vec<String>,
-    upgrade_prompt: Option<String>,
+pub struct SalienceResponse {
+    pub salient_phrases: Vec<String>,
+    pub upgrade_prompt: Option<String>,
 }
 
-static USAGE_TRACKER: std::sync::Mutex<Vec<(String, u32)>> = std::sync::Mutex::new(Vec::new());
+lazy_static::lazy_static! {
+    static ref USAGE_TRACKER: Mutex<HashMap<String, u32>> = Mutex::new(HashMap::new());
+}
 
 async fn process_salience(
     req: web::Json<SalienceRequest>,
 ) -> Result<impl Responder, actix_web::Error> {
     let user_id = &req.user_id;
     let mut tracker = USAGE_TRACKER.lock().unwrap();
-    let usage = tracker.iter_mut().find(|(id, _)| id == user_id).map(|(_, count)| {
-        *count += 1;
-        *count
-    }).unwrap_or_else(|| {
-        tracker.push((user_id.clone(), 1));
-        1
-    });
+    let usage = tracker.entry(user_id.clone()).and_modify(|e| *e += 1).or_insert(1);
 
-    let upgrade_prompt = if usage > 30 && !cfg!(feature = "enterprise") {
+    let upgrade_prompt = if *usage > 30 && !cfg!(feature = "enterprise") {
         Some("Upgrade to Enterprise for more salience processing!".to_string())
     } else {
         None
     };
 
-    // Simulate salience extraction (replace with NLP model)
-    let salient_phrases = vec!["key".to_string(), "phrase".to_string()];
+    // Simple salience extraction (splits text into words and takes first 3 as "salient")
+    let salient_phrases: Vec<String> = req.text
+        .split_whitespace()
+        .take(3)
+        .map(|s| s.to_string())
+        .collect();
 
-    // Policy distillation simulation
-    let mut distillation = PolicyDistillation::new();
-    distillation.set_rules(vec![zeta::policy::PolicyRule {
-        resource_type: "salience".to_string(),
-        required_plan: "basic".to_string(),
-        allow: true,
-    }]);
-    distillation.set_student_id(user_id.clone());
-    distillation.set_teacher_id("opa-teacher".to_string());
-    log::info!("Distilled salience policy: {:?}", distillation);
+    info!("Processed salience request for user: {}", user_id);
 
-    Ok(HttpResponse::Ok().json(SalienceResponse { salient_phrases, upgrade_prompt }))
+    Ok(HttpResponse::Ok().json(SalienceResponse { 
+        salient_phrases, 
+        upgrade_prompt 
+    }))
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init();
+pub async fn start_server(port: u16) -> std::io::Result<()> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    
+    info!("Starting salience-engine server on port {}", port);
+    
     HttpServer::new(|| {
         App::new()
-            .service(web::resource("/salience").to(process_salience))
+            .service(
+                web::scope("/api")
+                    .service(
+                        web::resource("/salience")
+                            .route(web::post().to(process_salience))
+                    )
+            )
     })
-    .bind(("0.0.0.0", 8083))?
+    .bind(("0.0.0.0", port))?
     .workers(2)
     .run()
     .await
+}
+
+#[cfg(not(test))]
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    start_server(8083).await
 }
 
 // ---- Core Data Structures ----

@@ -2,71 +2,32 @@
 name = "salience-engine"
 version = "0.1.1"
 edition = "2021"
-description = "A Rust-based salience engine for processing and analyzing large datasets with advanced features like WASM and Python bindings."
+description = "A Rust-based salience engine for processing and analyzing text with web API support"
 license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
-llm_rs = { path = "../llm-rs", features = ["wasm"], optional = true }
-ns-router-rs = { path = "../ns-router-rs", package = "ns-router-rs" }
-clap = { version = "4.5", features = ["derive"] }
-log = "0.4"
-env_logger = "0.10"  # For logging
-bincode = "1.3"  # For binary serialization
-neon = { version = "0.10", optional = true }
-rand = "0.8"
-rand_distr = "0.4"  # For stochastic search distributions
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-itertools = "0.12"
-dashmap = { version = "5.5", optional = true }  # For concurrent token processing
-ndarray = { version = "0.15", optional = true }  # For numerical operations
-half = { version = "2.2", optional = true }  # For half-precision floating point support
-openblas-src = { version = "0.10", optional = true }  # Optional OpenBLAS support
-rustc-hash = { version = "1.1", optional = true }  # For fast hash maps
-argmin = { version = "0.8", optional = true }  # For optimization algorithms
-pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }  # For Python bindings
-mlua = { version = "0.9", optional = true }  # For Lua bindings
-proc-macro2 = "1.0"  # For procedural macros
-validator = { version = "0.16", features = ["derive"] }  # For data validation
-wasm-bindgen = { version = "0.2.87", optional = true }
-wasm-bindgen-futures = { version = "0.4.37", optional = true }
-js-sys = { version = "0.3.64", optional = true }
-uuid = { version = "1.2", features = ["v4"] }  # For unique identifiers
-chrono = { version = "0.4", features = ["serde"] }  # For date and time handling
-stripe = { version = "0.0.5", optional = true }  # For Stripe API integration
-reqwest = { version = "0.11", features = ["json", "blocking"] }  # For HTTP requests
-serde_qs = "0.9"  # For query string serialization/deserialization
-tonic = "0.10"  # For gRPC support
-prost = "0.12"  # For Protocol Buffers serialization
-thiserror = "1.0"  # For error handling
-actix-web = { version = "4.3", optional = true }  # For web server functionality
-actix-multipart = { version = "0.6", optional = true }  # For handling multipart form data
-tokio = { version = "1.0", features = ["full"], optional = true }  # For asynchronous runtime
-futures = { version = "0.3", optional = true }  # For asynchronous programming
-sled = { version = "0.34", optional = true }  # For embedded database
-crossbeam = { version = "0.8", optional = true }  # For concurrent programming
-
+actix-web = { version = "4.11.0", optional = true }
+actix-rt = { version = "2.10.0", optional = true }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+log = "0.4.27"
+env_logger = { version = "0.10.2", optional = true }
+lazy_static = "1.5.0"
+wasm-bindgen = { version = "0.2.92", optional = true }
+js-sys = { version = "0.3.69", optional = true }
 
 [dev-dependencies]
-actix-rt = "2.5"
-serde_test = "1.0"
-
-
-
-[build-dependencies]
-tonic-build = "0.10"
-pyo3-build-config = { version = "0.19", optional = true }
+actix-test = "0.1.1"
+actix-rt = "2.10.0"
+serde_test = "1.0.219"
 
 [features]
 default = ["server"]
-node = ["neon"]
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
-wasm = ["wasm-bindgen", "wasm-bindgen-futures", "ndarray", "half"]
-python = ["pyo3", "pyo3-build-config"]
-lua = ["mlua"]
+server = ["actix-web", "actix-rt", "env_logger"]
+wasm = ["wasm-bindgen", "js-sys"]
 enterprise = []
 
 [profile.release]
