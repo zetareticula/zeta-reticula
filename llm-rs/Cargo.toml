@@ -13,11 +13,11 @@ rayon = { version = "1.8", optional = true }
 ndarray = { version = "0.15", optional = true }
 log = { version = "0.4", optional = true }
 dashmap = { version = "5.5", optional = true }
-tokio = { version = "1.0", features = ["fs", "io-util"], optional = true }
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync"], optional = true }
 wasm-bindgen = { version = "0.2.87", optional = true }
 wasm-bindgen-futures = { version = "0.4.37", optional = true }
 js-sys = { version = "0.3.64", optional = true }
-actix-web = { version = "4.11", optional = true }
+actix-web = { version = "4.11", optional = true, default-features = false, features = ["rustls"] }
 actix-multipart = { version = "0.6", optional = true }
 pyo3 = { version = "0.19", optional = true, features = ["extension-module"] }
 mlua = { version = "0.9", optional = true }

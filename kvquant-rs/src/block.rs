@@ -1,3 +1,17 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use dashmap::DashMap;
@@ -59,14 +73,12 @@ impl KVQuantizer {
 // This module defines the basic types and structures for the KVQuantizer system
 // It includes the configuration, data blocks, and quantization results.
 // It also includes the SpotManager for managing spots in the cache and the LogStructuredKVCache for handling key-value pairs.
-// This module is part of the kvquant-rs crate, which implements a key-value quantization system
-
 // Define basic types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BlockState {
     Free,
     Valid,
-    Used,
+    Obsolete,
     Invalid,
 }
 
@@ -74,22 +86,20 @@ pub enum BlockState {
 pub enum PrecisionLevel {
     Bit16,
     Bit32,
+    Bit64,
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-// Removed duplicate KVQuantConfig. Use the definition from lib.rs.
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DataBlock {
     pub id: usize,
     pub state: BlockState,
-    pub data: Vec<u8>,
+    pub data: HashMap<u32, f32>,
+    pub pointers: Vec<usize>,
+    pub biases: Vec<f32>,
+    pub vector_ids: Vec<u32>,
+    pub navigation_graph: HashMap<usize, Vec<usize>>,
     pub size: usize,
     pub capacity: usize,
-    pointers: Vec<_>,
-    biases: Vec<_>,
-    vector_ids: Vec<_>,
-    navigation_graph: HashMap<_, _>,
 }
 
 impl DataBlock {
@@ -97,14 +107,48 @@ impl DataBlock {
         Self {
             id,
             state: BlockState::Free,
-            data: vec![0; capacity],
+            data: HashMap::new(),
+            pointers: Vec::new(),
+            biases: Vec::new(),
+            vector_ids: Vec::new(),
+            navigation_graph: HashMap::new(),
             size: 0,
             capacity,
-            pointers: todo!(),
-            biases: todo!(),
-            vector_ids: todo!(),
-            navigation_graph: todo!(),
         }
+    }
+
+    pub fn write(&mut self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) {
+        if self.state == BlockState::Free || self.state == BlockState::Valid {
+            self.data.insert(token_id, value);
+            self.pointers.push(pointer);
+            self.biases.push(bias);
+            self.vector_ids.push(vector_id);
+            self.navigation_graph.insert(graph_entry.0, graph_entry.1);
+            self.size += 1;
+            self.state = BlockState::Valid;
+        }
+    }
+
+    pub fn unmap(&mut self) {
+        if self.state == BlockState::Valid {
+            self.state = BlockState::Obsolete;
+        }
+    }
+
+    pub fn invalidate(&mut self) {
+        if self.state == BlockState::Obsolete {
+            self.state = BlockState::Invalid;
+        }
+    }
+
+    pub fn erase(&mut self) {
+        self.data.clear();
+        self.pointers.clear();
+        self.biases.clear();
+        self.vector_ids.clear();
+        self.navigation_graph.clear();
+        self.size = 0;
+        self.state = BlockState::Free;
     }
 }
 
@@ -247,38 +291,14 @@ pub enum BlockState {
     Invalid,
 }
 
-#[derive(Serialize, Deserialize)]
-#[derive(Clone)]
-pub struct DataBlock {
-    pub id: usize,
-    pub state: BlockState,
-    pub data: HashMap<u32, f32>,
-    pub pointers: Vec<usize>,
-    pub biases: Vec<f32>,
-    pub vector_ids: Vec<u32>,  // ANNS vector-IDs
-    pub navigation_graph: HashMap<usize, Vec<usize>>,  // Navigation graph entries
-    pub size: usize,            // Size of the data block
-    pub capacity: usize,        // Capacity of the data block
-}
-
-impl DataBlock {
-    pub fn new(id: usize) -> Self {
-        DataBlock {
-            id,
-            state: BlockState::Free,
-            data: HashMap::new(),
-            pointers: vec![],
-            biases: vec![],
-            vector_ids: vec![],
-            navigation_graph: HashMap::new(),
-            size: todo!(),
-            capacity: todo!(),
-        }
-    }
-
     pub fn write(&mut self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) {
         if self.state == BlockState::Free || self.state == BlockState::Valid {
-            // Insert/update logic here, simplified for now
+            self.data.insert(token_id, value);
+            self.pointers.push(pointer);
+            self.biases.push(bias);
+            self.vector_ids.push(vector_id);
+            self.navigation_graph.insert(graph_entry.0, graph_entry.1);
+            self.size += 1;
             self.state = BlockState::Valid;
         }
     }
@@ -301,6 +321,7 @@ impl DataBlock {
         self.biases.clear();
         self.vector_ids.clear();
         self.navigation_graph.clear();
+        self.size = 0;
         self.state = BlockState::Free;
     }
 }
@@ -392,8 +413,3 @@ impl KVCache {
         self.inner.erase_full_spots();
     }
 }
-
-#[derive(Serialize, Deserialize)]
-// Removed duplicate KVQuantConfig. Use the definition from lib.rs.
-
-

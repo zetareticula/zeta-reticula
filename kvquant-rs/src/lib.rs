@@ -1,5 +1,17 @@
-use std::collections::HashMap;
-use serde::Deserialize;
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 use dashmap::DashMap;
@@ -9,17 +21,14 @@ use log::{info, error, debug};
 use serde::Serialize;
 use thiserror::Error;
 
-// Include the generated protobuf code
+// Include the generated protobuf code and re-export the service traits and types
 pub mod sidecar {
     tonic::include_proto!("sidecar");
+    
+    // Re-export the service traits and types for convenience
+    pub use sidecar_service_server::{SidecarService, SidecarServiceServer};
+    pub use sidecar_service_client::SidecarServiceClient;
 }
-
-// Re-export the service traits and types for convenience
-pub use sidecar::{
-    sidecar_service_server::{SidecarService, SidecarServiceServer},
-    sidecar_service_client::SidecarServiceClient,
-    CacheRequest, CacheResponse, CacheUpdate, UpdateResponse,
-};
 
 // Custom error type for the KVQuant service
 #[derive(Error, Debug)]

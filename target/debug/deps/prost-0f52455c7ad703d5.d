@@ -1,0 +1,11 @@
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libprost-0f52455c7ad703d5.rmeta: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/message.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/name.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/types.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/encoding.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/../README.md
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/prost-0f52455c7ad703d5.d: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/message.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/name.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/types.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/encoding.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/../README.md
+
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/lib.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/error.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/message.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/name.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/types.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/encoding.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/prost-0.12.6/src/../README.md:

@@ -8,10 +8,6 @@ use ndarray::s;
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 
-
-
-
-
 // FusionANNSConfig defines the configuration for the FusionANNS system.
 
 // FusionANNS is a mock implementation of a billion-scale ANN search system
