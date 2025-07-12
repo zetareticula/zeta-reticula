@@ -312,6 +312,7 @@ pub mod model;
 pub mod block;
 pub mod spot;
 pub mod kv_cache;
+pub mod tableaux;
 
 
 

@@ -1,0 +1,13 @@
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libpyo3_build_config-4e930fd59d160b06.rmeta: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/errors.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/impl_.rs /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config-file.txt /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config.txt
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libpyo3_build_config-4e930fd59d160b06.rlib: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/errors.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/impl_.rs /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config-file.txt /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config.txt
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/pyo3_build_config-4e930fd59d160b06.d: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/errors.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/impl_.rs /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config-file.txt /Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config.txt
+
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/lib.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/errors.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.19.2/src/impl_.rs:
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config-file.txt:
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out/pyo3-build-config.txt:
+
+# env-dep:OUT_DIR=/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/pyo3-build-config-69f1e4a053c2df9e/out
