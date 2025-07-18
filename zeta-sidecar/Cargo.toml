@@ -1,0 +1,40 @@
+[package]
+name = "zeta-sidecar"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zeta Reticula Team"]
+description = "Sidecar service for Zeta Reticula providing gRPC interfaces for model serving and caching"
+repository = "https://github.com/zetareticula/zeta-sidecar"
+license = "Apache-2.0"
+
+[lib]
+name = "zeta_sidecar"
+path = "src/lib.rs"
+
+[dependencies]
+tonic = { version = "0.9", features = ["tls"] }
+prost = "0.12"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+
+# Internal dependencies
+kvquant-rs = { path = "../kvquant-rs" }
+ns-router-rs = { path = "../ns-router-rs" }
+salience-engine = { path = "../salience-engine" }
+
+[build-dependencies]
+tonic-build = "0.9"
+
+[features]
+default = ["tls"]
+tls = ["tonic/tls"]
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
+tonic = { version = "0.9", features = ["tls"] }
+prost-types = "0.12"
+wiremock = "0.5"
+serial_test = "2.0"

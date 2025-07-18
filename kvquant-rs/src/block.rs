@@ -45,7 +45,7 @@ impl KVQuantizer {
         Self {
             config,
             data_blocks: DashMap::new(),
-            role_inferer: Arc::new(RoleInferer::new(0.1)), // Example threshold
+            role_inferer: Arc::new(RoleInferer::new(0.1)),
             mesolimbic_system: Arc::new(MesolimbicSystem::new()),
         }
     }
@@ -82,13 +82,18 @@ pub enum BlockState {
     Invalid,
 }
 
+
+// Define precision levels for quantization in the KVQuantizer system
+// For now, we only support 16-bit, 32-bit, and 64-bit floating point numbers
+// This will be expanded in the future to support other precision levels and integer types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PrecisionLevel {
     Bit16,
     Bit32,
     Bit64,
 }
-
+// Define the data block structure for the KVQuantizer system
+// This structure includes the block ID, state, data, pointers, biases, vector IDs, navigation graph, size, and capacity
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DataBlock {
     pub id: usize,
@@ -117,6 +122,14 @@ impl DataBlock {
         }
     }
 
+    // Write a new entry to the data block
+    // This function takes a token ID, value, pointer, bias, vector ID, and graph entry as arguments
+    // It inserts the token ID and value into the data map
+    // It appends the pointer and bias to the pointers and biases vectors
+    // It appends the vector ID to the vector IDs vector
+    // It inserts the graph entry into the navigation graph
+    // It increments the size of the block
+    // It sets the state of the block to Valid
     pub fn write(&mut self, token_id: u32, value: f32, pointer: usize, bias: f32, vector_id: u32, graph_entry: (usize, Vec<usize>)) {
         if self.state == BlockState::Free || self.state == BlockState::Valid {
             self.data.insert(token_id, value);
@@ -152,7 +165,7 @@ impl DataBlock {
     }
 }
 
-// Placeholder types for external dependencies
+
 pub type RoleInferer = ();
 pub type MesolimbicSystem = ();
 pub type GraphEntry = (usize, Vec<usize>);

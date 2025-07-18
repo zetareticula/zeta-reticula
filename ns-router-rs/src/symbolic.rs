@@ -1,7 +1,8 @@
-use egg::{EGraph, Rewrite, Runner, SymbolLang, Pattern, Searcher, Applier, Id};
+use egg::{EGraph, Runner, SymbolLang, Pattern, Searcher, Applier, Id, Rewrite};
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
 use std::collections::HashMap;
+use crate::rewrite_wrapper::{SerializableRewrite, RewriteError};
 
 /// Errors that can occur during symbolic reasoning
 #[derive(Error, Debug, Serialize, Deserialize)]
@@ -19,8 +20,9 @@ pub enum SymbolicError {
 /// A symbolic reasoner that uses e-graphs for rewriting
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SymbolicReasoner {
+    #[serde(skip_serializing, skip_deserializing)]
     egraph: EGraph<SymbolLang, ()>,
-    rules: HashMap<String, Rewrite<SymbolLang, ()>>,
+    rules: HashMap<String, SerializableRewrite>,
     next_var_id: usize,
 }
 
@@ -43,17 +45,8 @@ impl SymbolicReasoner {
     
     /// Add a new rewrite rule to the reasoner
     pub fn add_rule(&mut self, name: &str, left: &str, right: &str) -> Result<(), SymbolicError> {
-        let left_pat: Pattern<SymbolLang> = left.parse()
+        let rule = SerializableRewrite::new(name, left, right)
             .map_err(|e| SymbolicError::ParseError(e.to_string()))?;
-            
-        let right_pat: Pattern<SymbolLang> = right.parse()
-            .map_err(|e| SymbolicError::ParseError(e.to_string()))?;
-            
-        let rule = Rewrite::new(
-            name.to_string(),
-            left_pat,
-            right_pat,
-        );
         
         self.rules.insert(name.to_string(), rule);
         Ok(())
@@ -68,33 +61,38 @@ impl SymbolicReasoner {
         // Clear previous state
         self.egraph = EGraph::new(());
         
-        // Add constraints to the e-graph
+        // Parse constraints into the e-graph
         for constraint in constraints {
             let expr: Pattern<SymbolLang> = constraint.parse()
                 .map_err(|e| SymbolicError::ParseError(e.to_string()))?;
-                
-            // Add the expression to the e-graph
-            let id = self.egraph.add_expr(&expr.ast);
             
-            // Store the root ID for later extraction
-            self.egraph.union(id, id);
+            // Add the constraint to the e-graph
+            let id = self.egraph.add_expr(&expr.ast);
+            self.egraph.union(id, id); // Ensure the constraint is in its own equivalence class
         }
         
-        // Apply all rewrite rules
+        // Prepare rewrite rules
+        let rules: Result<Vec<Rewrite<SymbolLang, ()>>, _> = self.rules.values_mut()
+            .map(|r| r.get_rewrite()
+                .map_err(|e| SymbolicError::RewriteError(e.to_string()))
+                .map(|r| r.clone())
+            )
+            .collect();
+            
+        let rules = rules?;
+        
+        // Apply rewrite rules
         let runner = Runner::default()
             .with_egraph(self.egraph.clone())
-            .run(&self.rules.values().cloned().collect::<Vec<_>>());
+            .run(&rules);
             
-        // Extract the results
+        // Extract results
         let mut results = Vec::new();
         for class in runner.egraph.classes() {
-            let expr = class.nodes[0].to_string();
-            if !constraints.contains(&expr) {
-                results.push(expr);
-            }
+            results.push(class.nodes[0].to_string());
         }
         
-        // Apply salience-based filtering if provided
+        // Filter based on salience profile
         self.filter_by_salience(&mut results, salience_profile);
         
         Ok(results)

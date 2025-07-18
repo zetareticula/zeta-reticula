@@ -17,6 +17,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"  # For better error types
 log = { version = "0.4", features = ["std"] }  # Required for logging
+dashmap = "5.5"
+rand = "0.8"
+rand_distr = "0.4"
+salience-engine = { path = "../salience-engine", features = ["server"] }  # Required for logging
 lazy_static = "1.4"  # For static initialization and rule definitions
 tokio = { version = "1.32", features = ["rt-multi-thread", "sync", "full"] }  # Async runtime
 lru = "0.10"  # For LRU cache

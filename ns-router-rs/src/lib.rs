@@ -13,13 +13,16 @@ pub use shared::{QuantizationResult, PrecisionLevel};
 
 // Export modules
 pub mod context;
+pub mod rewrite_wrapper;
 pub mod router;
+pub mod salience;
 pub mod strategy;
 pub mod symbolic;
 
 // Re-export commonly used items
 pub use context::{NSContextAnalysis, NSContextAnalyzer};
 pub use router::{NSRouter, TokenFeatures};
+pub use salience::SalienceAnalyzer;
 pub use strategy::{ExecutionStrategy, ModelConfig, KVCacheConfig};
 
 /// Neurosymbolic Routing Plan

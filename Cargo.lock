@@ -5616,6 +5616,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeta-integration"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger 0.10.2",
+ "kvquant_rs",
+ "llm_rs",
+ "log",
+ "ns-router-rs",
+ "serde",
+ "serde_json",
+ "shared",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
 name = "zeta-protos"
 version = "0.1.0"
 dependencies = [

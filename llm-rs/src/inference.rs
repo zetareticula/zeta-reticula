@@ -1,3 +1,17 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use ndarray::{Array1, Array2, s};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -8,24 +22,6 @@ use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use std::cmp::Ordering;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct FusionANNSConfig {
-    pub vector_dim: usize,
-    pub batch_size: usize,
-    pub ssd_path: PathBuf,
-}
-
-impl FusionANNSConfig {
-    pub fn new(vector_dim: usize, batch_size: usize, ssd_path: PathBuf) -> Self {
-        FusionANNSConfig {
-            vector_dim,
-            batch_size,
-            ssd_path,
-        }
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct FusionANNS {
@@ -61,40 +57,7 @@ impl FusionANNS {
         }
     }
 
-    pub fn collaborative_filter(&self, query: &Array1<f32>, top_m: usize) -> Vec<u32> {
-        let mut current = 0;
-        let mut visited = vec![false; 1000];
-        let mut nearest_lists = vec![];
-
-        for _ in 0..top_m {
-            visited[current] = true;
-            nearest_lists.push(current);
-            if let Some(neighbors) = self.navigation_graph.get(&current) {
-                current = *neighbors.iter()
-                    .filter(|&&n| !visited[n])
-                    .min_by(|&&a, &&b| {
-                        let a_score = self.pq_vectors.slice(s![a, ..]).dot(query);
-                        let b_score = self.pq_vectors.slice(s![b, ..]).dot(query);
-                        a_score.partial_cmp(&b_score).unwrap_or(Ordering::Equal)
-                    })
-                    .unwrap_or(&0);
-            }
-        }
-
-        let mut candidates: Vec<u32> = nearest_lists.iter()
-            .flat_map(|&list_id| self.vector_ids.get(&list_id).map(|ids| ids.clone()).unwrap_or_default())
-            .collect();
-
-        candidates.sort_by(|&a, &b| {
-            let dist_a = self.pq_vectors.slice(s![a as usize, ..]).dot(query);
-            let dist_b = self.pq_vectors.slice(s![b as usize, ..]).dot(query);
-            dist_a.partial_cmp(&dist_b).unwrap_or(Ordering::Equal)
-        });
-
-        candidates.truncate(top_m);
-        candidates
-    }
-
+  
     pub async fn heuristic_rerank(&self, query: &Array1<f32>, candidates: Vec<u32>) -> Vec<u32> {
         let mut ranked = vec![];
         let mut prev_accuracy = 0.0;

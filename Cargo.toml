@@ -11,6 +11,7 @@ members = [
     "kvquant-rs",
     "quantize-cli",
     "agentflow-rs",
+    "zeta-integration"
 ]
 resolver = "2"
 

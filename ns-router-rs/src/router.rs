@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use crate::salience::SalienceAnalyzer;
 
 /// Errors that can occur during routing
 #[derive(Error, Debug, Serialize, Deserialize)]
@@ -36,7 +37,7 @@ pub type RouterResult<T> = Result<T, RouterError>;
 use shared::{QuantizationResult, PrecisionLevel};
 use crate::{
     NSRoutingPlan,
-    context::NSContextAnalyzer,
+    context::{NSContextAnalyzer, NSContextAnalysis},
     strategy::NSStrategySelector,
     symbolic::{SymbolicReasoner, SymbolicError},
 };
@@ -50,14 +51,14 @@ pub struct TokenFeatures {
     /// Frequency of the token in the training data (normalized)
     pub frequency: f32,
     
-    /// Sentiment score of the token (-1.0 to 1.0)
-    pub sentiment_score: f32,
-    
-    /// Relevance score in the current context (0.0 to 1.0)
+    /// Relevance of the token in the current context (0-1)
     pub context_relevance: f32,
     
-    /// Syntactic/semantic role of the token
-    pub role: String, // e.g., "subject", "modifier", "verb", etc.
+    /// Semantic role of the token (e.g., subject, object, modifier)
+    pub role: String,
+    
+    /// Sentiment score of the token (-1.0 to 1.0)
+    pub sentiment_score: f32,
 }
 
 /// Configuration for the NSRouter
@@ -91,23 +92,25 @@ impl Default for RouterConfig {
 /// 
 /// The `NSRouter` is responsible for processing inference requests and determining
 /// the optimal execution strategy based on the input and context analysis.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NSRouter {
-    /// Analyzer for extracting context from input
-    analyzer: NSContextAnalyzer,
+    /// Context analyzer for extracting features and context
+    context_analyzer: Arc<dyn NSContextAnalyzer + Send + Sync>,
     
-    /// Selector for choosing the best execution strategy
-    selector: NSStrategySelector,
+    /// Salience analyzer for determining token importance
+    salience_analyzer: Arc<SalienceAnalyzer>,
     
-    /// Symbolic reasoner for advanced constraints
-    symbolic_reasoner: SymbolicReasoner,
+    /// Symbolic reasoner for applying logical rules
+    symbolic_reasoner: Arc<SymbolicReasoner>,
     
-    /// Configuration
+    /// Strategy selector for choosing execution strategies
+    strategy_selector: Arc<NSStrategySelector>,
+    
+    /// Cache for storing routing decisions
+    routing_cache: Arc<dyn RoutingCache + Send + Sync>,
+    
+    /// Configuration for the router
     config: RouterConfig,
-    
-    /// Decision cache
-    #[allow(dead_code)]
-    decision_cache: Arc<RwLock<lru::LruCache<String, NSRoutingPlan>>>,
 }
 
 impl NSRouter {
@@ -116,7 +119,17 @@ impl NSRouter {
     /// # Returns
     /// A new instance of `NSRouter` ready to handle routing requests.
     pub fn new() -> Self {
-        Self::with_config(RouterConfig::default())
+        let config = RouterConfig::default();
+        let salience_analyzer = SalienceAnalyzer::new();
+        
+        Self {
+            context_analyzer: Arc::new(NSContextAnalyzer::default()),
+            salience_analyzer: Arc::new(salience_analyzer),
+            symbolic_reasoner: Arc::new(SymbolicReasoner::default()),
+            strategy_selector: Arc::new(NSStrategySelector::default()),
+            routing_cache: Arc::new(InMemoryRoutingCache::default()),
+            config,
+        }
     }
     
     /// Create a new `NSRouter` with custom configuration
@@ -131,12 +144,13 @@ impl NSRouter {
             lru::LruCache::new(config.cache_size)
         ));
         
-        NSRouter {
-            analyzer: NSContextAnalyzer::new(),
-            selector: NSStrategySelector::new(),
-            symbolic_reasoner: SymbolicReasoner::new(),
+        Self {
+            context_analyzer: Arc::new(NSContextAnalyzer::default()),
+            salience_analyzer: Arc::new(SalienceAnalyzer::new()),
+            symbolic_reasoner: Arc::new(SymbolicReasoner::default()),
+            strategy_selector: Arc::new(NSStrategySelector::default()),
+            routing_cache: Arc::new(InMemoryRoutingCache::default()),
             config,
-            decision_cache,
         }
     }
 
@@ -159,89 +173,99 @@ impl NSRouter {
     /// - Strategy selection fails
     pub async fn route_inference(&self, input: &str, user_id: &str) -> RouterResult<NSRoutingPlan> {
         // Input validation
-        let input = input.trim();
-        if input.is_empty() {
-            error!("Empty input received from user: {}", user_id);
+        if input.trim().is_empty() {
             return Err(RouterError::EmptyInput);
         }
-
-        info!("Routing inference for user: {}, input length: {}", user_id, input.len());
-        debug!("Input: {}", input);
-
+        
         // Check cache first
         let cache_key = format!("{}:{}", user_id, input);
-        if let Some(cached_plan) = self.decision_cache.write().await.get(&cache_key) {
-            debug!("Cache hit for input");
-            return Ok(cached_plan.clone());
+        if let Some(cached_plan) = self.routing_cache.get(&cache_key).await {
+            return Ok(cached_plan);
         }
-
-        // Tokenize and extract features
-        let tokens: Vec<&str> = input.split_whitespace().collect();
-        if tokens.len() > self.config.max_tokens {
-            return Err(RouterError::InvalidInput(format!(
-                "Input exceeds maximum token limit ({} > {})",
-                tokens.len(),
-                self.config.max_tokens
-            )));
-        }
-
-        let token_features = self.extract_token_features(&tokens);
         
-        // Analyze context
-        let context = self.analyzer.analyze(input, token_features);
+        // Tokenize input and analyze salience
+        let salience_results = self.salience_analyzer.analyze_text(input);
+        let salient_phrases = self.salience_analyzer.extract_salient_phrases(input, 0.5);
+        
+        // Extract token features with salience information
+        let token_features = self.extract_token_features_with_salience(&salience_results);
+        
+        // Analyze context with salience information
+        let mut context = self.context_analyzer.analyze(input, token_features);
         
         // Apply symbolic reasoning if enabled
-        let mut symbolic_rules = Vec::new();
         if self.config.enable_symbolic {
-            symbolic_rules = self.apply_symbolic_reasoning(input, &context.salience_profile)?;
-            debug!("Generated {} symbolic rules", symbolic_rules.len());
+            let symbolic_constraints = self.apply_symbolic_reasoning(input, &context.salience_profile)?;
+            context.symbolic_constraints = symbolic_constraints;
         }
-
-        // Select execution strategy
-        let strategy = self.selector.select_strategy(&context, &symbolic_rules)
+        
+        // Update context with salience information
+        context.salience_profile = salience_results.into_iter()
+            .map(|sr| {
+                let mut qr = QuantizationResult::default();
+                qr.token_id = sr.token_id;
+                qr.score = sr.salience_score;
+                qr
+            })
+            .collect();
+        
+        // Select execution strategy with salience information
+        let strategy = self.strategy_selector.select_strategy(&context)
+            .await
             .map_err(|e| RouterError::StrategyError(e.to_string()))?;
-
-        // Create routing plan
+        
+        // Create routing plan with salience-informed configuration
         let plan = NSRoutingPlan {
             model_config: ModelConfig {
-                model_name: self.config.default_model.clone(),
+                max_length: self.config.max_sequence_length,
                 precision: self.select_precision(&context),
-                max_length: self.config.max_tokens as u32,
+                ..Default::default()
             },
             execution_strategy: strategy,
             kv_cache_config: KVCacheConfig {
-                enabled: true,
+                enabled: self.config.enable_kv_cache,
                 size_mb: self.calculate_cache_size(&context),
             },
-            symbolic_rules,
+            symbolic_rules: context.symbolic_constraints,
+            salient_phrases, // Add salient phrases to the routing plan
         };
-
-        // Cache the decision
-        self.decision_cache.write().await.put(cache_key, plan.clone());
-
+        
+        // Cache the routing decision
+        self.routing_cache.set(&cache_key, plan.clone()).await;
+        
         Ok(plan)
     }
     
-    /// Extract features from tokens
-    fn extract_token_features(&self, tokens: &[&str]) -> Vec<TokenFeatures> {
-        tokens.iter()
-            .enumerate()
-            .map(|(idx, &word)| {
-                // In a real implementation, this would use more sophisticated NLP techniques
-                let is_subject = idx % 3 == 0 || word.ends_with('s');
-                let length_factor = word.len() as f32 / 10.0; // Normalize by max expected length
-                
+    /// Extract features from tokens with salience information
+    fn extract_token_features_with_salience(&self, salience_results: &[SalienceResult]) -> Vec<TokenFeatures> {
+        salience_results
+            .iter()
+            .map(|sr| {
                 TokenFeatures {
-                    token_id: idx as u32,
-                    frequency: 1.0 / (idx as f32 + 1.0).sqrt(), // Simple IDF-like weighting
-                    sentiment_score: 0.0,  // Would use a sentiment analysis model
-                    context_relevance: 1.0 - (0.1 * (idx % 5) as f32), // Simple decay
-                    role: if is_subject { 
-                        "subject".to_string() 
-                    } else { 
-                        "modifier".to_string() 
-                    },
-                    length_factor,
+                    token_id: sr.token_id,
+                    frequency: 1.0 - sr.salience_score, // Less frequent tokens are more salient
+                    context_relevance: sr.salience_score,
+                    role: sr.role.clone(),
+                }
+            })
+            .collect()
+    }
+    
+    /// Extract features from tokens (legacy method)
+    fn extract_token_features(&self, tokens: &[&str]) -> Vec<TokenFeatures> {
+        tokens
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                TokenFeatures {
+                    token_id: i as u32,
+                    frequency: 0.5,
+                    context_relevance: 0.5,
+                    role: "modifier".to_string(),
+                }
+            })
+            .collect()
+    }
                 }
             })
             .collect()
@@ -276,81 +300,151 @@ impl NSRouter {
     }
     
     /// Select appropriate precision based on context
-    fn select_precision(&self, context: &NSContextAnalysis) -> PrecisionLevel {
-        // Simple heuristic: use lower precision for larger inputs
-        if context.token_count > 1000 {
-            PrecisionLevel::FP16
+    fn select_precision(&self, context: &NSContextAnalysis) -> Vec<PrecisionLevel> {
+        // For now, return a single precision level based on the context
+        // In a real implementation, this could return multiple options with confidence scores
+        if context.token_features.len() > 1000 {
+            vec![PrecisionLevel::FP16]
         } else {
-            PrecisionLevel::FP32
+            vec![PrecisionLevel::FP32]
         }
     }
     
-    /// Calculate appropriate cache size based on context
+    /// Calculate appropriate cache size in MB based on context
     fn calculate_cache_size(&self, context: &NSContextAnalysis) -> u32 {
-        // Simple heuristic: larger inputs get more cache
-        let base_size = 1024; // 1GB base
-        let token_based = (context.token_count as f32 * 0.1) as u32; // 0.1MB per token
+        // Simple heuristic: allocate more cache for larger inputs
+        // Base size + size based on number of tokens
+        let base_size = 512; // 512MB base
+        let token_based = (context.token_features.len() as f32 * 0.1) as u32; // 0.1MB per token
         
-        (base_size + token_based).min(8192) // Cap at 8GB
+        (base_size + token_based).min(4096) // Cap at 4GB
+    }
+    
+        // Update context with salience information
+        context.salience_profile = salience_results.into_iter()
+            .map(|sr| {
+                let mut qr = QuantizationResult::default();
+                qr.token_id = sr.token_id;
+                qr.score = sr.salience_score;
+                qr
+            })
+            .collect();
+        
+        // Select execution strategy with salience information
+        let strategy = self.strategy_selector.select_strategy(&context)
+            .await
+            .map_err(|e| RouterError::StrategyError(e.to_string()))?;
+        
+        // Create routing plan with salience-informed configuration
+        let plan = NSRoutingPlan::new(
+            ModelConfig {
+                max_length: self.config.max_sequence_length,
+                precision: self.select_precision(&context),
+                ..Default::default()
+            },
+            strategy,
+            KVCacheConfig {
+                enabled: self.config.enable_kv_cache,
+                size_mb: self.calculate_cache_size(&context),
+            },
+            context.symbolic_constraints,
+        );
+        
+        // Cache the routing decision
+        self.routing_cache.set(&cache_key, plan.clone()).await;
+        
+        Ok(plan)
+    }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NSRoutingPlan {
+    /// Configuration for the model to use
+    pub model_config: ModelConfig,
+    
+    /// Strategy for executing the model
+    pub execution_strategy: String,
+    
+    /// Configuration for the KV cache
+    pub kv_cache_config: KVCacheConfig,
+    
+    /// Symbolic rules to apply during inference
+    pub symbolic_rules: Vec<String>,
+    
+    /// Salient phrases identified in the input
+    pub salient_phrases: Vec<String>,
+}
+
+impl Default for NSRoutingPlan {
+    fn default() -> Self {
+        Self {
+            model_config: ModelConfig {
+                model_name: "default".to_string(),
+                precision: vec![PrecisionLevel::FP16],
+                max_length: 2048,
+            },
+            execution_strategy: "local".to_string(),
+            kv_cache_config: KVCacheConfig {
+                enabled: true,
+                size_mb: 1024,
+            },
+            symbolic_rules: Vec::new(),
+            salient_phrases: Vec::new(),
+        }
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct NSRoutingPlan {
-    pub model_config: ModelConfig,
-    pub execution_strategy: String,
-    pub kv_cache_config: KVQuantConfig,
-    pub symbolic_rules: Vec<String>,
-}
-
 impl NSRoutingPlan {
-    pub fn new(model_config: ModelConfig, execution_strategy: String, kv_cache_config: KVQuantConfig, symbolic_rules: Vec<String>) -> Self {
-        NSRoutingPlan {
+    pub fn new(
+        model_config: ModelConfig,
+        execution_strategy: String,
+        kv_cache_config: KVCacheConfig,
+        symbolic_rules: Vec<String>,
+    ) -> Self {
+        Self {
             model_config,
             execution_strategy,
             kv_cache_config,
             symbolic_rules,
+            salient_phrases: Vec::new(),
         }
     }
 }
 
-enum ExecutionStrategy {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecutionStrategy {
     Local,
     Federated,
     Distributed,
+    OnDevice,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
-    pub size: usize,
+    pub model_name: String,
     pub precision: Vec<PrecisionLevel>,
+    pub max_length: u32,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct KVQuantConfig {
-    pub spot_capacity: usize,
-    pub block_size: usize,
-    pub salience_threshold: f32,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KVCacheConfig {
+    pub enabled: bool,
+    pub size_mb: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SymbolicRule {
     pub name: String,
-    pub description: String,
-    pub conditions: Vec<String>,
-    pub actions: Vec<String>,
+    pub pattern: String,
+    pub action: String,
+    pub priority: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SymbolicRules {
     pub rules: Vec<SymbolicRule>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct NSContextAnalysis {
-    pub context: String,
-    pub token_features: Vec<TokenFeatures>,
-}
+// NSContextAnalysis is now defined in the context module
 
 
 #[cfg(test)]

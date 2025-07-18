@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+
 /// Measures the latency of a function call in milliseconds.
 /// /// # Arguments
 /// /// * `f` - A closure that takes no arguments and returns a value of type `T`.
@@ -15,3 +16,4 @@ where
     let duration = start.elapsed().as_secs_f32() * 1000.0; // Convert to ms
     (result, duration)
 }
+

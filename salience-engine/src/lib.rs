@@ -17,6 +17,7 @@ pub mod mesolimbic;
 pub mod optimization;
 pub mod quantizer;
 pub mod role_inference;
+pub mod tableaux;
 
 use actix_web::{web, App, HttpServer, Responder, HttpResponse};
 use serde::{Deserialize, Serialize};

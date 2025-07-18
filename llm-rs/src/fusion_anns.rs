@@ -1,3 +1,18 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 use tokio::fs::File;
@@ -102,6 +117,10 @@ impl FusionANNS {
         candidates
     }
 
+    // Heuristic reranking
+    // This function takes a query vector and a list of candidates as arguments
+    // It returns a vector of the top_m nearest neighbors to the query vector
+    
     pub async fn heuristic_rerank(&self, query: &Array1<f32>, candidates: Vec<u32>) -> Vec<u32> {
         let mut ranked = vec![];
         let mut batches: Vec<_> = candidates.chunks(self.batch_size).collect();
