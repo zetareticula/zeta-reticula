@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'p2pstore'
+    orgId: 1
+    folder: 'P2PStore'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
