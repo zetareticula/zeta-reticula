@@ -1,8 +1,8 @@
 [package]
 name = "zeta-reticula"
-version = "0.1.0"
+version = "0.2.4"
 edition = "2021"
-description = "A k8s-native library for distributed AI inference and storage in Zeta Reticula"
+description = "A k8s-native library for distributed AI inference and storage with Petri net-based agent systems"
 license = "Apache-2.0"
 repository = "https://github.com/xAI/zeta-reticula"
 
@@ -14,6 +14,19 @@ log = "0.4"
 parking_lot = "0.12"
 uuid = { version = "1", features = ["v4"] }
 rand = "0.8"
+ndarray = "0.15"
+chrono = "0.4"
+actix-web = "4"
+actix-cors = "0.6"
+jsonwebtoken = "8"
+serde_json = "1"
+hashbrown = "0.14"
+rustls = "0.21"
+rustls-pemfile = "1.0"
+rayon = "1.5"
+lru = "0.7"
+clap = { version = "4", features = ["derive"] }
+mlua = { version = "0.9", features = ["lua54", "vendored"] }  # Added for Lua integration
 
 [dependencies.p2pstore]
 path = "src/p2pstore"
@@ -21,7 +34,7 @@ version = "0.1.0"
 
 [dependencies.zeta-vault-synergy]
 path = "src/zeta_vault_synergy"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies.client]
 path = "src/client"
@@ -39,8 +52,17 @@ version = "0.1.0"
 path = "src/llm_rs"
 version = "0.1.0"
 
+[dependencies.quantize]
+path = "src/quantize"
+version = "0.1.0"
 
+[dependencies.agentflow]
+path = "src/agentflow"
+version = "0.1.0"
 
+[[bin]]
+name = "zeta-infer"
+path = "src/bin/zeta-infer.rs"
 [workspace]
 members = [
     "api",

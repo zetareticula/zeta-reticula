@@ -12,19 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod attention_store;
-pub mod master_service;
-pub mod llm_rs;
-pub mod p2pstore;
-pub mod client;
-pub mod zeta_vault_synergy;
-pub mod quantize;
-pub mod agentflow;
-pub mod api;
+mod service;
+mod gc_task;
 
-pub use attention_store::AttentionStore;
-pub use master_service::MasterService;
-pub use llm_rs::LLMModel;
-pub use quantize::Quantizer;
-pub use agentflow::AgentFlow;
-pub use api::ApiServer;
+pub use service::MasterService;
+pub use p2pstore::Segment; // Assuming Segment is defined in p2pstore
