@@ -1,4 +1,43 @@
+[package]
+name = "zeta-reticula"
+version = "0.1.0"
+edition = "2021"
+description = "A k8s-native library for distributed AI inference and storage in Zeta Reticula"
+license = "Apache-2.0"
+repository = "https://github.com/xAI/zeta-reticula"
 
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+log = "0.4"
+parking_lot = "0.12"
+uuid = { version = "1", features = ["v4"] }
+rand = "0.8"
+
+[dependencies.p2pstore]
+path = "src/p2pstore"
+version = "0.1.0"
+
+[dependencies.zeta-vault-synergy]
+path = "src/zeta_vault_synergy"
+version = "0.1.0"
+
+[dependencies.client]
+path = "src/client"
+version = "0.1.0"
+
+[dependencies.master-service]
+path = "src/master_service"
+version = "0.1.0"
+
+[dependencies.attention-store]
+path = "src/attention_store"
+version = "0.1.0"
+
+[dependencies.llm-rs]
+path = "src/llm_rs"
+version = "0.1.0"
 
 
 

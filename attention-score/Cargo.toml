@@ -1,0 +1,13 @@
+[package]
+name = "attention-store"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+log = "0.4"
+p2pstore = { path = "../p2pstore" }
+zeta-vault-synergy = { path = "../zeta-vault-synergy" }
+parking_lot = "0.12"

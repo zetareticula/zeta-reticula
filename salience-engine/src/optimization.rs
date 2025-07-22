@@ -172,19 +172,20 @@ pub fn compute_token_salience(token: &Token) -> (u32, f32) {
     (token.id, salience_score)
 }
 
-        if let Some(ids) = self.vector_ids.get(&list_id) {
-                for &id in ids.iter() {
-                    let vector = self.pq_vectors.slice(s![id as usize, ..]);
-                    let distance = vector.dot(query);
-                    candidates.push((id, distance));
-                }
-            }
+fn find_nearest_neighbors(&self, query: &Array1<f32>, list_id: u32, top_m: usize) -> Vec<u32> {
+    let mut candidates = Vec::new();
+    
+    if let Some(ids) = self.vector_ids.get(&list_id) {
+        for &id in ids.iter() {
+            let vector = self.pq_vectors.slice(s![id as usize, ..]);
+            let distance = vector.dot(query);
+            candidates.push((id, distance));
         }
-
-        // Sort candidates by distance and return top-m
-        candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        candidates.iter().take(top_m).map(|&(id, _)| id).collect()
     }
+
+    // Sort candidates by distance and return top-m
+    candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    candidates.iter().take(top_m).map(|&(id, _)| id).collect()
 }
 
 

@@ -1,0 +1,18 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+log = "0.4"
+rand = "0.8"
+uuid = { version = "1", features = ["v4"] }
+p2pstore = { path = "../p2pstore" }
+zeta-vault-synergy = { path = "../zeta-vault-synergy" }
+agentflow-rs = { path = "../agentflow-rs" }
+etcd-client = "0.13"
+tonic = "0.10"
+prost = "0.11"
