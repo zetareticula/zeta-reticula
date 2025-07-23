@@ -39,3 +39,14 @@ wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys"]
 
 [lib]
 path = "src/lib.rs"
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"
+
+[dependencies.env_logger]
+version = "0.10"
+optional = true
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
