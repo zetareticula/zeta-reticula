@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "A k8s-native library for distributed AI inference and storage in Zeta Reticula"
 license = "Apache-2.0"
-repository = "https://github.com/xAI/zeta-reticula"
+repository = "https://github.com/zeta-reticula/zeta-reticula"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

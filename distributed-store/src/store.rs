@@ -1,4 +1,4 @@
-// Copyright 2025 xAI
+// Copyright 2025 zeta-reticula
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ impl DistributedObjectStore {
                 spec: Some(k8s::PodSpec {
                     containers: vec![k8s::Container {
                         name: "store-container".to_string(),
-                        image: Some("xai/distributed-store:latest".to_string()),
+                        image: Some("zeta-reticula/distributed-store:latest".to_string()),
                         ..Default::default()
                     }],
                     ..Default::default()

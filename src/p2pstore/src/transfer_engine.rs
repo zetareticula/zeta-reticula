@@ -123,7 +123,7 @@ impl TransferEngine {
                 spec: Some(k8s::PodSpec {
                     containers: vec![k8s::Container {
                         name: "transfer-container".to_string(),
-                        image: Some("xai/transfer-engine:latest".to_string()),
+                        image: Some("zeta-reticula/transfer-engine:latest".to_string()),
                         ports: Some(vec![k8s::ContainerPort {
                             container_port: self.rpc_port as i32,
                             ..Default::default()
