@@ -1,72 +1,378 @@
-use std::sync::Arc;
-use tokio::sync::{RwLock, broadcast};
+use std::{
+    sync::Arc,
+    time::Duration,
+    collections::HashMap,
+    num::NonZeroUsize,
+    backtrace::Backtrace,
+};
+use async_trait::async_trait;
+use dashmap::DashMap;
+use futures_util::stream::{self, StreamExt, TryStreamExt};
 use thiserror::Error;
-use rayon::prelude::*;
+use tokio::{
+    sync::{
+        mpsc,
+        broadcast,
+        RwLock,
+        Semaphore,
+    },
+    time,
+};
+use tokio_util::sync::CancellationToken;
+use tracing::{info, warn, error, instrument, Instrument};
+
+/// Maximum number of concurrent replication tasks
+const MAX_CONCURRENT_REPLICATIONS: usize = 10;
+/// Maximum batch size for batched operations
+const MAX_BATCH_SIZE: usize = 100;
 
 #[derive(Error, Debug)]
-pub enum SyncManagerError {
-    #[error("Sync error: {0}")]
-    Sync(String),
+pub enum SyncError {
+    #[error("Sync channel error: {0}")]
+    ChannelError(#[from] broadcast::error::SendError<(String, Vec<u8>)>),
+    
+    #[error("Failed to replicate to node {node_id}")]
+    ReplicationError {
+        node_id: usize,
+        #[source]
+        source: anyhow::Error,
+        backtrace: Backtrace,
+    },
+    
+    #[error("Batch operation failed: {0}")]
+    BatchError(#[from] BatchError),
+    
+    #[error("Operation cancelled")]
+    Cancelled,
 }
 
+#[derive(Error, Debug)]
+pub enum BatchError {
+    #[error("Batch size of {size} exceeds maximum of {max}")]
+    BatchSizeExceeded { size: usize, max: usize },
+    
+    #[error("Batch operation timed out after {elapsed:?}")]
+    Timeout { elapsed: Duration },
+}
+
+/// Trait for types that can be replicated
+#[async_trait]
+pub trait Replicable: Send + Sync + 'static {
+    async fn replicate(&self, node_id: usize) -> Result<(), SyncError>;
+}
+
+/// Configuration for synchronization
+#[derive(Clone, Debug)]
+pub struct SyncConfig {
+    pub sync_interval: Duration,
+    pub replication_factor: usize,
+    pub batch_size: usize,
+    pub timeout: Duration,
+}
+
+impl Default for SyncConfig {
+    fn default() -> Self {
+        Self {
+            sync_interval: Duration::from_secs(5),
+            replication_factor: 3,
+            batch_size: 50,
+            timeout: Duration::from_secs(30),
+        }
+    }
+}
+
+/// Manages synchronization between nodes
 pub struct SyncManager {
-    sync_channel: broadcast::Sender<(String, Vec<u8>)>,
     node_id: usize,
-    config: VaultConfig,
-    kv_cache_mgr: Arc<KVCacheManager>,
-    weight_mgr: Arc<WeightManager>,
+    config: SyncConfig,
+    kv_cache_mgr: Arc<dyn KVCacheManager>,
+    weight_mgr: Arc<dyn WeightManager>,
+    sync_tx: mpsc::Sender<(String, Vec<u8>)>,
+    cancel_token: CancellationToken,
+    semaphore: Arc<Semaphore>,
+    metrics: SyncMetrics,
+}
+
+/// Metrics for synchronization
+#[derive(Clone, Debug, Default)]
+struct SyncMetrics {
+    sync_ops: Arc<DashMap<String, u64>>,
+    errors: Arc<DashMap<String, u64>>,
 }
 
 impl SyncManager {
-    pub async fn new(node_id: usize, config: VaultConfig, kv_cache_mgr: Arc<KVCacheManager>, weight_mgr: Arc<WeightManager>) -> Result<Self, SyncManagerError> {
-        let (tx, _rx) = broadcast::channel(100);
-        Ok(SyncManager {
-            sync_channel: tx,
+    /// Creates a new SyncManager with the given configuration
+    pub async fn new(
+        node_id: usize,
+        config: SyncConfig,
+        kv_cache_mgr: Arc<dyn KVCacheManager>,
+        weight_mgr: Arc<dyn WeightManager>,
+    ) -> Result<Self, SyncError> {
+        let (sync_tx, mut sync_rx) = mpsc::channel(1000);
+        let cancel_token = CancellationToken::new();
+        let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REPLICATIONS));
+        let metrics = SyncMetrics::default();
+        
+        let manager = Self {
             node_id,
             config,
             kv_cache_mgr,
             weight_mgr,
-        })
-    }
-
-    pub async fn sync_nodes(&self) -> Result<(), SyncManagerError> {
-        let mut rx = self.sync_channel.subscribe();
+            sync_tx,
+            cancel_token: cancel_token.clone(),
+            semaphore: semaphore.clone(),
+            metrics: metrics.clone(),
+        };
+        
+        // Start background sync task
+        let sync_handle = tokio::spawn(
+            manager.clone().run_sync_loop(sync_rx)
+                .instrument(tracing::info_span!("sync_loop"))
+        );
+        
+        // Store the handle for graceful shutdown
         tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(self.config.sync_interval).await;
-                let data: Vec<(String, Vec<u8>)> = rx.try_iter().collect();
-                data.par_iter().for_each(|(key, value)| {
-                    log::info!("Syncing {} to node {}", key, self.node_id);
-                    // Mock parallel sync (replace with gRPC in production)
-                });
-            }
+            let _ = sync_handle.await;
         });
+        
+        Ok(manager)
+    }
+    
+    /// Main sync loop that processes sync messages
+    async fn run_sync_loop(
+        mut self,
+        mut rx: mpsc::Receiver<(String, Vec<u8>)>,
+    ) -> Result<(), SyncError> {
+        let mut interval = time::interval(self.config.sync_interval);
+        
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    if let Err(e) = self.sync_batch().await {
+                        error!(error = %e, "Failed to sync batch");
+                    }
+                }
+                Some((key, data)) = rx.recv() => {
+                    self.process_sync_message(&key, &data).await?;
+                }
+                _ = self.cancel_token.cancelled() => {
+                    info!("Sync loop cancelled");
+                    return Ok(());
+                }
+            }
+        }
+    }
+    
+    /// Processes a single sync message
+    async fn process_sync_message(&self, key: &str, data: &[u8]) -> Result<(), SyncError> {
+        // Process based on key prefix
+        if key.starts_with("kv_") {
+            self.process_kv_sync(key, data).await
+        } else if key.starts_with("weight_") {
+            self.process_weight_sync(key, data).await
+        } else {
+            warn!(key, "Unknown sync message type");
+            Ok(())
+        }
+    }
+    
+    /// Processes a KV cache sync message
+    async fn process_kv_sync(&self, key: &str, data: &[u8]) -> Result<(), SyncError> {
+        // Deserialize and apply KV update
+        // ... implementation ...
         Ok(())
     }
-
-    pub async fn replicate_data(&self) -> Result<(), SyncManagerError> {
-        let kv_caches = self.kv_cache_mgr.kv_cache.read().await.clone();
-        let weights = self.weight_mgr.binary_weights.read().await.clone();
-        rayon::scope(|s| {
-            s.spawn(|_| {
-                kv_caches.par_iter().for_each(|(key, cache)| {
-                    for node in 0..self.config.replication_factor {
-                        if node != self.node_id {
-                            log::info!("Replicating KV cache {} to node {}", key, node);
-                        }
-                    }
-                });
-            });
-            s.spawn(|_| {
-                weights.par_iter().for_each(|(key, weight)| {
-                    for node in 0..self.config.replication_factor {
-                        if node != self.node_id {
-                            log::info!("Replicating weight {} to node {}", key, node);
-                        }
-                    }
-                });
-            });
-        });
+    
+    /// Processes a weight sync message
+    async fn process_weight_sync(&self, key: &str, data: &[u8]) -> Result<(), SyncError> {
+        // Deserialize and apply weight update
+        // ... implementation ...
         Ok(())
+    }
+    
+    /// Syncs a batch of data to all replicas
+    pub async fn sync_batch(&self) -> Result<(), SyncError> {
+        let kv_data = self.kv_cache_mgr.get_all().await?;
+        let weight_data = self.weight_mgr.get_all().await?;
+        
+        // Process in parallel with backpressure
+        let semaphore = self.semaphore.clone();
+        let permit = semaphore.acquire().await.map_err(|_| SyncError::Cancelled)?;
+        
+        let result = tokio::try_join!(
+            self.replicate_data("kv", kv_data, |node_id, data| {
+                self.replicate_kv(node_id, data)
+            }),
+            self.replicate_data("weight", weight_data, |node_id, data| {
+                self.replicate_weight(node_id, data)
+            }),
+        );
+        
+        drop(permit);
+        result?;
+        
+        Ok(())
+    }
+    
+    /// Generic replication function with batching and backpressure
+    async fn replicate_data<T, F, Fut>(
+        &self,
+        data_type: &str,
+        data: Vec<T>,
+        replicate_fn: F,
+    ) -> Result<(), SyncError>
+    where
+        F: Fn(usize, T) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = Result<(), SyncError>> + Send,
+        T: Send + 'static,
+    {
+        if data.is_empty() {
+            return Ok(());
+        }
+        
+        // Process data in batches
+        let batches = data.chunks(self.config.batch_size);
+        let batch_count = batches.len();
+        
+        info!(
+            data_type,
+            batch_count,
+            total_items = data.len(),
+            "Starting replication"
+        );
+        
+        // Process batches in parallel with bounded concurrency
+        let results = stream::iter(batches.enumerate())
+            .map(|(i, batch)| {
+                let replicate_fn = &replicate_fn;
+                let node_id = self.node_id;
+                
+                async move {
+                    let start = std::time::Instant::now();
+                    let result = replicate_fn(node_id, batch).await;
+                    let elapsed = start.elapsed();
+                    
+                    match &result {
+                        Ok(_) => {
+                            info!(
+                                data_type,
+                                batch = i + 1,
+                                batch_count,
+                                elapsed_ms = elapsed.as_millis(),
+                                "Batch replicated successfully"
+                            );
+                        }
+                        Err(e) => {
+                            error!(
+                                error = %e,
+                                data_type,
+                                batch = i + 1,
+                                batch_count,
+                                "Batch replication failed"
+                            );
+                        }
+                    }
+                    
+                    result
+                }
+            })
+            .buffer_unordered(MAX_CONCURRENT_REPLICATIONS)
+            .collect::<Vec<_>>()
+            .await;
+        
+        // Check for any errors
+        for result in results {
+            result?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Replicates KV cache to a node
+    async fn replicate_kv(&self, node_id: usize, data: &[u8]) -> Result<(), SyncError> {
+        // Implementation for KV replication
+        // ...
+        Ok(())
+    }
+    
+    /// Replicates weights to a node
+    async fn replicate_weight(&self, node_id: usize, data: &[u8]) -> Result<(), SyncError> {
+        // Implementation for weight replication
+        // ...
+        Ok(())
+    }
+    
+    /// Gracefully shuts down the sync manager
+    pub async fn shutdown(&self) -> Result<(), SyncError> {
+        info!("Shutting down sync manager");
+        self.cancel_token.cancel();
+        Ok(())
+    }
+}
+
+// Implement Clone for Arc-wrapped types
+impl Clone for SyncManager {
+    fn clone(&self) -> Self {
+        Self {
+            node_id: self.node_id,
+            config: self.config.clone(),
+            kv_cache_mgr: self.kv_cache_mgr.clone(),
+            weight_mgr: self.weight_mgr.clone(),
+            sync_tx: self.sync_tx.clone(),
+            cancel_token: self.cancel_token.clone(),
+            semaphore: self.semaphore.clone(),
+            metrics: self.metrics.clone(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockall::{predicate::*, mock};
+    
+    // Mock implementations for testing
+    mock! {
+        pub KVCacheManager {}
+        #[async_trait]
+        impl KVCacheManagerTrait for KVCacheManager {
+            async fn get_all(&self) -> Result<Vec<u8>, SyncError>;
+        }
+    }
+    
+    mock! {
+        pub WeightManager {}
+        #[async_trait]
+        impl WeightManagerTrait for WeightManager {
+            async fn get_all(&self) -> Result<Vec<u8>, SyncError>;
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_sync_batch() {
+        let kv_mock = MockKVCacheManager::new();
+        let weight_mock = MockWeightManager::new();
+        
+        // Set up expectations
+        kv_mock.expect_get_all()
+            .returning(|| Ok(vec![1, 2, 3]));
+            
+        weight_mock.expect_get_all()
+            .returning(|| Ok(vec![4, 5, 6]));
+        
+        let config = SyncConfig {
+            batch_size: 10,
+            ..Default::default()
+        };
+        
+        let manager = SyncManager::new(
+            1,
+            config,
+            Arc::new(kv_mock),
+            Arc::new(weight_mock),
+        ).await.unwrap();
+        
+        let result = manager.sync_batch().await;
+        assert!(result.is_ok());
     }
 }

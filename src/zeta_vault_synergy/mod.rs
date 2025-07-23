@@ -16,74 +16,218 @@ pub mod kv_cache_manager;
 pub mod weight_manager;
 pub mod sync_manager;
 
-use std::sync::Arc;
-use tokio::sync::{RwLock, broadcast};
+use std::{
+    sync::Arc,
+    time::Duration,
+    backtrace::Backtrace,
+};
+use async_trait::async_trait;
+use ndarray::Array2;
+use serde::{Serialize, Deserialize};
 use thiserror::Error;
-use log;
-use crate::zeta_vault_synergy::kv_cache_manager::KVCacheManager;
-use crate::zeta_vault_synergy::weight_manager::WeightManager;
-use crate::zeta_vault_synergy::sync_manager::SyncManager;
+use tracing::{info, error, instrument};
+use half::f16;
 
+pub mod kv_cache_manager;
+pub mod weight_manager;
+pub mod sync_manager;
+
+use kv_cache_manager::{KVCache, KVCacheManager, KVCacheError};
+use weight_manager::{BinaryWeightSet, WeightManager, WeightManagerError};
+use sync_manager::{SyncManager, SyncError, SyncConfig};
+
+/// Main error type for ZetaVaultSynergy operations
 #[derive(Error, Debug)]
 pub enum ZetaVaultSynergyError {
-    #[error("IO error: {0}")]
+    #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+    
     #[error("Serialization error: {0}")]
     Serialization(#[from] bincode::Error),
+    
     #[error("Network error: {0}")]
     Network(String),
+    
     #[error("Sync error: {0}")]
-    Sync(String),
+    Sync(#[from] SyncError),
+    
+    #[error("KV cache error: {0}")]
+    KVCache(#[from] KVCacheError),
+    
+    #[error("Weight manager error: {0}")]
+    WeightManager(#[from] WeightManagerError),
+    
     #[error("Validation error: {0}")]
-    Validation(String),
+    Validation { 
+        message: String,
+        backtrace: Backtrace,
+    },
+    
+    #[error("Operation timed out after {elapsed:?}")]
+    Timeout { 
+        elapsed: Duration,
+        backtrace: Backtrace,
+    },
 }
 
+/// Configuration for ZetaVaultSynergy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultConfig {
+    /// Number of nodes in the cluster
+    pub node_count: usize,
+    
+    /// Number of replicas for each piece of data
+    pub replication_factor: usize,
+    
+    /// Interval between sync operations
+    pub sync_interval: Duration,
+    
+    /// Batch size for sync operations
+    pub batch_size: usize,
+    
+    /// Timeout for sync operations
+    pub sync_timeout: Duration,
+}
+
+impl Default for VaultConfig {
+    fn default() -> Self {
+        Self {
+            node_count: 1,
+            replication_factor: 3,
+            sync_interval: Duration::from_secs(5),
+            batch_size: 50,
+            sync_timeout: Duration::from_secs(30),
+        }
+    }
+}
+
+/// Main orchestrator for ZetaVaultSynergy operations
 pub struct ZetaVaultSynergy {
-    kv_cache_mgr: Arc<KVCacheManager>,
-    weight_mgr: Arc<WeightManager>,
+    kv_cache_mgr: Arc<dyn KVCacheManager>,
+    weight_mgr: Arc<dyn WeightManager>,
     sync_mgr: Arc<SyncManager>,
+    config: VaultConfig,
+    node_id: usize,
 }
 
 impl ZetaVaultSynergy {
+    /// Creates a new ZetaVaultSynergy instance
+    #[instrument(skip_all)]
     pub async fn new(node_id: usize, config: VaultConfig) -> Result<Self, ZetaVaultSynergyError> {
-        let kv_cache_mgr = Arc::new(KVCacheManager::new(node_id, config.clone()).await?);
-        let weight_mgr = Arc::new(WeightManager::new(node_id, config.clone()).await?);
-        let sync_mgr = Arc::new(SyncManager::new(node_id, config, Arc::clone(&kv_cache_mgr), Arc::clone(&weight_mgr)).await?);
-        Ok(ZetaVaultSynergy {
+        info!("Initializing ZetaVaultSynergy with config: {:?}", config);
+        
+        // Initialize managers
+        let kv_cache_mgr = Arc::new(kv_cache_manager::KVCacheManagerImpl::new(node_id, config.clone()).await?);
+        let weight_mgr = Arc::new(weight_manager::WeightManagerImpl::new(node_id, config.clone()).await?);
+        
+        // Create sync config
+        let sync_config = SyncConfig {
+            sync_interval: config.sync_interval,
+            replication_factor: config.replication_factor,
+            batch_size: config.batch_size,
+            timeout: config.sync_timeout,
+        };
+        
+        // Initialize sync manager
+        let sync_mgr = Arc::new(
+            SyncManager::new(
+                node_id,
+                sync_config,
+                Arc::clone(&kv_cache_mgr) as Arc<dyn KVCacheManager>,
+                Arc::clone(&weight_mgr) as Arc<dyn WeightManager>,
+            ).await?
+        );
+        
+        Ok(Self {
             kv_cache_mgr,
             weight_mgr,
             sync_mgr,
+            config,
+            node_id,
         })
     }
-
-    pub async fn store_kv_cache(&self, model_id: &str, keys: Array2<f16>, values: Array2<f16>) -> Result<(), ZetaVaultSynergyError> {
-        self.kv_cache_mgr.store_kv_cache(model_id, keys, values).await
+    
+    /// Stores KV cache for a model
+    #[instrument(skip(self, keys, values))]
+    pub async fn store_kv_cache(
+        &self, 
+        model_id: &str, 
+        keys: Array2<f16>, 
+        values: Array2<f16>
+    ) -> Result<(), ZetaVaultSynergyError> {
+        self.kv_cache_mgr.store_kv_cache(model_id, keys, values).await?;
+        
+        // Trigger async replication
+        if let Err(e) = self.sync_mgr.sync_batch().await {
+            error!(error = %e, "Failed to trigger replication after KV cache update");
+        }
+        
+        Ok(())
     }
-
-    pub async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache> {
+    
+    /// Retrieves KV cache for a model
+    #[instrument(skip(self))]
+    pub async fn get_kv_cache(&self, model_id: &str) -> Result<Option<KVCache>, ZetaVaultSynergyError> {
         self.kv_cache_mgr.get_kv_cache(model_id).await
+            .map_err(Into::into)
     }
-
-    pub async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), ZetaVaultSynergyError> {
-        self.weight_mgr.store_binary_weights(model_id, binary_set).await
+    
+    /// Stores binary weights for a model
+    #[instrument(skip(self, binary_set))]
+    pub async fn store_binary_weights(
+        &self, 
+        model_id: &str, 
+        binary_set: BinaryWeightSet
+    ) -> Result<(), ZetaVaultSynergyError> {
+        self.weight_mgr.store_binary_weights(model_id, binary_set).await?;
+        
+        // Trigger async replication
+        if let Err(e) = self.sync_mgr.sync_batch().await {
+            error!(error = %e, "Failed to trigger replication after weights update");
+        }
+        
+        Ok(())
     }
-
-    pub async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet> {
+    
+    /// Retrieves binary weights for a model
+    #[instrument(skip(self))]
+    pub async fn get_binary_weights(&self, model_id: &str) -> Result<Option<BinaryWeightSet>, ZetaVaultSynergyError> {
         self.weight_mgr.get_binary_weights(model_id).await
+            .map_err(Into::into)
     }
-
-    pub async fn sync_nodes(&self) -> Result<(), ZetaVaultSynergyError> {
-        self.sync_mgr.sync_nodes().await
+    
+    /// Triggers a manual sync of all data
+    #[instrument(skip(self))]
+    pub async fn sync_all(&self) -> Result<(), ZetaVaultSynergyError> {
+        self.sync_mgr.sync_batch().await?;
+        Ok(())
     }
-
-    pub async fn replicate_data(&self) -> Result<(), ZetaVaultSynergyError> {
-        self.sync_mgr.replicate_data().await
+    
+    /// Gracefully shuts down the service
+    #[instrument(skip(self))]
+    pub async fn shutdown(&self) -> Result<(), ZetaVaultSynergyError> {
+        info!("Shutting down ZetaVaultSynergy");
+        self.sync_mgr.shutdown().await?;
+        Ok(())
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct VaultConfig {
-    pub node_count: usize,
-    pub replication_factor: usize,
-    pub sync_interval: std::time::Duration,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockall::predicate::*;
+    
+    #[tokio::test]
+    async fn test_zvs_initialization() {
+        let config = VaultConfig {
+            node_count: 3,
+            replication_factor: 2,
+            ..Default::default()
+        };
+        
+        let zvs = ZetaVaultSynergy::new(1, config).await;
+        assert!(zvs.is_ok());
+    }
+    
+    // Add more tests for other methods
 }
