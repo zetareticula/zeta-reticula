@@ -11,6 +11,6 @@ log = "0.4"
 p2pstore = { path = "../p2pstore" }
 zeta-vault-synergy = { path = "../zeta-vault-synergy" }
 parking_lot = "0.12"
-llm-rs = { path = "../llm-rs" }  # Local path to llm-rs
+llm_rs = { path = "../llm-rs" }  # Local path to llm-rs
 client = { path = "../client" }  # For TransferEngine
 master-service = { path = "../master-service" }  # For segment management

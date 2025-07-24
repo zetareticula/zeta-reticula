@@ -177,6 +177,16 @@ pub struct SessionContext {
     pub last_accessed: std::time::Instant,
 }
 
+// Add RL policy trait for quantization/expert selection
+pub trait RLPolicy {
+    fn select_bit_depth(&self, state: &KVCache, hardware: &str) -> u8;
+    fn select_experts(&self, input: &Array2<f16>, num_experts: usize, hardware: &str) -> Vec<usize>;
+}
+
+// Add PetriNet logging integration (assume PetriNet is available in scope)
+use llm_rs::petri_net::{PetriNet, Token as PetriToken};
+
+// Add field for RL policy and PetriNet
 pub struct ZetaVaultSynergy {
     hbm_cache: SegQueue<SessionContext>,
     host_cache: SegQueue<SegQueue<SessionContext>>, // Batch processing
@@ -188,6 +198,8 @@ pub struct ZetaVaultSynergy {
     compression_threshold: f32,
     batch_size: usize,
     num_experts: usize, // Number of MoE experts
+    rl_policy: Option<Arc<dyn RLPolicy + Send + Sync>>,
+    petri_net_logger: Option<Arc<PetriNet>>,
 }
 
 impl ZetaVaultSynergy {
@@ -203,6 +215,29 @@ impl ZetaVaultSynergy {
             compression_threshold,
             batch_size,
             num_experts,
+            rl_policy: None,
+            petri_net_logger: None,
+        }
+    }
+
+    pub fn new_with_policy(
+        max_hbm_size: usize, max_host_size: usize, hardware: &str, compression_threshold: f32, batch_size: usize, num_experts: usize,
+        rl_policy: Option<Arc<dyn RLPolicy + Send + Sync>>,
+        petri_net_logger: Option<Arc<PetriNet>>,
+    ) -> Self {
+        ZetaVaultSynergy {
+            hbm_cache: SegQueue::new(),
+            host_cache: SegQueue::new(),
+            disk_cache: SegQueue::new(),
+            petri_net: AtomicCell::new(PetriNetMonoid::new()),
+            max_hbm_size,
+            max_host_size,
+            hardware: hardware.to_string(),
+            compression_threshold,
+            batch_size,
+            num_experts,
+            rl_policy,
+            petri_net_logger,
         }
     }
 
@@ -349,6 +384,28 @@ impl ZetaVaultSynergy {
         petri_net.add_transition("evict_complete", 1);
         self.petri_net.store(petri_net);
         info!("Petri Net state: {}", petri_net.compose().state);
+    }
+
+    // Adaptive compression threshold
+    fn get_adaptive_compression_threshold(&self, load: Option<f32>) -> f32 {
+        if let Some(load) = load {
+            (self.compression_threshold * (1.0 + load.min(1.0))).clamp(0.01, 1.0)
+        } else {
+            self.compression_threshold
+        }
+    }
+
+    // Integrate PetriNet logging in store_kv_cache, get_kv_cache_for_expert, evict_cache, etc.
+    // Example in store_kv_cache:
+    if let Some(logger) = &self.petri_net_logger {
+        let token = PetriToken::new(serde_json::json!({
+            "event": "store_kv_cache",
+            "model": model_name,
+            "expert_id": expert_id,
+            "bit_depth": bit_depth,
+            "timestamp": chrono::Utc::now().timestamp()
+        }));
+        let _ = logger.add_token("kv_cache_store", token).await;
     }
 
     pub fn hardware_optimized_quantization(&self, bit_depth: u8) -> u8 {

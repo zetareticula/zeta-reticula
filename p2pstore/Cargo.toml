@@ -1,0 +1,23 @@
+[package]
+name = "p2pstore"
+version = "0.1.0"
+edition = "2021"
+
+description = "A peer-to-peer storage system for zeta-reticula"
+license = "Apache-2.0"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+log = "0.4"
+rand = "0.8"
+uuid = { version = "1.0", features = ["v4"] }
+libp2p = { version = "0.50", features = ["tcp-tokio", "mplex", "yamux", "noise", "dns"] }
+async-trait = "0.1"
+bytes = "1.0"
+futures = "0.3"
+
+[lib]
+name = "p2pstore"
+path = "src/lib.rs"

@@ -1,0 +1,23 @@
+[package]
+name = "zeta-vault-synergy"
+version = "0.1.0"
+edition = "2021"
+description = "Synchronization and caching layer for Zeta Reticula's distributed AI system"
+license = "Apache-2.0"
+
+[lib]
+name = "zeta_vault_synergy"
+path = "mod.rs"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+log = "0.4"
+rand = "0.8"
+uuid = { version = "1.0", features = ["v4"] }
+async-trait = "0.1"
+bytes = "1.0"
+futures = "0.3"
+
+# Add any other dependencies that might be needed by the existing modules

@@ -59,40 +59,33 @@ pub enum PrecisionLevel {
 
 pub struct SalienceQuantizer {
     threshold: f32,
+    hardware: Option<String>,
+    batch_size: Option<usize>,
 }
 
 impl SalienceQuantizer {
     pub fn new(threshold: f32) -> Self {
-        SalienceQuantizer { threshold }
+        SalienceQuantizer { threshold, hardware: None, batch_size: None }
     }
-
-    pub fn quantize_tokens(&self, features: Vec<TokenFeatures>, theory_key: &str) -> (Vec<QuantizationResult>, YoungTableau) {
-        let mut results = Vec::new();
-        let dimensions = (features.len() as f32).sqrt().ceil() as usize;
-        let mut tableau = YoungTableau::new(dimensions, self.threshold);
-
-        for (i, feature) in features.iter().enumerate() {
-            let precision = if feature.context_relevance > 0.8 {
-                PrecisionLevel::Bit16
-            } else if feature.context_relevance > 0.5 {
-                PrecisionLevel::Bit8
-            } else {
-                PrecisionLevel::Bit4
-            };
-            let salience_score = feature.context_relevance * feature.frequency;
-            results.push(QuantizationResult {
-                token_id: feature.token_id,
-                precision,
-                salience_score,
-                row: i,
-                role: feature.role.clone(),
-                role_confidence: 0.9, // Mock
-            });
+    pub fn with_hardware(mut self, hardware: String) -> Self {
+        self.hardware = Some(hardware);
+        self
+    }
+    pub fn with_batch_size(mut self, batch_size: usize) -> Self {
+        self.batch_size = Some(batch_size);
+        self
+    }
+    pub fn quantize_tokens_batch(&self, features: Vec<TokenFeatures>, theory_key: &str) -> (Vec<QuantizationResult>, YoungTableau) {
+        let batch_size = self.batch_size.unwrap_or(32);
+        let mut all_results = Vec::new();
+        let mut all_tableaux = Vec::new();
+        for chunk in features.chunks(batch_size) {
+            let (results, tableau) = self.quantize_tokens(chunk.to_vec(), theory_key);
+            all_results.extend(results);
+            all_tableaux.push(tableau);
         }
-
-        tableau = YoungTableau::from_quantization_results(&results, dimensions);
-        tableau.sparsify();
-        (results, tableau)
+        // Optionally merge tableaux
+        (all_results, all_tableaux.into_iter().next().unwrap())
     }
 }
 

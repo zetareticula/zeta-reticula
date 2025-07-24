@@ -73,35 +73,31 @@ clap = { version = "4", features = ["derive"] }
 mlua = { version = "0.9", features = ["lua54", "vendored"] }  # Added for Lua integration
 
 [dependencies.p2pstore]
-path = "src/p2pstore"
+path = "p2pstore"
 version = "0.1.0"
 
 [dependencies.zeta-vault-synergy]
-path = "src/zeta_vault_synergy"
-version = "0.2.0"
-
-[dependencies.client]
-path = "src/client"
+path = "zeta-vault-synergy"
 version = "0.1.0"
 
 [dependencies.master-service]
-path = "src/master_service"
+path = "master-service"
 version = "0.1.0"
 
 [dependencies.attention-store]
-path = "src/attention_store"
+path = "attention-score"
 version = "0.1.0"
 
-[dependencies.llm-rs]
-path = "src/llm_rs"
+[dependencies.llm_rs]
+path = "llm-rs"
 version = "0.1.0"
 
-[dependencies.quantize]
-path = "src/quantize"
+[dependencies.quantize-cli]
+path = "quantize-cli"
 version = "0.1.0"
 
-[dependencies.agentflow]
-path = "src/agentflow"
+[dependencies.agentflow_rs]
+path = "agentflow-rs"
 version = "0.1.0"
 
 [[bin]]
@@ -116,7 +112,11 @@ members = [
     "kvquant-rs",
     "quantize-cli",
     "agentflow-rs",
-    "zeta-integration"
+    "zeta-integration",
+    "p2pstore",
+    "zeta-vault-synergy",
+    "master-service",
+    "client"
 ]
 resolver = "2"
 
