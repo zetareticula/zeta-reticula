@@ -112,31 +112,6 @@ impl Finetuner {
         info!("Finetuning completed for model {}", model_name);
         Ok(())
     }
-
-    pub async fn finetune_qat(&self, model_name: &str, dataset: Vec<(String, String)>, qat_config: Option<QATConfig>) -> Result<(), FinetuneError> {
-        // QAT logic stub: integrate quantization into training loop
-        // Use qat_config for bit-depth, hardware, and RL policy if present
-        info!("Starting QAT finetuning for model {}", model_name);
-        // TODO: Implement QAT logic
-        Ok(())
-    }
-    pub async fn distill_knowledge(&self, teacher_model: &str, student_model: &str, dataset: Vec<(String, String)>, distill_config: Option<DistillConfig>) -> Result<(), FinetuneError> {
-        // Knowledge distillation stub: train student to match teacher outputs
-        info!("Starting knowledge distillation from {} to {}", teacher_model, student_model);
-        // TODO: Implement distillation logic
-        Ok(())
-    }
-}
-
-// QAT and distillation config stubs
-pub struct QATConfig {
-    pub bit_depth: u8,
-    pub hardware: Option<String>,
-    pub rl_policy: Option<Arc<dyn RLPolicy + Send + Sync>>,
-}
-pub struct DistillConfig {
-    pub temperature: f32,
-    pub alpha: f32,
 }
 
 // Example usage in main (for testing)

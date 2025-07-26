@@ -1,9 +1,0 @@
-cargo:rerun-if-env-changed=OPENBLAS_TARGET
-cargo:rerun-if-env-changed=OPENBLAS_CC
-cargo:rerun-if-env-changed=OPENBLAS_HOSTCC
-cargo:rerun-if-env-changed=OPENBLAS_FC
-cargo:rerun-if-env-changed=OPENBLAS_RANLIB
-cargo:warning=OpenBLAS is built as a shared library. You need to set DYLD_LIBRARY_PATH=/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/release/build/openblas-src-c5141bb10bdf0cae/out/OpenBLAS-0.3.30
-cargo:rustc-link-search=/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/release/build/openblas-src-c5141bb10bdf0cae/out/OpenBLAS-0.3.30
-cargo:rustc-link-lib=System
-cargo:rustc-link-lib=dylib=openblas

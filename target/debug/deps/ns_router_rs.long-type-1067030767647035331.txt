@@ -1,1 +1,0 @@
-<&Vec<SerializableRewrite> as IntoIterator>::Item == &Rewrite<SymbolLang, ()>
