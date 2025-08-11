@@ -25,8 +25,9 @@ build_crate() {
         sed -i.bak 's/^llm-rs =/# llm-rs =/' "$crate/Cargo.toml"
     fi
     
-    # Build the crate
-    cargo build -p $(basename "$crate")
+    # Build the crate with the correct package name (replace hyphens with underscores)
+    local pkg_name=$(basename "$crate" | tr '-' '_')
+    cargo build -p $pkg_name
     
     # Restore the original Cargo.toml
     mv "$crate/Cargo.toml.bak" "$crate/Cargo.toml"

@@ -1,0 +1,7 @@
+cargo:rerun-if-changed=proto
+cargo:rerun-if-changed=proto/auth.proto
+cargo:rerun-if-changed=proto/kv.proto
+cargo:rerun-if-changed=proto/rpc.proto
+cargo:rerun-if-changed=proto/v3election.proto
+cargo:rerun-if-changed=proto/v3lock.proto
+cargo:rerun-if-changed=proto

@@ -9,7 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
 [dependencies]
-actix-web = { version = "4.3", optional = true }
+actix-web = { version = "4.3", optional = true, features = ["rustls"] }
 actix-rt = { version = "2.9", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -18,6 +18,14 @@ env_logger = { version = "0.10", optional = true }
 lazy_static = "1.4"
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
+rand = "0.8"
+rand_distr = "0.4"
+ndarray = "0.15"
+bumpalo = "3.0"
+rayon = "1.5"
+dashmap = "5.0"
+rand_chacha = "0.3"
+tokio = { version = "1.0", features = ["full"], optional = true }
 
 [dev-dependencies]
 actix-test = "0.1.1"

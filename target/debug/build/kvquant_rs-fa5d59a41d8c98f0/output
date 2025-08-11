@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=../zeta-sidecar/proto/sidecar.proto
+cargo:rerun-if-changed=..
+cargo:rerun-if-changed=../zeta-sidecar/proto/sidecar.proto

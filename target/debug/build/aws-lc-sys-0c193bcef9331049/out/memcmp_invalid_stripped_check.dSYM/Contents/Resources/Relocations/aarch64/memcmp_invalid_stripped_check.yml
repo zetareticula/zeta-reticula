@@ -1,0 +1,7 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/build/aws-lc-sys-0c193bcef9331049/out/memcmp_invalid_stripped_check'
+relocations:
+  - { offset: 0x27, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x1000004B0, symSize: 0x30 }
+  - { offset: 0x52, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x1000004B0, symSize: 0x30 }
+...

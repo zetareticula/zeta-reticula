@@ -85,7 +85,7 @@ pub async fn start_server(port: u16) -> std::io::Result<()> {
     
     info!("Starting salience-engine server on port {}", port);
     
-    HttpServer::new(|| {
+    let server = HttpServer::new(|| {
         App::new()
             .service(
                 web::scope("/api")
@@ -96,9 +96,10 @@ pub async fn start_server(port: u16) -> std::io::Result<()> {
             )
     })
     .bind(("0.0.0.0", port))?
-    .workers(2)
-    .run()
-    .await
+    .workers(2);
+    
+    info!("Server is running on http://0.0.0.0:{}", port);
+    server.run().await
 }
 
 #[cfg(not(test))]

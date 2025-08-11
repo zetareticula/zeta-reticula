@@ -64,9 +64,9 @@ impl YoungTableau {
             salience_threshold,
             vector_ids: Vec::new(),
             layer_ids: Vec::new(),
-            dimensions: todo!(),
-            threshold: todo!(),
-            rows: todo!(),
+            dimensions: (dimensions, dimensions),
+            threshold: salience_threshold,
+            rows: Vec::new(),
         }
     }
 
@@ -94,10 +94,18 @@ impl YoungTableau {
                 *value = 0.0;
             }
         }
-        self.vector_ids.retain(|_| {
-            let idx = self.vector_ids.iter().position(|v| v == _).unwrap();
-            self.data[[idx % self.data.dim().0, idx / self.data.dim().0]] != 0.0
-        });
+        
+        // Create a vector to store indices of items to keep
+        let mut to_keep = Vec::new();
+        for (idx, id) in self.vector_ids.iter().enumerate() {
+            let (rows, _) = self.data.dim();
+            if self.data[[idx % rows, idx / rows]] != 0.0 {
+                to_keep.push(id.clone());
+            }
+        }
+        
+        // Update vector_ids to only keep those that weren't zeroed out
+        self.vector_ids = to_keep;
     }
 
     pub async fn cache_to_sidecar(&self, sidecar_client: &mut pb::sidecar_service_client::SidecarServiceClient<Channel>) -> Result<(), Status> {

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 llm_rs = { path = "../llm-rs" }
-kvquant_rs = { path = "../kvquant-rs" }
+kvquant_rs = { path = "../kvquant_rs" }
 ns-router-rs = { path = "../ns-router-rs" }
 shared = { path = "../shared" }
 tokio = { version = "1.0", features = ["full"] }

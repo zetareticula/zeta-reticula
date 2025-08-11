@@ -102,8 +102,11 @@ impl FusionANNS {
         // GPU: Fetch vector-IDs and compute distances
         let mut candidates = vec![];
         for list_id in nearest_lists {
+            
             if let Some(ids) = self.vector_ids.get(&list_id) {
                 candidates.extend(ids.iter().copied());
+            
+                
             }
         }
 

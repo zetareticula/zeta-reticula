@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # Zeta Reticula Core Services
+  salience-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+      - QUANTIZATION_BITS=8
+      - KV_STORE_ENABLED=true
+      - MESOLIMBIC_ENGINE_ENABLED=true
+    volumes:
+      - ./config:/app/config
+      - ./models:/app/models
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+
+  # NS Router for distributed routing
+  ns-router:
+    build:
+      context: ./ns-router-rs
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - NS_ROUTER_PORT=9090
+    ports:
+      - "9090:9090"
+    depends_on:
+      - salience-engine
+
+  # AgentFlow for workflow management
+  agentflow:
+    build:
+      context: ./agentflow-rs
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - AGENTFLOW_PORT=9091
+    ports:
+      - "9091:9091"
+    depends_on:
+      - ns-router
+
+  # LLM Service
+  llm-service:
+    build:
+      context: ./llm-rs
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - LLM_SERVICE_PORT=9092
+    ports:
+      - "9092:9092"
+    volumes:
+      - ./models:/app/models
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 32G
+    depends_on:
+      - agentflow
+
+  # KV Quantization Service
+  kv-quant:
+    build:
+      context: ./kvquant-rs
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - KV_QUANT_PORT=9093
+    ports:
+      - "9093:9093"
+    depends_on:
+      - llm-service
+
+  # Attention Store
+  attention-store:
+    build:
+      context: ./attention-store
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - ATTENTION_STORE_PORT=9094
+    ports:
+      - "9094:9094"
+    volumes:
+      - ./attention-data:/data
+    depends_on:
+      - kv-quant
+
+  # Quantization CLI Service
+  quantize-cli:
+    build:
+      context: ./quantize-cli
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    volumes:
+      - ./models:/app/models
+      - ./quantization-results:/app/results
+    environment:
+      - RUST_LOG=info
+      - QUANTIZATION_BITS=1,2,4,8,16
+      - TARGET_MODEL_PATH=/app/models/llama2-7b
+    depends_on:
+      - attention-store
+
+  # Zeta Vault Synergy
+  zeta-vault:
+    build:
+      context: .
+      dockerfile: Dockerfile.zeta-vault
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=info
+      - ZETA_VAULT_PORT=9095
+    ports:
+      - "9095:9095"
+    volumes:
+      - ./vault-data:/data
+    depends_on:
+      - attention-store
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - SALIENCE_ENGINE_URL=http://salience-engine:8080
+      - LLM_SERVICE_URL=http://llm-service:9092
+    depends_on:
+      - salience-engine
+      - llm-service
+
+  # Monitoring and Visualization
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - salience-engine
+      - llm-service
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-storage:
+  models:
+  attention-data:
+  vault-data:
+  quantization-results:
+
+networks:
+  default:
+    driver: bridge

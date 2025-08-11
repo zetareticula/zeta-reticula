@@ -1,0 +1,53 @@
+# Zeta Vault Synergy Service
+# This service handles the integration between the attention store and the KV store
+# for optimized model serving and quantization
+
+# Stage 1: Build environment
+FROM --platform=linux/amd64 rust:1.78-slim-bullseye as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create a dummy project to cache dependencies
+RUN USER=root cargo new --bin zeta-vault
+WORKDIR /app/zeta-vault
+
+# Copy build files
+COPY Cargo.toml Cargo.lock ./
+
+# Build dependencies (cached unless Cargo.toml changes)
+RUN cargo build --release \
+    && find target -name "*.rlib" -delete \
+    && find target -name "*.d" -delete
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN cargo build --release --bin zeta-vault
+
+# Stage 2: Runtime image
+FROM debian:bullseye-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary from the builder
+COPY --from=builder /app/zeta-vault/target/release/zeta-vault /usr/local/bin/
+
+# Create data directory
+RUN mkdir -p /data
+VOLUME /data
+
+# Default command
+CMD ["zeta-vault"]

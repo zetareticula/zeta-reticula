@@ -16,6 +16,8 @@ use serde::{Serialize, Deserialize};
 use crate::server::AgentFlowServer;
 use std::sync::Arc;
 use kvquant_rs::LogStructuredKVCache;
+use rayon::prelude::*;
+use kvquant_rs::pb::sidecar_service_client::SidecarServiceClient;
 
 #[derive(Serialize, Deserialize)]
 pub struct DistributedCache;
@@ -42,3 +44,5 @@ impl DistributedCache {
         });
     }
 }
+
+

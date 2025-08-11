@@ -1,0 +1,25 @@
+[package]
+name = "zeta-infer"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for Zeta Reticula inference and quantization"
+
+[dependencies]
+agentflow_rs = { path = "../agentflow-rs" }
+zeta-reticula-api = { path = "../api" }
+attention-store = { path = "../attention-store" }
+clap = { version = "4.0", features = ["derive"] }
+llm_rs = { path = "../llm-rs" }
+quantize-cli = { path = "../quantize-cli" }
+salience-engine = { path = "../salience-engine" }
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+zeta-vault-synergy = { path = "../zeta-vault-synergy" }
+
+# Runtime dependencies
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+log = "0.4"

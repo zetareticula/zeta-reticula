@@ -1,0 +1,10 @@
+{
+  "model_name": "llama2-7b",
+  "model_path": "/app/models/llama2-7b",
+  "quantization_bits": [1, 2, 4, 8, 16],
+  "max_sequence_length": 4096,
+  "attention_heads": 32,
+  "hidden_size": 4096,
+  "num_hidden_layers": 32,
+  "vocab_size": 32000
+}

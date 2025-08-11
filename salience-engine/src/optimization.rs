@@ -49,10 +49,9 @@ pub struct TokenFeatures {
 }
 
 // SalienceOptimizer optimizes the computation of salience scores for tokens
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]  
 #[serde(deny_unknown_fields)]
-#[derive(Debug, Clone)]
 pub struct YoungTableau {
     pub rows: Vec<Vec<QuantizationResult>>, // Rows of the tableau
     pub dimensions: (usize, usize), // Dimensions of the tableau
@@ -72,20 +71,18 @@ pub struct QuantizationResult {
     pub precision: PrecisionLevel, // Precision level of the quantization
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-#[derive(Debug, Clone)]
 pub struct Frame<'a> {
     pub tokens: &'a [TokenFeatures], // Tokens in the frame
     pub aggregated_salience: f32, // Aggregated salience score for the frame
     pub frame_id: u32, // Unique identifier for the frame
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-#[derive(Debug, Clone)]
 pub struct RoleInferer {
     pub outer_iterations: usize, // Number of outer iterations for role inference
     pub inner_iterations: usize, // Number of inner iterations for role inference
@@ -223,6 +220,7 @@ impl PrecisionLevel {
             PrecisionLevel::Bit16 => 16,
         }
     }
+}
 
 // ---- Young Tableau Implementation ----
 impl YoungTableau {

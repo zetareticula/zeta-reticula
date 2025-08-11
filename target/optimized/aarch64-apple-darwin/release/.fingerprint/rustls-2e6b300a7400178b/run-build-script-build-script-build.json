@@ -1,0 +1,1 @@
+{"rustc":12406026817698902688,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[5491919304041016563,"build_script_build",false,9894295259330744567],[11295624341523567602,"build_script_build",false,11511521492183017870]],"local":[{"Precalculated":"0.21.12"}],"rustflags":["-C","target-cpu=native","-C","codegen-units=1"],"config":0,"compile_kind":0}

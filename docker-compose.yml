@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  salience-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./config:/app/config
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  # Uncomment and configure additional services as needed
+  # master-service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: builder
+  #   command: master-service
+  #   environment:
+  #     - RUST_LOG=info
+  #   ports:
+  #     - "8081:8081"
+
+networks:
+  default:
+    driver: bridge

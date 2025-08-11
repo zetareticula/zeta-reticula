@@ -1,0 +1,66 @@
+[build]
+# Build mode: "debug" or "release"
+mode = "release"
+
+# Target platform
+target = "x86_64-unknown-linux-gnu"
+
+# Enable/disable features to include in the build
+features = [
+    "default",
+    "cuda",      # Enable CUDA support if available
+    "opencl",    # Enable OpenCL support if available
+    "mkl",       # Use Intel MKL for BLAS
+]
+
+# Number of parallel jobs (0 = auto-detect)
+parallel_jobs = 0
+
+# Optimization level (0-3, s/z for size optimization)
+opt_level = 3
+
+# Enable link-time optimization
+lto = true
+
+# Use incremental compilation (faster rebuilds)
+incremental = true
+
+# Strip debug symbols
+strip = true
+
+# Use UPX for binary compression
+use_upx = true
+
+[output]
+# Output directory for build artifacts
+directory = "./target/optimized"
+
+# Create a distribution package
+create_dist = true
+
+# Distribution directory
+dist_directory = "./dist"
+
+[features]
+# Enable/disable specific features
+cuda = false
+opencl = false
+mkl = false
+
+[profile.release]
+# Release profile settings
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+# Development profile settings
+opt-level = 1
+debug = true
+
+[profile.bench]
+# Benchmark profile settings
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = false

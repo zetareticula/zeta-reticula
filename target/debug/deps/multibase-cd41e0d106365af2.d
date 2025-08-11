@@ -1,0 +1,11 @@
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libmultibase-cd41e0d106365af2.rmeta: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/base.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/encoding.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/impls.rs
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/libmultibase-cd41e0d106365af2.rlib: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/base.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/encoding.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/impls.rs
+
+/Users/xaxpmore/Documents/GitHub/zeta-reticula/target/debug/deps/multibase-cd41e0d106365af2.d: /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/lib.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/base.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/encoding.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/error.rs /Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/impls.rs
+
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/lib.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/base.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/encoding.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/error.rs:
+/Users/xaxpmore/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/multibase-0.9.1/src/impls.rs:

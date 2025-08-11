@@ -21,7 +21,7 @@ thiserror = "1.0"
 tracing = "0.1"
 
 # Internal dependencies
-kvquant-rs = { path = "../kvquant-rs" }
+kvquant_rs = { path = "../kvquant_rs" }
 ns-router-rs = { path = "../ns-router-rs" }
 salience-engine = { path = "../salience-engine" }
 

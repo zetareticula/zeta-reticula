@@ -1,0 +1,27 @@
+# Ignore build artifacts
+/target
+**/*.rs.bk
+**/*.bk
+**/Cargo.lock
+.git
+.vscode
+.idea
+*.log
+*.bin
+*.pdb
+*.dSYM
+*.so
+*.dll
+*.exe
+**/node_modules
+**/dist
+**/build
+**/.cache
+**/*.pyc
+__pycache__
+*.py[cod]
+*$py.class
+.env
+*.swp
+.DS_Store
+*.sublime-*

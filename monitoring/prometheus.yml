@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'salience-engine'
+    static_configs:
+      - targets: ['salience-engine:8080']
+
+  - job_name: 'llm-service'
+    static_configs:
+      - targets: ['llm-service:9092']
+
+  - job_name: 'kv-quant'
+    static_configs:
+      - targets: ['kv-quant:9093']
+
+  - job_name: 'attention-store'
+    static_configs:
+      - targets: ['attention-store:9094']
+
+  - job_name: 'zeta-vault'
+    static_configs:
+      - targets: ['zeta-vault:9095']
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
