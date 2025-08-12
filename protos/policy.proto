@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package zeta.policy;
+
+message PolicyRule {
+  string resource_type = 1;
+  string required_plan = 2;
+  bool allow = 3;
+}
+
+message PolicyDistillation {
+  repeated PolicyRule rules = 1;
+  string student_id = 2;
+  string teacher_id = 3;
+}

@@ -15,25 +15,22 @@
 use std::{
     sync::Arc,
     time::Duration,
-    collections::HashMap,
-    num::NonZeroUsize,
-    backtrace::Backtrace,
 };
 use async_trait::async_trait;
 use dashmap::DashMap;
-use futures_util::stream::{self, StreamExt, TryStreamExt};
+use futures_util::stream::{self, StreamExt};
 use thiserror::Error;
 use tokio::{
     sync::{
         mpsc,
         broadcast,
-        RwLock,
         Semaphore,
     },
     time,
 };
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn, error, instrument, Instrument};
+use tracing::{info, warn, error};
+use tracing::Instrument;
 use crate::kv_cache_manager::KVCacheManager;
 use crate::weight_manager::WeightManager;
 
@@ -52,7 +49,6 @@ pub enum SyncError {
         node_id: usize,
         #[source]
         source: anyhow::Error,
-        backtrace: Backtrace,
     },
     
     #[error("Batch operation failed: {0}")]
@@ -126,7 +122,7 @@ impl SyncManager {
         kv_cache_mgr: Arc<dyn KVCacheManager>,
         weight_mgr: Arc<dyn WeightManager>,
     ) -> Result<Self, SyncError> {
-        let (sync_tx, mut sync_rx) = mpsc::channel(1000);
+        let (sync_tx, sync_rx) = mpsc::channel(1000);
         let cancel_token = CancellationToken::new();
         let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REPLICATIONS));
         let metrics = SyncMetrics::default();
@@ -143,10 +139,10 @@ impl SyncManager {
         };
         
         // Start background sync task
-        let sync_handle = tokio::spawn(
-            manager.clone().run_sync_loop(sync_rx)
-                .instrument(tracing::info_span!("sync_loop"))
-        );
+        let sync_handle = tokio::spawn({
+            let mgr = manager.clone();
+            async move { mgr.run_sync_loop(sync_rx).await }
+        });
         
         // Store the handle for graceful shutdown
         tokio::spawn(async move {
@@ -158,7 +154,7 @@ impl SyncManager {
     
     /// Main sync loop that processes sync messages
     async fn run_sync_loop(
-        mut self,
+        self,
         mut rx: mpsc::Receiver<(String, Vec<u8>)>,
     ) -> Result<(), SyncError> {
         let mut interval = time::interval(self.config.sync_interval);
@@ -195,14 +191,14 @@ impl SyncManager {
     }
     
     /// Processes a KV cache sync message
-    async fn process_kv_sync(&self, key: &str, data: &[u8]) -> Result<(), SyncError> {
+    async fn process_kv_sync(&self, _key: &str, _data: &[u8]) -> Result<(), SyncError> {
         // Deserialize and apply KV update
         // ... implementation ...
         Ok(())
     }
     
     /// Processes a weight sync message
-    async fn process_weight_sync(&self, key: &str, data: &[u8]) -> Result<(), SyncError> {
+    async fn process_weight_sync(&self, _key: &str, _data: &[u8]) -> Result<(), SyncError> {
         // Deserialize and apply weight update
         // ... implementation ...
         Ok(())
@@ -210,19 +206,19 @@ impl SyncManager {
     
     /// Syncs a batch of data to all replicas
     pub async fn sync_batch(&self) -> Result<(), SyncError> {
-        let kv_data = self.kv_cache_mgr.get_all().await?;
-        let weight_data = self.weight_mgr.get_all().await?;
+        let kv_data = self.kv_cache_mgr.get_all().await;
+        let weight_data = self.weight_mgr.get_all().await;
         
         // Process in parallel with backpressure
         let semaphore = self.semaphore.clone();
         let permit = semaphore.acquire().await.map_err(|_| SyncError::Cancelled)?;
         
         let result = tokio::try_join!(
-            self.replicate_data("kv", kv_data, |node_id, data| {
-                self.replicate_kv(node_id, data)
+            self.replicate_data("kv", kv_data, move |node_id, data: Vec<u8>| {
+                async move { Self::replicate_kv(node_id, &data).await }
             }),
-            self.replicate_data("weight", weight_data, |node_id, data| {
-                self.replicate_weight(node_id, data)
+            self.replicate_data("weight", weight_data, move |node_id, data: Vec<u8>| {
+                async move { Self::replicate_weight(node_id, &data).await }
             }),
         );
         
@@ -242,14 +238,17 @@ impl SyncManager {
     where
         F: Fn(usize, T) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Result<(), SyncError>> + Send,
-        T: Send + 'static,
+        T: Send + Clone + 'static,
     {
         if data.is_empty() {
             return Ok(());
         }
         
-        // Process data in batches
-        let batches = data.chunks(self.config.batch_size);
+        // Process data in batches (own the batches to ensure 'static futures)
+        let batches: Vec<Vec<T>> = data
+            .chunks(self.config.batch_size)
+            .map(|c| c.to_vec())
+            .collect();
         let batch_count = batches.len();
         
         info!(
@@ -260,14 +259,29 @@ impl SyncManager {
         );
         
         // Process batches in parallel with bounded concurrency
-        let results = stream::iter(batches.enumerate())
+        let results = stream::iter(batches.into_iter().enumerate())
             .map(|(i, batch)| {
                 let replicate_fn = &replicate_fn;
                 let node_id = self.node_id;
                 
                 async move {
                     let start = std::time::Instant::now();
-                    let result = replicate_fn(node_id, batch).await;
+                    // Process items in this batch sequentially
+                    for item in batch.into_iter() {
+                        if let Err(e) = replicate_fn(node_id, item).await {
+                            let elapsed = start.elapsed();
+                            error!(
+                                error = %e,
+                                data_type,
+                                batch = i + 1,
+                                batch_count,
+                                elapsed_ms = elapsed.as_millis(),
+                                "Batch replication failed on item",
+                            );
+                            return Err(e);
+                        }
+                    }
+                    let result: Result<(), SyncError> = Ok(());
                     let elapsed = start.elapsed();
                     
                     match &result {
@@ -307,14 +321,14 @@ impl SyncManager {
     }
     
     /// Replicates KV cache to a node
-    async fn replicate_kv(&self, node_id: usize, data: &[u8]) -> Result<(), SyncError> {
+    async fn replicate_kv(node_id: usize, data: &[u8]) -> Result<(), SyncError> {
         // Implementation for KV replication
         // ...
         Ok(())
     }
     
     /// Replicates weights to a node
-    async fn replicate_weight(&self, node_id: usize, data: &[u8]) -> Result<(), SyncError> {
+    async fn replicate_weight(node_id: usize, data: &[u8]) -> Result<(), SyncError> {
         // Implementation for weight replication
         // ...
         Ok(())

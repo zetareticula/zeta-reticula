@@ -7,13 +7,15 @@ edition = "2021"
 shared = { path = "../shared" }
 ns-router-rs = { path = "../ns-router-rs", optional = true, package = "ns-router-rs" }
 kvquant_rs = { path = "../kvquant_rs" }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
+bincode = "1"
 rayon = { version = "1.8", optional = true }
-ndarray = { version = "0.15", optional = true }
+ndarray = { version = "0.15", optional = true, features = ["serde"] }
 log = { version = "0.4", optional = true }
 dashmap = { version = "5.5", optional = true }
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync"], optional = true }
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "sync", "macros"], optional = true }
+tonic = { version = "0.10", optional = true }
 wasm-bindgen = { version = "0.2.87", optional = true }
 wasm-bindgen-futures = { version = "0.4.37", optional = true }
 js-sys = { version = "0.3.64", optional = true }
@@ -26,7 +28,15 @@ openblas-src = { version = "0.10", optional = true }
 rustc-hash = { version = "1.1", optional = true }
 argmin = { version = "0.8", optional = true }
 bumpalo = { version = "3.0", optional = true }
-
+chrono = { version = "0.4", features = ["serde"], optional = true }
+thiserror = { version = "1.0", optional = false }
+tracing = { version = "0.1", optional = false, features = ["std"] }
+uuid = { version = "1.2", features = ["v4", "serde"], optional = false }
+parking_lot = { version = "0.12", optional = true }
+rand = { version = "0.8", features = ["std", "std_rng"], optional = true }
+half = { version = "2.2", features = ["serde", "std"], optional = true }
+num-traits = "0.2"
+ndarray-rand = "0.14"
 
 [profile.release]
 opt-level = 3
@@ -34,5 +44,19 @@ lto = true
 codegen-units = 1
 
 [features]
+default = ["server"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "js-sys"]
-server = ["actix-web", "actix-multipart", "tokio", "rayon", "log", "dashmap", "ndarray"]
+server = [
+    "actix-web", 
+    "actix-multipart", 
+    "tokio", 
+    "rayon", 
+    "log", 
+    "dashmap", 
+    "ndarray", 
+    "chrono",
+    "parking_lot",
+    "rand",
+    "half"
+]
+grpc = ["tonic"]

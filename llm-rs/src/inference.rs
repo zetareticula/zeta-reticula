@@ -21,9 +21,9 @@ use tokio::io::{AsyncReadExt, BufReader};
 use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use std::cmp::Ordering;
+use crate::fusion_anns::FusionANNSConfig;
 
 
-#[derive(Serialize, Deserialize)]
 pub struct FusionANNS {
     raw_vectors_path: PathBuf,
     pq_vectors: Array2<f32>,

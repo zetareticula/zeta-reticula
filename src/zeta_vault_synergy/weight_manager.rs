@@ -34,6 +34,7 @@ pub enum WeightManagerError {
 pub trait WeightManager: Send + Sync {
     async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError>;
     async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet>;
+    async fn get_all(&self) -> Vec<Vec<u8>>;
 }
 
 pub struct WeightManagerImpl {
@@ -70,5 +71,10 @@ impl WeightManager for WeightManagerImpl {
 
     async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet> {
         self.get_binary_weights_impl(model_id).await
+    }
+
+    async fn get_all(&self) -> Vec<Vec<u8>> {
+        let store = self.binary_weights.read().await;
+        store.values().map(|w| w.data.clone()).collect()
     }
 }

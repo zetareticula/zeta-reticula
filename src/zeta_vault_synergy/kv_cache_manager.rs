@@ -22,6 +22,7 @@ use std::collections::HashMap;
 use crate::VaultConfig;
 use chrono;
 use half::f16;
+use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone)]
 pub enum CacheLayer {
@@ -50,6 +51,7 @@ pub enum KVCacheManagerError {
 pub trait KVCacheManager: Send + Sync {
     async fn store_kv_cache(&self, model_id: &str, keys: Array2<f16>, values: Array2<f16>) -> Result<(), KVCacheManagerError>;
     async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache>;
+    async fn get_all(&self) -> Vec<Vec<u8>>;
 }
 
 pub struct KVCacheManagerImpl {
@@ -68,7 +70,7 @@ impl KVCacheManagerImpl {
     pub async fn new(node_id: usize, config: VaultConfig) -> Result<Self, KVCacheManagerError> {
         Ok(KVCacheManagerImpl {
             kv_cache: Arc::new(RwLock::new(HashMap::new())),
-            cache: RwLock::new(LruCache::new(100)), // LRU cache for 100 entries
+            cache: RwLock::new(LruCache::new(NonZeroUsize::new(100).unwrap())), // LRU cache for 100 entries
             node_id,
             config,
         })
@@ -96,7 +98,7 @@ impl KVCacheManagerImpl {
 
     async fn get_kv_cache_impl(&self, model_id: &str) -> Option<KVCache> {
         let key = format!("kv_cache_{}", model_id);
-        if let Some(cached) = self.cache.read().await.get(&key) {
+        if let Some(cached) = self.cache.write().await.get(&key) {
             log::debug!("Cache hit for {}", model_id);
             return Some(cached.clone());
         }
@@ -118,5 +120,10 @@ impl KVCacheManager for KVCacheManagerImpl {
 
     async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache> {
         self.get_kv_cache_impl(model_id).await
+    }
+
+    async fn get_all(&self) -> Vec<Vec<u8>> {
+        let store = self.kv_cache.read().await;
+        store.values().map(|kv| kv.value.clone()).collect()
     }
 }

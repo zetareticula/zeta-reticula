@@ -18,10 +18,6 @@ use log;
 use crate::quantizer::QuantizationResult;
 use serde::{Serialize, Deserialize};
 use ndarray::s;
-use ndarray::ArrayViewMut2;
-use std::sync::Arc;
-use zeta_vault::ZetaVault;
-use zeta_vault::VaultConfig;
 
 
 
@@ -36,24 +32,19 @@ use zeta_vault::VaultConfig;
 
 // gRPC client for zeta-sidecar
 pub mod pb {
-    tonic::include_proto!("pb"); // The string specified here must match the proto package name
+    tonic::include_proto!("sidecar"); // Must match the package name in sidecar.proto
 }
 
-// Ensure you have a build.rs file with the following content:
-// FILEPATH: /Users/xaxpmore/Documents/GitHub/zeta-reticula/salience-engine/build.rs
-fn main() {
-    tonic_build::compile_protos("proto/sidecar.proto").unwrap();
-}
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+
+#[derive(Debug, Clone)]
 pub struct YoungTableau {
     pub(crate) data: Array2<f32>, // Sparse matrix representing the tableau
     pub(crate) salience_threshold: f32,
     pub(crate) vector_ids: Vec<String>,
     pub(crate) layer_ids: Vec<String>,
     pub(crate) dimensions: (usize, usize),
-    pub(crate) threshold: f32,
-    pub(crate) rows: Vec<Vec<_>>,
+    pub(crate) rows: Vec<Vec<QuantizationResult>>,
 }
 
 impl YoungTableau {
@@ -65,8 +56,7 @@ impl YoungTableau {
             vector_ids: Vec::new(),
             layer_ids: Vec::new(),
             dimensions: (dimensions, dimensions),
-            threshold: salience_threshold,
-            rows: Vec::new(),
+            rows: vec![Vec::new(); dimensions],
         }
     }
 
@@ -89,7 +79,7 @@ impl YoungTableau {
 
     pub fn sparsify(&mut self) {
         // Apply sparsity based on salience threshold
-        for ((i, j), value) in self.data.indexed_iter_mut() {
+        for ((_i, _j), value) in self.data.indexed_iter_mut() {
             if *value < self.salience_threshold {
                 *value = 0.0;
             }
@@ -111,7 +101,11 @@ impl YoungTableau {
     pub async fn cache_to_sidecar(&self, sidecar_client: &mut pb::sidecar_service_client::SidecarServiceClient<Channel>) -> Result<(), Status> {
         for (i, vector_id) in self.vector_ids.iter().enumerate() {
             let layer_id = self.layer_ids.get(i).unwrap_or(&"layer_001".to_string());
-            let data = self.data.slice(s![i, ..]).to_vec().into_raw_vec();
+            let data_f32 = self.data.slice(s![i, ..]).to_owned().into_raw_vec();
+            let data: Vec<u8> = data_f32
+                .into_iter()
+                .flat_map(|f| f.to_le_bytes())
+                .collect();
             let request = Request::new(pb::CacheUpdate {
                 vector_id: vector_id.clone(),
                 data: data.into(),

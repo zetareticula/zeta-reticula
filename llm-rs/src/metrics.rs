@@ -17,13 +17,11 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::sync::Arc;
 
-use metrics::{histogram, counter, gauge};
-use metrics_exporter_prometheus::PrometheusBuilder;
 use tokio::sync::RwLock;
-use tracing::{info, error};
+use tracing::{error};
 
 #[derive(Debug, Clone)]
 pub struct MetricsRecorder {
@@ -33,7 +31,7 @@ pub struct MetricsRecorder {
     gauges: Arc<RwLock<HashMap<String, f64>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct HistogramStats {
     sum: AtomicU64,
     count: AtomicU64,
@@ -44,13 +42,8 @@ struct HistogramStats {
 
 impl MetricsRecorder {
     pub fn new(namespace: &str) -> Self {
-        // Initialize Prometheus exporter
-        let builder = PrometheusBuilder::new();
-        
-        if let Err(e) = builder.install() {
-            error!("Failed to install Prometheus recorder: {}", e);
-        }
-        
+        // External metrics exporters are disabled in this build.
+        // We keep an internal recorder for lightweight tracking.
         Self {
             namespace: namespace.to_string(),
             counters: Arc::new(RwLock::new(HashMap::new())),
@@ -63,22 +56,12 @@ impl MetricsRecorder {
         let name = format!("{}_latency_seconds", operation);
         let micros = duration.as_micros() as f64 / 1_000_000.0;
         
-        // Record to Prometheus
-        histogram!(
-            format!("{}_{}", self.namespace, name),
-            micros,
-            "operation" => operation.to_string()
-        );
-        
         // Record to local histogram
         self.record_histogram(&name, micros);
     }
     
     pub fn increment_counter(&self, name: &str) {
         let full_name = format!("{}_{}", self.namespace, name);
-        
-        // Record to Prometheus
-        counter!(full_name.clone(), 1);
         
         // Record to local counter
         let counters = self.counters.blocking_read();
@@ -93,9 +76,6 @@ impl MetricsRecorder {
     
     pub fn record_histogram(&self, name: &str, value: f64) {
         let full_name = format!("{}_{}", self.namespace, name);
-        
-        // Record to Prometheus
-        histogram!(full_name, value);
         
         // Record to local histogram
         let histograms = self.histograms.blocking_read();
@@ -113,9 +93,6 @@ impl MetricsRecorder {
     
     pub fn set_gauge(&self, name: &str, value: f64) {
         let full_name = format!("{}_{}", self.namespace, name);
-        
-        // Record to Prometheus
-        gauge!(full_name, value);
         
         // Record to local gauge
         let mut gauges = self.gauges.blocking_write();

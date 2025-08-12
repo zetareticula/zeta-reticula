@@ -15,6 +15,8 @@
 mod inference;
 pub mod kv_cache;
 mod fusion_anns;
+mod metrics;
+mod utils;
 
 use std::time::Instant;
 use std::sync::{Arc, RwLock};
@@ -22,7 +24,7 @@ use ndarray::{array, Array2, ArrayView2, s};
 use half::f16;
 use serde::{Deserialize, Serialize};
 use log;
-use rayon::prelude::*;
+// use rayon::prelude::*; // Not needed when using sequential iterators
 use ns_router_rs::NSRoutingPlan;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
@@ -38,7 +40,8 @@ pub fn get_default_inference_config() -> InferenceConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct InferenceConfig {
@@ -78,7 +81,7 @@ impl InferenceEngine {
 
         if !is_enterprise {
             let req_i = 1024;
-            let matrix = Array2::<f16>::zeros((req_i, 2 * self.d_model));
+            let matrix = Array2::<f16>::from_elem((req_i, 2 * self.d_model), f16::from_f32(0.0));
             self.neuron_matrix = Some(Arc::new(RwLock::new(matrix)));
             self.num_used = 0;
         }
@@ -105,9 +108,10 @@ impl InferenceEngine {
         let down_project = matrix.slice(s![..self.num_used, self.d_model..]).reversed_axes();
 
         let attention_scores: Vec<f16> = (0..self.num_used)
-            .into_par_iter()
+            .into_iter()
             .map(|i| {
-                (0..self.d_model).map(|d| up_project[[i, d]] * down_project[[i, d]])
+                (0..self.d_model)
+                    .map(|d| up_project[[i, d]] * down_project[[i, d]])
                     .fold(f16::from_f32(0.0), |acc, val| acc + val)
             })
             .collect();
@@ -134,7 +138,11 @@ impl InferenceEngine {
 
             for i in inactive.iter().rev() {
                 if *i < self.num_used - 1 {
-                    matrix.swap_rows(*i, self.num_used - 1);
+                    // Manually swap rows by copying
+                    let last_row = matrix.row(self.num_used - 1).to_owned();
+                    let i_row = matrix.row(*i).to_owned();
+                    matrix.slice_mut(s![self.num_used - 1, ..]).assign(&i_row);
+                    matrix.slice_mut(s![*i, ..]).assign(&last_row);
                 }
                 self.num_used -= 1;
             }
@@ -225,6 +233,7 @@ pub mod quantizer {
         }
 
         pub fn quantize_tokens(&self, tokens: Vec<TokenFeatures>, precision: &str) -> (Vec<QuantizationResult>, Vec<f32>) {
+            let len = tokens.len();
             let results = tokens.into_iter()
                 .map(|t| QuantizationResult {
                     token_id: t.token_id,
@@ -232,7 +241,7 @@ pub mod quantizer {
                 })
                 .filter(|r| r.salience_score > self.threshold)
                 .collect();
-            (results, vec![0.0; tokens.len()])
+            (results, vec![0.0; len])
         }
     }
 
@@ -245,6 +254,7 @@ pub mod quantizer {
     }
 }
 
+#[cfg(feature = "grpc")]
 mod pb {
     pub mod sidecar_service_client {
         use tonic::transport::Channel;

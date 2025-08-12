@@ -12,26 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+use serde::{Serialize, Deserialize};
 use crate::tableaux::YoungTableau;
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
 
-use crate::tableaux::YoungTableau;
-use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::role_inference::RoleTheory;
 
-// TokenFeatures represents the features of a token used for salience quantization
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
-
-// Represents a token's features relevant to salience
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Frame<'a> {
-    pub tokens: &'a [TokenFeatures], // Tokens in the frame
-    pub aggregated_salience: f32, // Aggregated salience score for the frame
-    pub frame_id: u32, // Unique identifier for the frame
-}
-
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TokenFeatures {
     pub token_id: u32,
     pub frequency: f32,
@@ -40,7 +25,7 @@ pub struct TokenFeatures {
     pub role: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct QuantizationResult {
     pub token_id: u32,
     pub precision: PrecisionLevel,
@@ -50,7 +35,7 @@ pub struct QuantizationResult {
     pub role_confidence: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PrecisionLevel {
     Bit4,
     Bit8,
@@ -75,6 +60,23 @@ impl SalienceQuantizer {
         self.batch_size = Some(batch_size);
         self
     }
+        pub fn quantize_tokens(&self, features: Vec<TokenFeatures>, theory_key: &str) -> (Vec<QuantizationResult>, YoungTableau) {
+        let results = features.into_iter().map(|feature| {
+            let salience_score = feature.frequency * feature.sentiment_score * feature.context_relevance;
+            QuantizationResult {
+                token_id: feature.token_id,
+                precision: PrecisionLevel::Bit8, // Mock precision
+                salience_score,
+                row: 0, // Mock row
+                role: feature.role,
+                role_confidence: 0.9, // Mock confidence
+            }
+        }).collect::<Vec<_>>();
+
+        let tableau = YoungTableau::from_quantization_results(&results, 10);
+        (results, tableau)
+    }
+
     pub fn quantize_tokens_batch(&self, features: Vec<TokenFeatures>, theory_key: &str) -> (Vec<QuantizationResult>, YoungTableau) {
         let batch_size = self.batch_size.unwrap_or(32);
         let mut all_results = Vec::new();
@@ -90,38 +92,3 @@ impl SalienceQuantizer {
 }
 
 // Represents the quantization results for a token
-#[derive(Serialize, Deserialize, Clone)]
-pub struct SalienceQuantizationResult {
-    pub token_id: u32,
-    pub precision: PrecisionLevel,
-    pub salience_score: f32,
-    pub row: usize,
-    pub role: String,
-    pub role_confidence: f32,
-}
-
-impl YoungTableau {
-    pub fn new(dimensions: usize, threshold: f32) -> Self {
-        YoungTableau {
-            rows: vec![vec![]; dimensions], // Ensure this field exists in the YoungTableau struct
-            dimensions: (dimensions, dimensions),
-            threshold,
-            data: todo!(),
-            salience_threshold: todo!(),
-            vector_ids: todo!(),
-            layer_ids: todo!(),
-        }
-    }
-
-    pub fn from_quantization_results(results: &[QuantizationResult], dimensions: usize) -> Self {
-        let mut tableau = YoungTableau::new(dimensions, 0.0);
-        for result in results {
-            tableau.rows[result.row].push(result.clone());
-        }
-        tableau
-    }
-
-    pub fn sparsify(&mut self) {
-        // Implement sparsification logic here
-    }
-}

@@ -6,6 +6,11 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]  # Enable WASM and Python bindings
 
+[[bin]]
+name = "zeta-reticula-api"
+path = "src/main.rs"
+required-features = ["server"]
+
 [dependencies]
 actix-web = { version = "4.11", optional = true }
 actix-multipart = { version = "0.6", optional = true }

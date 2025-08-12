@@ -19,7 +19,6 @@ pub mod sync_manager;
 use std::{
     sync::Arc,
     time::Duration,
-    backtrace::Backtrace,
 };
 use async_trait::async_trait;
 use ndarray::Array2;
@@ -53,16 +52,14 @@ pub enum ZetaVaultSynergyError {
     #[error("Weight manager error: {0}")]
     WeightManager(#[from] WeightManagerError),
     
-    #[error("Validation error: {0}")]
+    #[error("Validation error: {message}")]
     Validation { 
         message: String,
-        backtrace: Backtrace,
     },
     
     #[error("Operation timed out after {elapsed:?}")]
     Timeout { 
         elapsed: Duration,
-        backtrace: Backtrace,
     },
 }
 
@@ -187,8 +184,7 @@ impl ZetaVaultSynergy {
     /// Retrieves binary weights for a model
     #[instrument(skip(self))]
     pub async fn get_binary_weights(&self, model_id: &str) -> Result<Option<BinaryWeightSet>, ZetaVaultSynergyError> {
-        self.weight_mgr.get_binary_weights(model_id).await
-            .map_err(Into::into)
+        Ok(self.weight_mgr.get_binary_weights(model_id).await)
     }
     
     /// Triggers a manual sync of all data

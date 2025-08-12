@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use serde::{Serialize, Deserialize};
+use thiserror::Error;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AllocatedBufferDescriptor {
@@ -47,7 +48,7 @@ pub trait TransferEngine {
     async fn async_save(&self, cache: Vec<KVCache>) -> Result<(), TransferEngineError>;
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TransferEngineError {
     #[error("IO error: {0}")]
     Io(String),

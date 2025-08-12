@@ -28,8 +28,6 @@ use serde::{Serialize, Deserialize};
 // FusionANNS is a mock implementation of a billion-scale ANN search system
 // using a combination of SSD storage, GPU HBM, and host memory for vector management.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
 pub struct FusionANNSConfig {
     pub vector_dim: usize,  // Dimension of the vectors
     pub batch_size: usize,  // Mini-batch size for re-ranking
@@ -47,7 +45,6 @@ impl FusionANNSConfig {
 }
 
 
-#[derive(Serialize, Deserialize)]
 pub struct FusionANNS {
     raw_vectors: String,  // Path to SSD storage
     pq_vectors: Array2<f32>,  // Compressed vectors in GPU HBM
