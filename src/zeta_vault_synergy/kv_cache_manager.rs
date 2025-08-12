@@ -17,7 +17,26 @@ use tokio::sync::RwLock;
 use thiserror::Error;
 use ndarray::Array2;
 use lru::LruCache;
-use crate::model_store::NeuronMatrix;
+use async_trait::async_trait;
+use std::collections::HashMap;
+use crate::VaultConfig;
+use chrono;
+use half::f16;
+
+#[derive(Debug, Clone)]
+pub enum CacheLayer {
+    HBM,
+    DDR,
+}
+
+#[derive(Debug, Clone)]
+pub struct KVCache {
+    pub key: Vec<u8>,
+    pub value: Vec<u8>,
+    pub layer: CacheLayer,
+    pub timestamp: u64,
+    pub node_id: usize,
+}
 
 #[derive(Error, Debug)]
 pub enum KVCacheManagerError {
@@ -27,18 +46,29 @@ pub enum KVCacheManagerError {
     Validation(String),
 }
 
-pub struct KVCacheManager {
+#[async_trait]
+pub trait KVCacheManager: Send + Sync {
+    async fn store_kv_cache(&self, model_id: &str, keys: Array2<f16>, values: Array2<f16>) -> Result<(), KVCacheManagerError>;
+    async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache>;
+}
+
+pub struct KVCacheManagerImpl {
     kv_cache: Arc<RwLock<HashMap<String, KVCache>>>,
-    cache: LruCache<String, KVCache>,
+    cache: RwLock<LruCache<String, KVCache>>,
     node_id: usize,
     config: VaultConfig,
 }
 
-impl KVCacheManager {
+impl KVCacheManagerImpl {
+    // Note: The `get_mut` method on `LruCache` requires a mutable reference, 
+    // so we need to change how we handle the cache lock.
+    // This is a temporary solution to get the code to compile.
+    // A more robust solution would involve using a `Mutex` or `RwLock` around the `LruCache`.
+
     pub async fn new(node_id: usize, config: VaultConfig) -> Result<Self, KVCacheManagerError> {
-        Ok(KVCacheManager {
+        Ok(KVCacheManagerImpl {
             kv_cache: Arc::new(RwLock::new(HashMap::new())),
-            cache: LruCache::new(100), // LRU cache for 100 entries
+            cache: RwLock::new(LruCache::new(100)), // LRU cache for 100 entries
             node_id,
             config,
         })
@@ -59,21 +89,34 @@ impl KVCacheManager {
         };
         let key = format!("kv_cache_{}", model_id);
         self.kv_cache.write().await.insert(key.clone(), kv_cache.clone());
-        self.cache.put(key, kv_cache);
+        self.cache.write().await.put(key, kv_cache);
         log::info!("Stored KV cache for model {}", model_id);
         Ok(())
     }
 
-    pub async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache> {
+    async fn get_kv_cache_impl(&self, model_id: &str) -> Option<KVCache> {
         let key = format!("kv_cache_{}", model_id);
-        if let Some(cached) = self.cache.get(&key) {
+        if let Some(cached) = self.cache.read().await.get(&key) {
             log::debug!("Cache hit for {}", model_id);
-            Some(cached.clone())
-        } else {
-            self.kv_cache.read().await.get(&key).cloned().map(|cache| {
-                self.cache.put(key, cache.clone());
-                cache
-            })
+            return Some(cached.clone());
         }
+
+        if let Some(cache) = self.kv_cache.read().await.get(&key).cloned() {
+            self.cache.write().await.put(key.to_string(), cache.clone());
+            return Some(cache);
+        }
+
+        None
+    }
+}
+
+#[async_trait]
+impl KVCacheManager for KVCacheManagerImpl {
+    async fn store_kv_cache(&self, model_id: &str, keys: Array2<f16>, values: Array2<f16>) -> Result<(), KVCacheManagerError> {
+        self.store_kv_cache(model_id, keys, values).await
+    }
+
+    async fn get_kv_cache(&self, model_id: &str) -> Option<KVCache> {
+        self.get_kv_cache_impl(model_id).await
     }
 }

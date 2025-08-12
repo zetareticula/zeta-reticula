@@ -28,12 +28,8 @@ use thiserror::Error;
 use tracing::{info, error, instrument};
 use half::f16;
 
-pub mod kv_cache_manager;
-pub mod weight_manager;
-pub mod sync_manager;
-
-use kv_cache_manager::{KVCache, KVCacheManager, KVCacheError};
-use weight_manager::{BinaryWeightSet, WeightManager, WeightManagerError};
+use kv_cache_manager::{KVCache, KVCacheManager, KVCacheManagerImpl, KVCacheManagerError};
+use weight_manager::{BinaryWeightSet, WeightManager, WeightManagerImpl, WeightManagerError};
 use sync_manager::{SyncManager, SyncError, SyncConfig};
 
 /// Main error type for ZetaVaultSynergy operations
@@ -52,7 +48,7 @@ pub enum ZetaVaultSynergyError {
     Sync(#[from] SyncError),
     
     #[error("KV cache error: {0}")]
-    KVCache(#[from] KVCacheError),
+    KVCache(#[from] KVCacheManagerError),
     
     #[error("Weight manager error: {0}")]
     WeightManager(#[from] WeightManagerError),
@@ -117,8 +113,8 @@ impl ZetaVaultSynergy {
         info!("Initializing ZetaVaultSynergy with config: {:?}", config);
         
         // Initialize managers
-        let kv_cache_mgr = Arc::new(kv_cache_manager::KVCacheManagerImpl::new(node_id, config.clone()).await?);
-        let weight_mgr = Arc::new(weight_manager::WeightManagerImpl::new(node_id, config.clone()).await?);
+        let kv_cache_mgr = Arc::new(KVCacheManagerImpl::new(node_id, config.clone()).await?);
+        let weight_mgr = Arc::new(WeightManagerImpl::new(node_id, config.clone()).await?);
         
         // Create sync config
         let sync_config = SyncConfig {
@@ -168,8 +164,7 @@ impl ZetaVaultSynergy {
     /// Retrieves KV cache for a model
     #[instrument(skip(self))]
     pub async fn get_kv_cache(&self, model_id: &str) -> Result<Option<KVCache>, ZetaVaultSynergyError> {
-        self.kv_cache_mgr.get_kv_cache(model_id).await
-            .map_err(Into::into)
+        Ok(self.kv_cache_mgr.get_kv_cache(model_id).await)
     }
     
     /// Stores binary weights for a model

@@ -3,7 +3,10 @@
 use crate::{
     KVQuantConfig, PrecisionLevel, QuantizationResult, RoleInferer, MesolimbicSystem,
 };
+use crate::block::DataBlock;
+use crate::config::QuantizationError;
 use dashmap::DashMap;
+use std::sync::Arc;
 
 /// Main KVQuantizer struct that handles the quantization process
 #[derive(Debug, Clone)]

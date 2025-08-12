@@ -34,6 +34,8 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn, error, instrument, Instrument};
+use crate::kv_cache_manager::KVCacheManager;
+use crate::weight_manager::WeightManager;
 
 /// Maximum number of concurrent replication tasks
 const MAX_CONCURRENT_REPLICATIONS: usize = 10;
@@ -106,6 +108,8 @@ pub struct SyncManager {
     semaphore: Arc<Semaphore>,
     metrics: SyncMetrics,
 }
+
+//
 
 /// Metrics for synchronization
 #[derive(Clone, Debug, Default)]

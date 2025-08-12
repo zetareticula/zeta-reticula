@@ -15,6 +15,14 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use thiserror::Error;
+use std::collections::HashMap;
+use crate::VaultConfig;
+use async_trait::async_trait;
+
+#[derive(Debug, Clone)]
+pub struct BinaryWeightSet {
+    pub data: Vec<u8>,
+}
 
 #[derive(Error, Debug)]
 pub enum WeightManagerError {
@@ -22,28 +30,45 @@ pub enum WeightManagerError {
     Serialization(#[from] bincode::Error),
 }
 
-pub struct WeightManager {
+#[async_trait]
+pub trait WeightManager: Send + Sync {
+    async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError>;
+    async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet>;
+}
+
+pub struct WeightManagerImpl {
     binary_weights: Arc<RwLock<HashMap<String, BinaryWeightSet>>>,
     node_id: usize,
 }
 
-impl WeightManager {
-    pub async fn new(node_id: usize, config: VaultConfig) -> Result<Self, WeightManagerError> {
-        Ok(WeightManager {
+impl WeightManagerImpl {
+    pub async fn new(node_id: usize, _config: VaultConfig) -> Result<Self, WeightManagerError> {
+        Ok(WeightManagerImpl {
             binary_weights: Arc::new(RwLock::new(HashMap::new())),
             node_id,
         })
     }
 
-    pub async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError> {
+        async fn store_binary_weights_impl(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError> {
         let key = format!("binary_weights_{}", model_id);
         self.binary_weights.write().await.insert(key.clone(), binary_set);
         log::info!("Stored binary weights for model {}", model_id);
         Ok(())
     }
 
-    pub async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet> {
+        async fn get_binary_weights_impl(&self, model_id: &str) -> Option<BinaryWeightSet> {
         let key = format!("binary_weights_{}", model_id);
         self.binary_weights.read().await.get(&key).cloned()
+    }
+}
+
+#[async_trait]
+impl WeightManager for WeightManagerImpl {
+    async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError> {
+        self.store_binary_weights_impl(model_id, binary_set).await
+    }
+
+    async fn get_binary_weights(&self, model_id: &str) -> Option<BinaryWeightSet> {
+        self.get_binary_weights_impl(model_id).await
     }
 }
