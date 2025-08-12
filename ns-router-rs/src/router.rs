@@ -9,6 +9,8 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use lru::LruCache;
+use salience_engine::role_inference::SalienceResult;
 use crate::salience::SalienceAnalyzer;
 
 /// Errors that can occur during routing
@@ -95,7 +97,7 @@ impl Default for RouterConfig {
 #[derive(Debug, Clone)]
 pub struct NSRouter {
     /// Context analyzer for extracting features and context
-    context_analyzer: Arc<dyn NSContextAnalyzer + Send + Sync>,
+    context_analyzer: Arc<NSContextAnalyzer>,
     
     /// Salience analyzer for determining token importance
     salience_analyzer: Arc<SalienceAnalyzer>,
@@ -107,7 +109,7 @@ pub struct NSRouter {
     strategy_selector: Arc<NSStrategySelector>,
     
     /// Cache for storing routing decisions
-    routing_cache: Arc<dyn RoutingCache + Send + Sync>,
+    decision_cache: Arc<RwLock<LruCache<String, NSRoutingPlan>>>,
     
     /// Configuration for the router
     config: RouterConfig,
@@ -121,13 +123,13 @@ impl NSRouter {
     pub fn new() -> Self {
         let config = RouterConfig::default();
         let salience_analyzer = SalienceAnalyzer::new();
-        
+        let decision_cache = Arc::new(RwLock::new(LruCache::new(config.cache_size)));
         Self {
             context_analyzer: Arc::new(NSContextAnalyzer::default()),
             salience_analyzer: Arc::new(salience_analyzer),
             symbolic_reasoner: Arc::new(SymbolicReasoner::default()),
             strategy_selector: Arc::new(NSStrategySelector::default()),
-            routing_cache: Arc::new(InMemoryRoutingCache::default()),
+            decision_cache,
             config,
         }
     }
@@ -140,16 +142,13 @@ impl NSRouter {
     /// # Returns
     /// A new instance of `NSRouter` with the specified configuration.
     pub fn with_config(config: RouterConfig) -> Self {
-        let decision_cache = Arc::new(RwLock::new(
-            lru::LruCache::new(config.cache_size)
-        ));
-        
+        let decision_cache = Arc::new(RwLock::new(LruCache::new(config.cache_size)));
         Self {
             context_analyzer: Arc::new(NSContextAnalyzer::default()),
             salience_analyzer: Arc::new(SalienceAnalyzer::new()),
             symbolic_reasoner: Arc::new(SymbolicReasoner::default()),
             strategy_selector: Arc::new(NSStrategySelector::default()),
-            routing_cache: Arc::new(InMemoryRoutingCache::default()),
+            decision_cache,
             config,
         }
     }
@@ -179,7 +178,10 @@ impl NSRouter {
         
         // Check cache first
         let cache_key = format!("{}:{}", user_id, input);
-        if let Some(cached_plan) = self.routing_cache.get(&cache_key).await {
+        if let Some(cached_plan) = {
+            let cache = self.decision_cache.read().await;
+            cache.peek(&cache_key).cloned()
+        } {
             return Ok(cached_plan);
         }
         
@@ -217,13 +219,13 @@ impl NSRouter {
         // Create routing plan with salience-informed configuration
         let plan = NSRoutingPlan {
             model_config: ModelConfig {
-                max_length: self.config.max_sequence_length,
+                model_name: self.config.default_model.clone(),
+                max_length: self.config.max_tokens as u32,
                 precision: self.select_precision(&context),
-                ..Default::default()
             },
             execution_strategy: strategy,
             kv_cache_config: KVCacheConfig {
-                enabled: self.config.enable_kv_cache,
+                enabled: true,
                 size_mb: self.calculate_cache_size(&context),
             },
             symbolic_rules: context.symbolic_constraints,
@@ -231,7 +233,10 @@ impl NSRouter {
         };
         
         // Cache the routing decision
-        self.routing_cache.set(&cache_key, plan.clone()).await;
+        {
+            let mut cache = self.decision_cache.write().await;
+            cache.put(cache_key, plan.clone());
+        }
         
         Ok(plan)
     }
@@ -266,10 +271,7 @@ impl NSRouter {
             })
             .collect()
     }
-                }
-            })
-            .collect()
-    }
+
     
     /// Apply symbolic reasoning to the input
     fn apply_symbolic_reasoning(
@@ -319,42 +321,9 @@ impl NSRouter {
         
         (base_size + token_based).min(4096) // Cap at 4GB
     }
+}
     
-        // Update context with salience information
-        context.salience_profile = salience_results.into_iter()
-            .map(|sr| {
-                let mut qr = QuantizationResult::default();
-                qr.token_id = sr.token_id;
-                qr.score = sr.salience_score;
-                qr
-            })
-            .collect();
-        
-        // Select execution strategy with salience information
-        let strategy = self.strategy_selector.select_strategy(&context)
-            .await
-            .map_err(|e| RouterError::StrategyError(e.to_string()))?;
-        
-        // Create routing plan with salience-informed configuration
-        let plan = NSRoutingPlan::new(
-            ModelConfig {
-                max_length: self.config.max_sequence_length,
-                precision: self.select_precision(&context),
-                ..Default::default()
-            },
-            strategy,
-            KVCacheConfig {
-                enabled: self.config.enable_kv_cache,
-                size_mb: self.calculate_cache_size(&context),
-            },
-            context.symbolic_constraints,
-        );
-        
-        // Cache the routing decision
-        self.routing_cache.set(&cache_key, plan.clone()).await;
-        
-        Ok(plan)
-    }
+
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NSRoutingPlan {

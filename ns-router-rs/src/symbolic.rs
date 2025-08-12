@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 use thiserror::Error;
 use std::collections::HashMap;
 use crate::rewrite_wrapper::{SerializableRewrite, RewriteError};
+use shared::QuantizationResult;
 
 /// Errors that can occur during symbolic reasoning
 #[derive(Error, Debug, Serialize, Deserialize)]
@@ -106,7 +107,7 @@ impl SymbolicReasoner {
         
         // Simple implementation: just limit the number of results based on salience
         let avg_salience: f32 = salience_profile.iter()
-            .map(|r| r.salience_score)
+            .map(|r| r.score)
             .sum::<f32>() / salience_profile.len() as f32;
             
         let max_results = (avg_salience * 10.0) as usize;

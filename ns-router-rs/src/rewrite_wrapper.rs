@@ -15,7 +15,6 @@ pub struct SerializableRewrite {
     name: String,
     left: String,
     right: String,
-    #[serde(skip_serializing, skip_deserializing)]
     rewrite: Option<Rewrite<SymbolLang, ()>>,
 }
 

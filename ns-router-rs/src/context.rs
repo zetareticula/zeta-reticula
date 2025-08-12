@@ -23,31 +23,6 @@ use shared::{QuantizationResult, PrecisionLevel};
 use serde::{Serialize, Deserialize};
 use super::{TokenFeatures, ModelConfig, KVCacheConfig};
 use log;
-use crate::model::Model;
-use crate::kv_cache::KVCache;
-use crate::fusion_anns::FusionANNS;
-use agentflow_rs::server::AgentFlowServer;
-use tonic::transport::Channel;
-use ns_router_rs::pb;
-
-
-
-
-
-//bring crates forward
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct NSContextAnalyzer {
-    //branch off
-    let mut model: Model;
-    let mut kv_cache: KVCache;
-    let mut fusion_anns: FusionANNS;
-    let mut agent_flow_server: agentflow_rs::server::AgentFlowServer;
-    let mut quantization_results: Vec<QuantizationResult>;
-    let mut sidecar_client: pb::sidecar_service_client::SidecarServiceClient<Channel>;
-    // Placeholder for future tableau functionality
-    let mut _tableau_placeholder: ();
-}
-
 
 /// Analysis of the context for neurosymbolic routing
 #[derive(Serialize, Deserialize, Debug, Clone)]

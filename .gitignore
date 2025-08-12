@@ -1,0 +1,53 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Rust target and build artifacts
+/target/
+/target/**
+**/*.rlib
+**/*.rmeta
+**/*.d
+**/*.dSYM/
+
+# Cargo extras
+Cargo.lock.bak
+Cargo 2.lock
+
+# Logs
+*.log
+server.log
+
+# Python venvs and caches
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated/large data
+models/
+quantization-results/
+vault-data/
+attention-data/
+
+# Docker/compose leftovers
+*.local.yml
+
+# Build outputs
+/target/optimized/
+
+# Misc scripts outputs
+*.tmp
+*.bak
+
+# OpenBLAS build outputs
+**/openblas-src-*/out/

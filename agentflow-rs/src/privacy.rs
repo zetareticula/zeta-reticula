@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use serde::{Serialize, Deserialize};
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use rand::thread_rng;
 use rand::Rng;
 use serde_json::json;
@@ -29,17 +29,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::AtomicI32;
+#[cfg(feature = "server")]
 use dashmap::DashMap;
+#[cfg(feature = "server")]
 use dashmap::mapref::entry::Entry;
-use crate::tableaux::YoungTableau;
-use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::mesolimbic::{MesolimbicSystem, SalienceResult};
-use crate::role_inference::RoleTheory;
-use crate::quantizer::{QuantizationResult, PrecisionLevel};
-use crate::spot::SpotManager;
-use crate::block::{DataBlock, BlockState};
-use crate::quantizer::KVQuantConfig;
-use crate::quantizer::KVQuantizer;
+use salience_engine::tableaux::YoungTableau;
+use salience_engine::role_inference::{RoleInferer, RoleInferenceResult, RoleTheory, SalienceResult};
+use salience_engine::mesolimbic::MesolimbicSystem;
+use kvquant_rs::{QuantizationResult, PrecisionLevel, SpotManager, DataBlock, KVQuantConfig, KVQuantizer};
+use kvquant_rs::spot::BlockState;
 
 // Represents a privacy guard that adds noise to data for differential privacy
 // This is used to protect sensitive data while allowing for analysis
@@ -56,10 +54,12 @@ impl PrivacyGuardConfig {
     }
 }
 
+#[cfg(feature = "server")]
 pub struct PrivacyGuardManager {
     guards: DashMap<usize, PrivacyGuard>,
 }
 
+#[cfg(feature = "server")]
 impl PrivacyGuardManager {
     pub fn new() -> Self {
         PrivacyGuardManager {
@@ -75,9 +75,15 @@ impl PrivacyGuardManager {
     pub fn get_guard(&self, id: usize) -> Option<PrivacyGuard> {
         self.guards.get(&id).map(|g| g.clone())
     }
+
+    pub fn apply_guard(&self, id: usize, data: &mut [f32]) {
+        if let Some(guard) = self.get_guard(id) {
+            guard.add_noise(data);
+        }
+    }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PrivacyGuard {
     epsilon: f32,
 }
@@ -88,24 +94,13 @@ impl PrivacyGuard {
     }
 
     pub fn add_noise(&self, data: &mut [f32]) {
-        let normal = Normal::new(0.0, 1.0 / self.epsilon as f64);
+        let normal = Normal::new(0.0, self.epsilon as f64).unwrap();
         let mut rng = rand::thread_rng();
         for val in data.iter_mut() {
             *val += normal.sample(&mut rng) as f32;
         }
     }
-}
 
-
-impl PrivacyGuardManager {
-    pub fn apply_guard(&self, id: usize, data: &mut [f32]) {
-        if let Some(guard) = self.get_guard(id) {
-            guard.add_noise(data);
-        }
-    }
-}
-
-impl PrivacyGuard {
     pub fn serialize(&self) -> String {
         to_string(self).unwrap()
     }

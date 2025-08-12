@@ -1,5 +1,5 @@
-use salience_engine::mesolimbic::{MesolimbicSystem, SalienceResult, TokenFeatures as SETokenFeatures};
-use salience_engine::role_inference::RoleInferenceResult;
+use salience_engine::mesolimbic::MesolimbicSystem;
+use salience_engine::role_inference::{RoleInferenceResult, TokenFeatures as SETokenFeatures, SalienceResult};
 use std::collections::HashMap;
 
 /// Wrapper around the salience engine's functionality

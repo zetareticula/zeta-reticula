@@ -12,30 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
 
+use dashmap::DashMap;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
-use dashmap::DashMap;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use crate::quantization::QuantizationResult;
-use crate::quantization::PrecisionLevel;
-use crate::role_inference::{RoleInferer, RoleInferenceResult};
-use crate::role_inference::RoleTheory;
-use crate::role_inference::TokenFeatures;
+use serde::{Deserialize, Serialize};
 
-// Represents a token's features relevant to salience
-#[derive(Serialize, Deserialize, Clone)]
+use crate::{
+    quantization::{PrecisionLevel, QuantizationResult},
+};
+// Re-export the trait so downstream crates can import it from role_inference
+pub use crate::role_inferer::RoleInferer;
+
+/// Represents features of a token used for role inference
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TokenFeatures {
     pub token_id: u32,
     pub frequency: f32,
     pub sentiment_score: f32,
     pub context_relevance: f32,
-    pub role: String, // Now dynamically inferred
+    pub role: String,
 }
 
-// Represents the result of salience computation for a token
-#[derive(Serialize, Deserialize)]
+/// Result of role inference for a token
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RoleInferenceResult {
+    pub token_id: u32,
+    pub role: String,
+    pub confidence: f32,
+}
+
+/// Result of salience computation for a token
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SalienceResult {
     pub token_id: u32,
     pub salience_score: f32,
@@ -43,28 +52,24 @@ pub struct SalienceResult {
     pub role_confidence: f32,
 }
 
-
-// Role inference state
-#[derive(Serialize, Deserialize, Clone)]
+/// Role theory containing possible roles and their probabilities
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoleTheory {
-    pub roles: Vec<String>,          // Possible roles (e.g., "subject", "negation")
-    pub probabilities: Vec<Vec<f32>>, // P(role | token_features)
+    /// Possible roles (e.g., "subject", "negation")
+    pub roles: Vec<String>,
+    /// Probability matrix P(role | token_features)
+    pub probabilities: Vec<Vec<f32>>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct RoleInferenceResult {
-    pub token_id: u32,
-    pub inferred_role: String,
-    pub confidence: f32,
-}
-
-pub struct RoleInferer {
-    pub(crate) theories: DashMap<String, RoleTheory>, // Concurrent theory storage
+/// Default implementation of the RoleInferer trait
+#[derive(Clone, Debug)]
+pub struct RoleInfererImpl {
+    pub(crate) theories: DashMap<String, RoleTheory>,
     pub(crate) outer_loop_iterations: usize,
     pub(crate) inner_loop_iterations: usize,
 }
 
-impl RoleInferer {
+impl RoleInfererImpl {
     pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
         let theories = DashMap::new();
         // Initialize with a default theory
@@ -72,34 +77,52 @@ impl RoleInferer {
             roles: vec!["subject".to_string(), "verb".to_string(), "object".to_string(), "modifier".to_string(), "negation".to_string()],
             probabilities: vec![vec![0.2; 5]; 5], // Uniform distribution initially
         });
-        RoleInferer {
+        RoleInfererImpl {
             theories,
             outer_loop_iterations,
             inner_loop_iterations,
         }
     }
 
+    // Sample an index from a probability distribution
+    fn sample_role(&self, probs: &[f32], rng: &mut impl rand::Rng) -> usize {
+        let mut r = rng.gen::<f32>();
+        let mut cum = 0.0f32;
+        for (i, p) in probs.iter().enumerate() {
+            cum += *p;
+            if r <= cum { return i; }
+        }
+        probs.len().saturating_sub(1)
+    }
+}
+
+// Trait is available in scope via the public re-export above
+
+impl RoleInferer for RoleInfererImpl {
     // Stochastic search to infer roles
-    pub fn infer_roles(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<RoleInferenceResult> {
+    fn infer_roles(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<RoleInferenceResult> {
         let mut rng = rand::thread_rng();
         let theory = self.theories.get(theory_key).unwrap_or_else(|| self.theories.get("default").unwrap()).clone();
 
         // Outer loop: Sample theories
         let mut best_theory = theory.clone();
         let mut best_likelihood = f32::NEG_INFINITY;
+        let mut selected_model: Vec<(usize, f32)> = vec![(0, 0.0); features.len()];
 
         for _ in 0..self.outer_loop_iterations {
             let mut candidate_theory = theory.clone();
             // Perturb probabilities (simplified perturbation)
             for probs in &mut candidate_theory.probabilities {
                 let normal = Normal::new(0.0, 0.1).unwrap();
-                for p in probs {
+                for p in probs.iter_mut() {
                     *p = (*p + normal.sample(&mut rng)).clamp(0.0, 1.0);
                 }
                 // Normalize
-                let sum: f32 = probs.iter().sum();
-                for p in probs {
-                    *p /= sum;
+                let sum: f32 = probs.iter().copied().sum();
+                if sum > 0.0 {
+                    for p in probs.iter_mut() {
+                        *p /= sum;
+                    }
                 }
             }
 
@@ -127,6 +150,7 @@ impl RoleInferer {
 
             if best_model_likelihood > best_likelihood {
                 best_likelihood = best_model_likelihood;
+                selected_model = best_model.clone();
                 best_theory = candidate_theory;
             }
         }
@@ -136,25 +160,13 @@ impl RoleInferer {
 
         // Map results
         features.into_iter().enumerate().map(|(i, feature)| {
-            let (role_idx, confidence) = best_model[i];
+            let (role_idx, confidence) = selected_model[i];
             RoleInferenceResult {
                 token_id: feature.token_id,
-                inferred_role: best_theory.roles[role_idx].clone(),
+                role: best_theory.roles[role_idx].clone(),
                 confidence,
             }
         }).collect()
-    }
-
-    fn sample_role(&self, probabilities: &[f32], rng: &mut impl Rng) -> usize {
-        let mut sum = 0.0;
-        let r: f32 = rng.gen();
-        for (i, &p) in probabilities.iter().enumerate() {
-            sum += p;
-            if r <= sum {
-                return i;
-            }
-        }
-        probabilities.len() - 1
     }
 }
 
@@ -164,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_role_inference() {
-        let inferer = RoleInferer::new(10, 5);
+        let inferer = RoleInfererImpl::new(10, 5);
         let features = vec![
             TokenFeatures {
                 token_id: 0,
@@ -185,6 +197,6 @@ mod tests {
         let results = inferer.infer_roles(features, "default");
         assert_eq!(results.len(), 2);
         assert!(results[0].confidence > 0.0);
-        assert!(results[0].inferred_role == "subject" || results[0].inferred_role == "negation"); // Likely roles
+        assert!(results[0].role == "subject" || results[0].role == "negation"); // Likely roles
     }
 }
