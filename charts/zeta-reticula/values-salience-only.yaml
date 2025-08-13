@@ -1,0 +1,31 @@
+replicaCount: 2
+
+image:
+  # Local image name to load into Kind
+  repository: zeta-salience
+  tag: "local"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 8080
+
+# Deploy only salience-engine for now
+services:
+  - name: salience-engine
+    port: 8080
+
+# Disable Airflow in this profile
+airflow:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+ingress:
+  enabled: false

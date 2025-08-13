@@ -37,9 +37,11 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
 
 - Rust (latest stable version)
 - Node.js and npm (for front-end)
-- Docker (optional, for containerized deployment)
+- Docker and Docker Compose (for containerized deployment)
+- kubectl and Helm (for Kubernetes deployment)
+- protobuf-compiler (for building protobuf files)
 
-### Installation
+### Quick Start with Docker
 
 1. **Clone the Repository**
 
@@ -48,12 +50,56 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
    cd zeta-reticula
    ```
 
-2. **Build the Backend**
+2. **Build and Run with Docker Compose**
 
    ```bash
-   cd api
+   docker-compose up --build
+   ```
+
+   This will build and start the salience-engine service. The API will be available at `http://localhost:8080`.
+
+### Kubernetes Deployment
+
+1. **Build the Docker Image**
+
+   ```bash
+   docker build -t zeta-salience/salience-engine:local .
+   ```
+
+2. **Deploy to Kubernetes**
+
+   ```bash
+   # Create namespace
+   kubectl create namespace zeta
+   
+   # Deploy with Helm
+   helm upgrade --install zeta charts/zeta-reticula -n zeta --create-namespace -f charts/zeta-reticula/values-salience-only.yaml
+   
+   # Check deployment status
+   kubectl -n zeta get pods
+   ```
+
+3. **Access the Service**
+
+   ```bash
+   # Port-forward to access the service locally
+   kubectl -n zeta port-forward svc/salience-engine 8080:8080
+   ```
+
+   The service will be available at `http://localhost:8080`.
+
+### Local Development
+
+1. **Build the Backend**
+
+   ```bash
    cargo build --release
-   cd ..
+   ```
+
+2. **Run the API**
+
+   ```bash
+   cargo run --release --bin salience-engine
    ```
 
 3. **Set Up the Front-End**
@@ -64,14 +110,60 @@ Zeta Reticula is an open-source, cutting-edge framework designed to revolutioniz
    npm start
    ```
 
-4. **Run the API**
-
-   ```bash
-   cd api
-   cargo run --release
-   ```
-
 Visit `http://localhost:3000` to explore the dashboard and begin your journey into optimized inference!
+
+### Troubleshooting
+
+#### Docker Build Issues
+
+- **Missing Dependencies**: Ensure all build dependencies are installed in the Dockerfile.
+  ```dockerfile
+  RUN apt-get update && apt-get install -y \
+      pkg-config \
+      libssl-dev \
+      build-essential \
+      cmake \
+      curl \
+      git \
+      clang \
+      lld \
+      protobuf-compiler \
+      libprotobuf-dev \
+      && rm -rf /var/lib/apt/lists/*
+  ```
+
+- **Rust Version Mismatch**: Ensure the Rust version in the Dockerfile matches the required version for all dependencies.
+  ```dockerfile
+  FROM --platform=linux/amd64 rust:1.82-slim-bookworm AS builder
+  ```
+
+#### Kubernetes Issues
+
+- **Image Pull Errors**: Ensure the image is available in your cluster. For local development, use `kind` to load the image:
+  ```bash
+  kind load docker-image zeta-salience/salience-engine:local --name your-cluster-name
+  ```
+
+- **Service Not Accessible**: Check if the service is running and the ports are correctly exposed:
+  ```bash
+  kubectl -n zeta get svc,pods
+  kubectl -n zeta logs -l app=zeta-reticula,component=salience-engine
+  ```
+
+#### Common Build Errors
+
+- **Protoc Not Found**: Ensure `protobuf-compiler` is installed:
+  ```bash
+  sudo apt-get install -y protobuf-compiler
+  ```
+
+- **Rust Toolchain Issues**: Ensure the correct Rust toolchain is installed:
+  ```bash
+  rustup update
+  rustup default stable
+  ```
+
+For additional help, please open an issue on our [GitHub repository](https://github.com/your-org/zeta-reticula/issues).
 
 ---
 
