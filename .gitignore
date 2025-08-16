@@ -1,53 +1,120 @@
-# OS junk
+# === OS Specific Files ===
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Rust target and build artifacts
+# === Rust ===
+# Cargo build artifacts
 /target/
-/target/**
-**/*.rlib
-**/*.rmeta
+**/*.rs.bk
 **/*.d
-**/*.dSYM/
-
-# Cargo extras
+*.pdb
+*.dSYM/
+*.profraw
+Cargo.lock
 Cargo.lock.bak
 Cargo 2.lock
 
-# Logs
-*.log
-server.log
+# Rust check files
+*.dll
+*.so
+*.dylib
+*.rlib
+*.rmeta
+*.rbc
 
-# Python venvs and caches
-venv/
-.env
-__pycache__/
-*.pyc
-
-# Node
+# === Node.js ===
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.pnp.*
 
-# IDE/editor
-.vscode/
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# === Environment Variables ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === Editors ===
+# VS Code
+.vscode/*
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+*~
 
-# Generated/large data
+# === Large/Binary Files ===
+# Model files
 models/
 quantization-results/
 vault-data/
 attention-data/
+*.gguf
+*.bin
+*.pt
+*.pth
+*.h5
 
-# Docker/compose leftovers
-*.local.yml
-
-# Build outputs
+# === Build Outputs ===
 /target/optimized/
+**/openblas-src-*/out/
+*.o
+*.a
+*.lib
 
-# Misc scripts outputs
+# === Logs and Databases ===
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+
+# === Local Development ===
+*.local.yml
+.docker/
+.vercel
+.netlify
+
+# === Temporary Files ===
 *.tmp
 *.bak
+*.swp
+*~
 
-# OpenBLAS build outputs
-**/openblas-src-*/out/
+# === System Files ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

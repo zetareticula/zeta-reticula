@@ -1,105 +1,102 @@
-# Zeta Reticula 🌌
+<div align="center">
+  <a href="https://github.com/zetareticula/zeta-reticula">
+    <img src="assets/blob.png" alt="Zeta Reticula Logo" width="400">
+  </a>
+  
+  <h1>Zeta Reticula</h1>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Rust](https://github.com/zetareticula/zeta-reticula/actions/workflows/rust.yml/badge.svg)](https://github.com/zetareticula/zeta-reticula/actions)
+  [![Docker](https://img.shields.io/docker/pulls/zetareticula/salience-engine)](https://hub.docker.com/r/zetareticula/salience-engine)
+  [![Discord](https://img.shields.io/discord/your-discord-invite-code)](https://discord.gg/your-invite)
+</div>
 
-## A Vision of the Machine Age Unleashed
+> "Imagine a world where the vast machinery of the intellect propels humanity into realms undreamed of—a future where artificial minds are sculpted with precision to serve the cosmos itself."
 
-"Imagine a world where the vast machinery of the intellect, a Time Machine of thought, propels humanity into realms undreamed of—a future where artificial minds, vast and intricate, are sculpted with precision to serve the cosmos itself." — H.G. Wells, reimagined for the digital frontier.
+## 🚀 Overview
 
-Welcome to **Zeta Reticula**, a pioneering inference quantization platform that transcends the boundaries of conventional artificial intelligence. Born from the ethereal glow of the Zeta Reticula team (formerly EinsteinDB and MilevaDB), this project is a leap into the uncharted territories of machine learning optimization, where performance, scalability, and innovation converge in a symphony of code and computation.
+Zeta Reticula is a high-performance, open-source framework for optimizing large language model (LLM) inference through advanced quantization techniques. Designed for scalability and efficiency, it enables seamless deployment of trillion-parameter models across diverse hardware environments.
 
----
+## ✨ Features
 
-## Project Overview
+- **Advanced Quantization**: 4-bit, 8-bit, and 16-bit quantization support
+- **Distributed Architecture**: Federated learning and distributed computing
+- **Hardware Agnostic**: Runs on GPUs, CPUs, and TPUs
+- **Real-time Analytics**: Comprehensive monitoring and metrics
+- **Privacy-First**: Differential privacy and homomorphic encryption
 
-Zeta Reticula is an open-source, cutting-edge framework designed to revolutionize large language model (LLM) inference through advanced quantization techniques. Leveraging state-of-the-art algorithms and a distributed, federated architecture, we enable developers and enterprises to deploy trillion-parameter models with unprecedented efficiency. Our platform offers plug-and-play support for 4-bit, 8-bit, and 16-bit quantization, ensuring hardware and cloud-agnostic compatibility across diverse environments—from edge devices to hyperscale data centers.
+## 🛠️ Tech Stack
 
-### Core Features
+- **Backend**: Rust (`llm-rs`, `agentflow-rs`, `ns-router-rs`)
+- **Frontend**: React + Tailwind CSS
+- **APIs**: Actix-web
+- **Containerization**: Docker + Kubernetes
+- **CI/CD**: GitHub Actions
 
-- **Quantization Excellence**: Optimize inference with precision-tuned 4, 8, and 16-bit quantization, reducing memory footprint by up to 60% while maintaining high accuracy.
-- **Scalable Architecture**: Harness federated learning and distributed computing to support long-context scenarios (e.g., 1M tokens) and billion-scale datasets.
-- **Hardware Agnosticism**: Seamlessly integrate with GPUs, CPUs, TPUs, and cloud infrastructures, eliminating vendor lock-in.
-- **Real-Time Analytics**: Monitor latency (as low as 0.4 ms/sample), throughput, and ANNS recall via an intuitive, futuristic dashboard.
-- **Privacy-First Design**: Employ differential privacy and homomorphic encryption to safeguard data in collaborative settings.
-
----
-
-## Technical Stack
-
-- **Backend**: Rust-based modules (`llm-rs`, `agentflow-rs`, `ns-router-rs`, `kvquant-rs`, `quantize-cli`) for high-performance inference and quantization.
-- **Frontend**: React with Tailwind CSS, delivering a sleek, cosmic-themed UI/UX dashboard.
-- **APIs**: RESTful endpoints with Actix-web for model management and metric retrieval.
-- **Dependencies**: Chart.js for visualizations, Axios for API calls, and more, all orchestrated via Vite.
-
----
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Rust (latest stable version)
-- Node.js and npm (for front-end)
-- Docker and Docker Compose (for containerized deployment)
-- kubectl and Helm (for Kubernetes deployment)
-- protobuf-compiler (for building protobuf files)
-
-### Quick Start with Docker
-
-1. **Clone the Repository**
-
-   ```bash
-   git clone https://github.com/your-org/zeta-reticula.git
-   cd zeta-reticula
-   ```
-
-2. **Build and Run with Docker Compose**
-
-   ```bash
-   docker-compose up --build
-   ```
-
-   This will build and start the salience-engine service. The API will be available at `http://localhost:8080`.
-
-### Kubernetes Deployment
-
-1. **Build the Docker Image**
-
-   ```bash
-   docker build -t zeta-salience/salience-engine:local .
-   ```
-
-2. **Deploy to Kubernetes**
-
-   ```bash
-   # Create namespace
-   kubectl create namespace zeta
-   
-   # Deploy with Helm
-   helm upgrade --install zeta charts/zeta-reticula -n zeta --create-namespace -f charts/zeta-reticula/values-salience-only.yaml
-   
-   # Check deployment status
-   kubectl -n zeta get pods
-   ```
-
-3. **Access the Service**
-
-   ```bash
-   # Port-forward to access the service locally
-   kubectl -n zeta port-forward svc/salience-engine 8080:8080
-   ```
-
-   The service will be available at `http://localhost:8080`.
+- Rust (latest stable)
+- Node.js 18+ & npm
+- Docker 20.10+
+- Kubernetes (for production)
+- protobuf-compiler
 
 ### Local Development
 
-1. **Build the Backend**
-
+1. **Clone & Build**
    ```bash
+   git clone https://github.com/zetareticula/zeta-reticula.git
+   cd zeta-reticula
    cargo build --release
    ```
 
-2. **Run the API**
-
+2. **Run with Docker**
    ```bash
-   cargo run --release --bin salience-engine
+   docker-compose up --build
+   ```
+   Access the API at `http://localhost:8080`
+
+### 🚀 Production Deployment
+
+#### Kubernetes (Helm)
+
+```bash
+# Add Helm repo
+helm repo add zeta https://charts.zeta-reticula.ai
+
+# Install chart
+helm install zeta zeta/zeta-reticula -n zeta --create-namespace
+```
+
+## 📚 Documentation
+
+- [API Reference](https://docs.zeta-reticula.ai/api)
+- [Deployment Guide](https://docs.zeta-reticula.ai/deployment)
+- [Developer Guide](https://docs.zeta-reticula.ai/development)
+
+## 🤝 Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🌐 Community
+
+- [Discord](https://discord.gg/your-invite)
+- [Twitter](https://twitter.com/zetareticula)
+- [Blog](https://blog.zeta-reticula.ai)
+
+---
+
+<div align="center">
+  Made with ❤️ by the Zeta Reticula Team
+</div>
+
+
    ```
 
 3. **Set Up the Front-End**
@@ -211,7 +208,7 @@ This project is licensed under the MIT License—free to use, modify, and distri
 
 ## Contact
 
-Embark on this odyssey with us! Reach out at [info@zetareticula.ai](mailto:info@zetareticula.ai) or follow our journey on [Twitter](https://twitter.com/ZetaReticulaAI).
+Embark on this odyssey with us! Reach out at [karl@zetareticula.com](mailto:karl@zetareticula.com) or follow our journey on [Twitter](https://twitter.com/ZetaReticulaAI).
 
 "Into the abyss of the future we go, where machines dream and humanity ascends!" — H.G. Wells, rekindled.
 
