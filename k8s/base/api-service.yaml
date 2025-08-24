@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zeta-reticula
+      component: api
+  template:
+    metadata:
+      labels:
+        app: zeta-reticula
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: zetareticula/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MASTER_SERVICE_URL
+          value: "http://master-service.zeta-reticula.svc.cluster.local"
+        - name: RUST_LOG
+          value: "info"
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: api
+spec:
+  ports:
+  - port: 80
+    targetPort: 3000
+    name: http
+  selector:
+    app: zeta-reticula
+    component: api
+  type: LoadBalancer

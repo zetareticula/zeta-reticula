@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-service
+  namespace: zeta-reticula
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: master
+        resources:
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: zeta-reticula
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: worker
+        resources:
+          limits:
+            cpu: "8"
+            memory: "32Gi"
+            nvidia.com/gpu: 1
+          requests:
+            cpu: "4"
+            memory: "16Gi"
+            nvidia.com/gpu: 1
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "nvidia-smi"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeta-config
+  namespace: zeta-reticula
+data:
+  RUST_LOG: "info"
+  ENVIRONMENT: "production"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"

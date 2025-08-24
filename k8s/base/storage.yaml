@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: p2pstore
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: storage
+spec:
+  serviceName: p2pstore
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zeta-reticula
+      component: storage
+  template:
+    metadata:
+      labels:
+        app: zeta-reticula
+        component: storage
+    spec:
+      containers:
+      - name: p2pstore
+        image: zetareticula/p2pstore:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4001
+          name: p2p
+        - containerPort: 5001
+          name: api
+        env:
+        - name: LIBP2P_FORCE_PNET
+          value: "1"
+        - name: RUST_LOG
+          value: "info"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p2pstore
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: storage
+spec:
+  clusterIP: None
+  ports:
+  - port: 4001
+    name: p2p
+  - port: 5001
+    name: api
+  selector:
+    app: zeta-reticula
+    component: storage

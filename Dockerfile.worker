@@ -1,0 +1,73 @@
+# Stage 1: Build environment
+FROM --platform=linux/amd64 nvidia/cuda:12.3.2-devel-ubuntu22.04 AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    cmake \
+    curl \
+    git \
+    clang \
+    lld \
+    protobuf-compiler \
+    libprotobuf-dev \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /app/zeta-reticula
+
+# Copy only the necessary files for building
+COPY Cargo.toml Cargo.lock ./
+COPY worker/ worker/
+COPY shared/ shared/
+COPY protos/ protos/
+COPY kvquant_rs/ kvquant_rs/
+COPY llm-rs/ llm-rs/
+
+# Install Python dependencies for quantization
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Build in release mode with CUDA support
+ENV CUDA_HOME=/usr/local/cuda
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+
+# Build the worker crate with CUDA support
+RUN cargo build --release -p worker --features cuda
+
+# Stage 2: Runtime image
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary from the builder
+COPY --from=builder /app/zeta-reticula/target/release/worker /usr/local/bin/
+
+# Copy Python scripts
+COPY scripts/ scripts/
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Default environment variables
+ENV RUST_LOG=info
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["/usr/local/bin/worker"]

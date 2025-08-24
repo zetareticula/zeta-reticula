@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zeta-reticula
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: zeta-reticula
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: zetareticula/worker:latest
+        imagePullPolicy: Always
+        env:
+        - name: MASTER_SERVICE_URL
+          value: "http://master-service.zeta-reticula.svc.cluster.local"
+        - name: RUST_LOG
+          value: "info"
+        resources:
+          limits:
+            cpu: "4"
+            memory: "16Gi"
+            nvidia.com/gpu: 1
+          requests:
+            cpu: "2"
+            memory: "8Gi"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: zeta-reticula
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 100Gi

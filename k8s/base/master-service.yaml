@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-service
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: master
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zeta-reticula
+      component: master
+  template:
+    metadata:
+      labels:
+        app: zeta-reticula
+        component: master
+    spec:
+      containers:
+      - name: master
+        image: zetareticula/master-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: ZETA_ENV
+          value: production
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+      volumes:
+      - name: config
+        configMap:
+          name: zeta-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: master-service
+  namespace: zeta-reticula
+  labels:
+    app: zeta-reticula
+    component: master
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  selector:
+    app: zeta-reticula
+    component: master
+  type: ClusterIP

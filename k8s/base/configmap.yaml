@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeta-config
+  namespace: zeta-reticula
+data:
+  # General configuration
+  RUST_LOG: "info"
+  ENVIRONMENT: "production"
+  
+  # Master service configuration
+  MASTER_PORT: "8080"
+  MASTER_HOST: "0.0.0.0"
+  
+  # Storage configuration
+  STORAGE_TYPE: "p2p"
+  P2P_BOOTSTRAP_NODES: "p2pstore-0.p2pstore.zeta-reticula.svc.cluster.local,p2pstore-1.p2pstore.zeta-reticula.svc.cluster.local"
+  
+  # Model configuration
+  MODEL_CACHE_DIR: "/app/models"
+  DEFAULT_QUANTIZATION_BITS: "8"
+  
+  # API configuration
+  API_PORT: "3000"
+  CORS_ORIGIN: "*"
