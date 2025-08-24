@@ -8,40 +8,157 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![Rust](https://github.com/zetareticula/zeta-reticula/actions/workflows/rust.yml/badge.svg)](https://github.com/zetareticula/zeta-reticula/actions)
   [![Docker](https://img.shields.io/docker/pulls/zetareticula/salience-engine)](https://hub.docker.com/r/zetareticula/salience-engine)
-  [![Discord](https://img.shields.io/discord/your-discord-invite-code)](https://discord.gg/your-invite)
+  [![Crates.io](https://img.shields.io/crates/v/llm-rs)](https://crates.io/crates/llm-rs)
+  [![Documentation](https://docs.rs/llm-rs/badge.svg)](https://docs.rs/llm-rs)
 </div>
 
-> "Imagine a world where the vast machinery of the intellect propels humanity into realms undreamed of—a future where artificial minds are sculpted with precision to serve the cosmos itself."
+> "Precision-engineered intelligence for the next generation of AI applications."
 
 ## 🚀 Overview
 
-Zeta Reticula is a high-performance, open-source framework for optimizing large language model (LLM) inference through advanced quantization techniques. Designed for scalability and efficiency, it enables seamless deployment of trillion-parameter models across diverse hardware environments.
+Zeta Reticula is a high-performance, open-source framework for optimizing large language model (LLM) inference through advanced quantization techniques. Built in Rust for maximum performance and safety, it provides fine-grained control over numerical precision to balance model accuracy, memory usage, and computational efficiency.
+
+The framework is designed from the ground up to support:
+- Multiple numerical precisions (1-bit to 32-bit)
+- Hardware-accelerated operations
+- Memory-efficient model serving
+- Scalable distributed inference
 
 ## ✨ Features
 
-- **Advanced Quantization**: 4-bit, 8-bit, and 16-bit quantization support
-- **Distributed Architecture**: Federated learning and distributed computing
-- **Hardware Agnostic**: Runs on GPUs, CPUs, and TPUs
-- **Real-time Analytics**: Comprehensive monitoring and metrics
-- **Privacy-First**: Differential privacy and homomorphic encryption
+### 🎯 Precision Control
+- **Multiple Precision Levels**: 1-bit, 2-bit, 4-bit, 8-bit, 16-bit (fp16), and 32-bit (fp32) support
+- **Mixed Precision Training**: Combine fp16 for activations with fp32 for master weights
+- **Quantization-Aware Training**: Maintain model accuracy during quantization
+
+### 🚀 Performance
+- **Hardware Acceleration**: Optimized for modern CPUs and GPUs
+- **Memory Efficiency**: Up to 32x memory reduction with minimal accuracy loss
+- **Low-Latency Inference**: Optimized kernels for fast model serving
+
+### 🛠️ Developer Experience
+- **Rust-Powered**: Memory safety without garbage collection
+- **Simple API**: Easy integration into existing pipelines
+- **Comprehensive Metrics**: Detailed performance and accuracy tracking
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Rust (`llm-rs`, `agentflow-rs`, `ns-router-rs`)
-- **Frontend**: React + Tailwind CSS
-- **APIs**: Actix-web
-- **Containerization**: Docker + Kubernetes
-- **CI/CD**: GitHub Actions
+### Core Crates
+- **llm-rs**: Core LLM functionality and model serving
+- **kvquant-rs**: Advanced quantization algorithms
+- **agentflow-rs**: Agent-based workflow orchestration
+- **ns-router-rs**: Neuro-symbolic routing for model execution
+
+### Infrastructure
+- **APIs**: Actix-web for high-performance web services
+- **Containerization**: Docker + Kubernetes for deployment
+- **CI/CD**: GitHub Actions for automated testing and deployment
+- **Monitoring**: Prometheus + Grafana for observability
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Rust (latest stable)
-- Node.js 18+ & npm
-- Docker 20.10+
-- Kubernetes (for production)
-- protobuf-compiler
+- Rust (latest stable, 1.70+ recommended)
+- Cargo (Rust's package manager)
+- LLVM/Clang (for building some dependencies)
+- OpenBLAS or Intel MKL (for optimized math operations)
+- CUDA Toolkit (for GPU acceleration, optional)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/zetareticula/zeta-reticula.git
+   cd zeta-reticula
+   ```
+
+2. Build the project:
+   ```bash
+   cargo build --release
+   ```
+
+3. Run the quantize-cli example:
+   ```bash
+   cargo run --release --bin quantize-cli -- --help
+   ```
+
+### Basic Usage
+
+Quantize a model to 4-bit precision:
+```bash
+cargo run --release --bin quantize-cli -- quantize \
+    --input model.bin \
+    --output model_quantized.bin \
+    --precision int4
+```
+
+Run inference with mixed precision:
+```bash
+cargo run --release --bin quantize-cli -- infer \
+    --model model_quantized.bin \
+    --input "Your prompt here" \
+    --precision f16
+```
+
+### Kubernetes Deployment
+
+Zeta Reticula can be deployed to a Kubernetes cluster using the provided configurations.
+
+#### Prerequisites
+
+1. A running Kubernetes cluster (minikube, EKS, GKE, AKS, etc.)
+2. `kubectl` configured to communicate with your cluster
+3. `kustomize` installed
+4. GPU nodes available in your cluster (for optimal performance)
+
+#### Deployment Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/zetareticula/zeta-reticula.git
+   cd zeta-reticula
+   ```
+
+2. **Deploy to Development Environment**
+   ```bash
+   ./scripts/deploy-k8s.sh --env dev
+   ```
+
+3. **Deploy to Production**
+   ```bash
+   ./scripts/deploy-k8s.sh --env prod
+   ```
+
+4. **Verify Deployment**
+   ```bash
+   kubectl -n zeta-reticula get pods
+   kubectl -n zeta-reticula get svc
+   ```
+
+5. **Access the API**
+   ```bash
+   # Get the external IP of the API service
+   kubectl -n zeta-reticula get svc api-service
+   ```
+
+#### Advanced Configuration
+
+You can customize the deployment by modifying the files in the `k8s/overlays/` directory.
+
+- `k8s/base/` - Base configurations
+- `k8s/overlays/dev/` - Development environment overrides
+- `k8s/overlays/prod/` - Production environment overrides
+
+#### Monitoring and Logs
+
+```bash
+# View logs for all pods
+kubectl -n zeta-reticula logs -l app=zeta-reticula --tail=50
+
+# View metrics (if enabled)
+kubectl -n zeta-reticula port-forward svc/grafana 3000:3000
+```
 
 ### Local Development
 
