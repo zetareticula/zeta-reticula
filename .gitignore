@@ -34,6 +34,10 @@ yarn-debug.log*
 yarn-error.log*
 .yarn/
 .pnp.*
+.next/
+out/
+build/
+coverage/
 
 # === Python ===
 __pycache__/
