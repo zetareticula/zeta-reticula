@@ -1,0 +1,119 @@
+# Airflow
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+airflow-webserver-monitor.pid
+webserver_config.py
+
+# Logs
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Local development
+*.sqlite3
+*.db
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Kubernetes
+kubeconfig
+*.yaml
+!k8s/*.yaml
+
+# Secrets
+secrets.yml
+secrets.yaml
+secrets.json
+
+# Local development
+.direnv/
+.envrc
+
+# Mac OS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux specific
+*~
+
+# Project specific
+models/
+data/
+backups/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.p7b
+*.p7c
+*.p7s
+*.p12
+*.pfx
+*.pem
+*.crt
+*.key
+*.csr
+*.srl
+*.jks
+*.keystore
+*.truststore
+*.cer
+*.der
+*.p7b
+*.p7c
+*.p7s
+*.p12
+*.pfx
+*.pem
+*.crt
+*.key
+*.csr
+*.srl
+*.jks
+*.keystore
+*.truststore
+*.cer
+*.der

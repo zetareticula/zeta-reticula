@@ -20,14 +20,14 @@ use std::sync::Arc;
 use crate::role_inference::{RoleInfererImpl, RoleInferenceResult, TokenFeatures, SalienceResult};
 use crate::role_inferer::RoleInferer;
 
-// Use RoleInferenceResult, TokenFeatures, and SalienceResult from crate::role_inference
-
+/// Mesolimbic configuration
 #[derive(Serialize, Deserialize)]
 pub struct MesolimbicConfig {
     pub outer_loop_iterations: usize,
     pub inner_loop_iterations: usize,
 }
 
+//
 impl MesolimbicConfig {
     pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
         Self {

@@ -48,6 +48,9 @@ pub struct NSContextAnalysis {
     /// User ID for the current request
     pub user_id: Option<String>,
     
+    /// Batch size for the current request
+    pub batch_size: usize,
+    
     /// Model configuration for the request
     pub model_config: Option<ModelConfig>,
     
@@ -58,7 +61,7 @@ pub struct NSContextAnalysis {
 impl NSContextAnalysis {
     /// Create a new NSContextAnalysis with default values
     pub fn new() -> Self {
-        NSContextAnalysis {
+        Self {
             input: String::new(),
             token_features: Vec::new(),
             token_count: 0,
@@ -66,6 +69,7 @@ impl NSContextAnalysis {
             theory_complexity: 0.0,
             symbolic_constraints: Vec::new(),
             user_id: None,
+            batch_size: 1,  // Default batch size is 1
             model_config: None,
             cache_config: None,
         }
@@ -148,14 +152,14 @@ impl NSContextAnalyzer {
     pub fn analyze(&self, input: &str, token_features: Vec<TokenFeatures>) -> NSContextAnalysis {
         let token_count = token_features.len();
         
-        // Calculate theory complexity (simplified for now)
+        // Calculate theory complexity based on average salience
         let theory_complexity = if token_count > 0 {
-            let avg_freq: f32 = token_features.iter()
-                .map(|f| f.frequency)
+            let avg_salience: f32 = token_features.iter()
+                .map(|f| f.salience)
                 .sum::<f32>() / token_count as f32;
             
-            // Higher complexity for less frequent words
-            (1.0 - avg_freq).max(0.1)
+            // Higher complexity for more salient tokens
+            avg_salience
         } else {
             0.0
         };
@@ -163,13 +167,15 @@ impl NSContextAnalyzer {
         // Create salience profile (simplified for now)
         let salience_profile = token_features.iter()
             .map(|f| {
-                let mut qr = QuantizationResult::default();
-                qr.token_id = f.token_id;
-                qr.score = f.context_relevance;
-                // Set other required fields with reasonable defaults
-                qr.precision = PrecisionLevel::FP32;
-                qr.quantized = false;
-                qr
+                // Use salience as the original value, quantize to the same value for now
+                let salience = f.salience;
+                QuantizationResult {
+                    original: salience,
+                    quantized: salience,  // No quantization for now
+                    scale: 1.0,  // No scaling
+                    zero_point: None,  // No zero point for now
+                    precision: PrecisionLevel::Bit32,  // Use Bit32 instead of FP32
+                }
             })
             .collect();
         

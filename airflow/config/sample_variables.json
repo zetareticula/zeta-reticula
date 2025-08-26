@@ -1,0 +1,13 @@
+{
+    "environment": "development",
+    "k8s_namespace": "zeta-reticula",
+    "model_registry": "zetareticula",
+    "default_retries": 3,
+    "default_retry_delay_seconds": 300,
+    "enable_notifications": true,
+    "slack_webhook_url": "",
+    "email_notification_list": "admin@example.com",
+    "model_validation_threshold": 0.95,
+    "max_concurrent_tasks": 10,
+    "enable_debug_logging": true
+}

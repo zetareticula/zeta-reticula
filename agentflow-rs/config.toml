@@ -1,0 +1,61 @@
+# AgentFlow Configuration
+
+[server]
+host = "127.0.0.1"
+port = 50053
+workers = 2
+
+[master_service]
+host = "127.0.0.1"
+port = 50052
+
+[model]
+# Path to the model directory or model name
+model_path = "./models/quantized-llama-2-7b"
+model_type = "llama"
+context_size = 2048
+batch_size = 8
+
+[quantization]
+# Only used if the model needs to be quantized on the fly
+enabled = false
+bits = 4
+group_size = 64
+act_order = true
+
+[performance]
+max_concurrent_requests = 32
+prefetch_factor = 2
+max_batch_tokens = 4096
+
+[cache]
+enabled = true
+size_mb = 2048
+ttl_seconds = 3600
+
+[logging]
+level = "info"
+file = "./logs/agentflow.log"
+
+[monitoring]
+metrics_enabled = true
+metrics_port = 9102
+
+[security]
+# Enable for production
+enable_authentication = false
+api_key = "your-secure-api-key"
+
+[rate_limiting]
+enabled = true
+requests_per_minute = 1000
+
+[gpu]
+enabled = true
+device_id = 0
+memory_fraction = 0.9
+
+[telemetry]
+enabled = true
+endpoint = "https://telemetry.example.com"
+interval_seconds = 60

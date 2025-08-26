@@ -1,8 +1,14 @@
+
+
 use salience_engine::mesolimbic::MesolimbicSystem;
 use salience_engine::role_inference::{RoleInferenceResult, TokenFeatures as SETokenFeatures, SalienceResult};
 use std::collections::HashMap;
 
+use std::fmt;
+
 /// Wrapper around the salience engine's functionality
+/// The mesolimbic system is used to compute salience scores for each token
+/// The role inference is used to compute the role of each token
 pub struct SalienceAnalyzer {
     mesolimbic: MesolimbicSystem,
     theory_key: String,
@@ -12,7 +18,7 @@ impl SalienceAnalyzer {
     /// Create a new SalienceAnalyzer with default configuration
     pub fn new() -> Self {
         Self {
-            mesolimbic: MesolimbicSystem::default(),
+            mesolimbic: MesolimbicSystem::with_config(Default::default()),
             theory_key: "default".to_string(),
         }
     }
@@ -77,6 +83,14 @@ impl SalienceAnalyzer {
         }
         
         phrases
+    }
+}
+
+impl fmt::Debug for SalienceAnalyzer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SalienceAnalyzer")
+            .field("theory_key", &self.theory_key)
+            .finish()
     }
 }
 

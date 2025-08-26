@@ -1,0 +1,42 @@
+# Salience Engine Configuration
+
+[server]
+host = "127.0.0.1"
+port = 50054
+workers = 4
+
+[model]
+model_path = "./models/quantized-llama-2-7b"
+model_type = "llama"
+context_size = 2048
+batch_size = 8
+use_gpu = true
+
+[kv_cache]
+enabled = true
+host = "127.0.0.1"
+port = 50051
+shards = 4
+cache_size_gb = 4
+
+[quantization]
+bits = 4
+group_size = 64
+act_order = true
+
+[master_service]
+host = "127.0.0.1"
+port = 50052
+
+[agentflow]
+host = "127.0.0.1"
+port = 50053
+
+[logging]
+level = "info"
+file = "./logs/salience-engine.log"
+
+[performance]
+num_threads = 4
+token_chunk_size = 512
+max_concurrent_requests = 32

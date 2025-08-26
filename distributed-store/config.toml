@@ -1,0 +1,43 @@
+# Distributed Store Configuration
+
+[server]
+host = "127.0.0.1"
+port = 50051
+replication_factor = 3
+
+[storage]
+data_dir = "./data/kvstore"
+max_size_gb = 10
+shards = 4
+
+[raft]
+election_timeout = 1000  # ms
+heartbeat_interval = 100  # ms
+snapshot_interval = 10000  # ms
+
+[performance]
+max_concurrent_requests = 1000
+cache_size_mb = 1024
+
+[logging]
+level = "info"
+file = "./logs/distributed-store.log"
+
+[security]
+# Enable TLS for production
+enable_tls = false
+tls_cert = ""
+tls_key = ""
+
+[monitoring]
+metrics_enabled = true
+metrics_port = 9100
+
+[gossip]
+enabled = true
+bind_addr = "0.0.0.0:7946"
+seeds = ["127.0.0.1:7946"]
+
+[api]
+admin_enabled = true
+admin_port = 50060

@@ -1,0 +1,54 @@
+# Master Service Configuration
+
+[server]
+host = "127.0.0.1"
+port = 50052
+workers = 2
+
+[distributed_store]
+host = "127.0.0.1"
+port = 50051
+
+[load_balancing]
+algorithm = "round_robin"  # Options: round_robin, least_connections, random
+health_check_interval = 10  # seconds
+
+[sharding]
+enabled = true
+num_shards = 4
+replication_factor = 2
+
+[caching]
+enabled = true
+cache_size_mb = 2048
+ttl_seconds = 3600
+
+[logging]
+level = "info"
+file = "./logs/master-service.log"
+
+[monitoring]
+metrics_enabled = true
+metrics_port = 9101
+
+[security]
+# Enable for production
+enable_authentication = false
+api_key = "your-secure-api-key"
+
+[rate_limiting]
+enabled = true
+requests_per_minute = 1000
+
+[service_discovery]
+# For dynamic service discovery in a distributed setup
+enabled = false
+consul_host = "localhost:8500"
+service_name = "master-service"
+service_id = "master-1"
+
+[backup]
+enabled = true
+backup_dir = "./data/backups"
+backup_interval_minutes = 60
+retention_days = 7

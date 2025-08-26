@@ -1,0 +1,41 @@
+# Test dependencies
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-mock>=3.10.0
+pytest-xdist>=2.5.0
+pytest-timeout>=2.1.0
+pytest-env>=0.6.2
+pytest-randomly>=3.12.0
+
+# Code quality
+black>=22.3.0
+isort>=5.10.1
+flake8>=4.0.1
+mypy>=0.910
+
+# Mocking
+freezegun>=1.2.0
+responses>=0.20.0
+
+# Documentation
+sphinx>=4.5.0
+sphinx-rtd-theme>=1.0.0
+sphinx-autodoc-typehints>=1.12.0
+
+# Development utilities
+pre-commit>=2.17.0
+ipython>=8.0.0
+ipdb>=0.13.9
+
+# Airflow testing
+apache-airflow[kubernetes,postgres,celery,redis,slack,ssh,google,amazon,azure,statsd,elasticsearch,grpc,ldap,password,redis,slack,ssh,statsd,virtualenv,winrm]>=2.5.0
+apache-airflow-providers-docker>=3.0.0
+apache-airflow-providers-cncf-kubernetes>=5.0.0
+
+# Kubernetes
+kubernetes>=24.2.0
+
+# For running tests
+pytest-docker-compose>=3.2.1
+docker>=6.0.0
+docker-compose>=1.29.2

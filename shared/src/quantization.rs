@@ -36,6 +36,18 @@ impl Default for PrecisionLevel {
     }
 }
 
+impl Default for QuantizationResult {
+    fn default() -> Self {
+        Self {
+            original: 0.0,
+            quantized: 0.0,
+            scale: 1.0,
+            zero_point: None,
+            precision: PrecisionLevel::Bit32,
+        }
+    }
+}
+
 impl QuantizationResult {
     /// Creates a new QuantizationResult
     pub fn new(

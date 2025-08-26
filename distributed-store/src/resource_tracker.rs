@@ -16,13 +16,17 @@ use std::sync::{Mutex, Arc};
 use std::collections::HashSet;
 use log;
 
+//! Resource tracker for distributed object store instances
 pub struct ResourceTracker {
+    //! Set of distributed object store instances
     instances: Mutex<HashSet<Arc<DistributedObjectStore>>>,
 }
 
 impl ResourceTracker {
     pub fn new() -> Arc<Self> {
+        //! Create a new resource tracker
         let tracker = Arc::new(ResourceTracker {
+            //! Set of distributed object store instances
             instances: Mutex::new(HashSet::new()),
         });
 

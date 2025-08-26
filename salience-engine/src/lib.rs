@@ -58,19 +58,27 @@ pub struct SalienceResponse {
     pub upgrade_prompt: Option<String>,
 }
 
+/// Usage tracker for salience engine
 #[cfg(feature = "server")]
 lazy_static::lazy_static! {
     static ref USAGE_TRACKER: Mutex<HashMap<String, u32>> = Mutex::new(HashMap::new());
 }
 
+/// Process salience request
 #[cfg(feature = "server")]
 async fn process_salience(
+    // Request containing the text to analyze and user ID
     req: web::Json<SalienceRequest>,
 ) -> Result<impl Responder, actix_web::Error> {
+    // append user_id to USAGE_TRACKER
     let user_id = &req.user_id;
+
+    //USAGE_TRACKER is a lazy_static::lazy_static! macro that creates a static variable
     let mut tracker = USAGE_TRACKER.lock().unwrap();
     let usage = tracker.entry(user_id.clone()).and_modify(|e| *e += 1).or_insert(1);
 
+    // If the user has exceeded the free tier limit, return an upgrade prompt
+    // cfg!(feature = "enterprise") is a compile-time feature flag, if it is not enabled, the code will not be compiled
     let upgrade_prompt = if *usage > 30 && !cfg!(feature = "enterprise") {
         Some("Upgrade to Enterprise for more salience processing!".to_string())
     } else {
@@ -79,10 +87,10 @@ async fn process_salience(
 
     // Simple salience extraction (splits text into words and takes first 3 as "salient")
     let salient_phrases: Vec<String> = req.text
-        .split_whitespace()
-        .take(3)
-        .map(|s| s.to_string())
-        .collect();
+        .split_whitespace() // splits text into words
+        .take(3) // takes first 3 words
+        .map(|s| s.to_string()) // maps each word to a String
+        .collect(); // collects into a Vec<String>
 
     info!("Processed salience request for user: {}", user_id);
 

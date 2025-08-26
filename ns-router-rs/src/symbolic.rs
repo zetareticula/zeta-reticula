@@ -1,3 +1,19 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+
 use egg::{EGraph, Runner, SymbolLang, Pattern, Searcher, Applier, Id, Rewrite};
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
@@ -25,6 +41,12 @@ pub struct SymbolicReasoner {
     egraph: EGraph<SymbolLang, ()>,
     rules: HashMap<String, SerializableRewrite>,
     next_var_id: usize,
+}
+
+impl Default for SymbolicReasoner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SymbolicReasoner {
@@ -74,10 +96,11 @@ impl SymbolicReasoner {
         
         // Prepare rewrite rules
         let rules: Result<Vec<Rewrite<SymbolLang, ()>>, _> = self.rules.values_mut()
-            .map(|r| r.get_rewrite()
-                .map_err(|e| SymbolicError::RewriteError(e.to_string()))
-                .map(|r| r.clone())
-            )
+            .map(|r| {
+                r.get_rewrite()
+                    .map_err(|e| SymbolicError::RewriteError(e.to_string()))
+                    .and_then(|r| r.into_rewrite().map_err(|e| SymbolicError::RewriteError(e.to_string())))
+            })
             .collect();
             
         let rules = rules?;
@@ -93,8 +116,10 @@ impl SymbolicReasoner {
             results.push(class.nodes[0].to_string());
         }
         
-        // Filter based on salience profile
-        self.filter_by_salience(&mut results, salience_profile);
+        // Filter based on salience profile if there are any results
+        if !results.is_empty() {
+            self.filter_by_salience(&mut results, salience_profile);
+        }
         
         Ok(results)
     }
@@ -107,7 +132,7 @@ impl SymbolicReasoner {
         
         // Simple implementation: just limit the number of results based on salience
         let avg_salience: f32 = salience_profile.iter()
-            .map(|r| r.score)
+            .map(|r| r.original)  // Use original field instead of score
             .sum::<f32>() / salience_profile.len() as f32;
             
         let max_results = (avg_salience * 10.0) as usize;
