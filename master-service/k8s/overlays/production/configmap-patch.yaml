@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: master-service-config
+data:
+  RUST_LOG: "info"
+  NODE_TIMEOUT_SECONDS: "300"
+  GRPC_MAX_CONNECTION_AGE: "3600"
+  GRPC_MAX_CONNECTION_AGE_GRACE: "300"
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  # Production-specific configurations
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+  # Add any other production-specific configurations here

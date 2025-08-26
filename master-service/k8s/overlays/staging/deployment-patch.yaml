@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-service
+spec:
+  replicas: 2  # Fewer replicas for staging
+  template:
+    spec:
+      containers:
+      - name: master-service
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        env:
+        - name: RUST_LOG
+          value: "debug"  # More verbose logs in staging
+        - name: NODE_TIMEOUT_SECONDS
+          value: "600"  # Longer timeout for staging
+        - name: GRPC_MAX_CONNECTION_AGE
+          value: "7200"  # Longer connection age for staging
+        - name: GRPC_MAX_CONNECTION_AGE_GRACE
+          value: "600"
+        - name: METRICS_ENABLED
+          value: "true"
+        - name: METRICS_PORT
+          value: "9090"

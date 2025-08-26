@@ -18,152 +18,390 @@
 
 Zeta Reticula is a high-performance, open-source framework for optimizing large language model (LLM) inference through advanced quantization techniques. Built in Rust for maximum performance and safety, it provides fine-grained control over numerical precision to balance model accuracy, memory usage, and computational efficiency.
 
-The framework is designed from the ground up to support:
-- Multiple numerical precisions (1-bit to 32-bit)
-- Hardware-accelerated operations
-- Memory-efficient model serving
-- Scalable distributed inference
+### System Architecture
+
+Zeta Reticula follows a modular, microservices-based architecture with the following core components:
+
+1. **AgentFlow-RS**: Core orchestration and workflow management
+2. **Attention-Store**: Manages attention mechanisms and KV cache
+3. **KVQuant-RS**: Handles model quantization and optimization
+4. **LLM-RS**: Core language model inference engine
+5. **API Layer**: Next.js-based REST API for model serving
+6. **Sidecar Services**: gRPC services for low-level operations
 
 ## ✨ Features
 
-### 🎯 Precision Control
+### 🎯 Core Capabilities
 - **Multiple Precision Levels**: 1-bit, 2-bit, 4-bit, 8-bit, 16-bit (fp16), and 32-bit (fp32) support
-- **Mixed Precision Training**: Combine fp16 for activations with fp32 for master weights
-- **Quantization-Aware Training**: Maintain model accuracy during quantization
-
-### 🚀 Performance
-- **Hardware Acceleration**: Optimized for modern CPUs and GPUs
+- **Dynamic Quantization**: On-the-fly precision adjustment based on model requirements
+- **Salience-Based Processing**: Intelligent token prioritization for efficient inference
+- **Model Parallelism**: Distributed model execution across multiple devices
+- **Hardware Acceleration**: Optimized for modern CPUs and GPUs (NVIDIA/AMD/Intel)
 - **Memory Efficiency**: Up to 32x memory reduction with minimal accuracy loss
-- **Low-Latency Inference**: Optimized kernels for fast model serving
+- **Low-Latency Inference**: Sub-millisecond token generation for real-time applications
+
+### 🛠️ Advanced Features
+- **Attention Management**: Efficient KV cache with layer-wise preloading
+- **Role-Based Inference**: Dynamic model routing based on input characteristics
+- **Secure Deployment**: mTLS for service communication and RBAC
+- **Observability**: Built-in metrics collection and distributed tracing
+- **Efficient KV Caching**: Smart eviction policies and distributed caching
+- **High Throughput**: Optimized for batch processing and concurrent requests
+
+### 🚀 Performance Characteristics
+- **Hardware Acceleration**: Optimized for modern CPUs and GPUs (NVIDIA/AMD/Intel)
+- **Memory Efficiency**: Up to 32x memory reduction with minimal accuracy loss
+- **Low-Latency Inference**: Sub-millisecond token generation for real-time applications
+- **Efficient KV Caching**: Smart eviction policies and distributed caching
+- **High Throughput**: Optimized for batch processing and concurrent requests
+- **Resource Scaling**: Automatic scaling based on workload demands
 
 ### 🛠️ Developer Experience
 - **Rust-Powered**: Memory safety without garbage collection
 - **Simple API**: Easy integration into existing pipelines
 - **Comprehensive Metrics**: Detailed performance and accuracy tracking
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Architecture
 
-### Core Crates
-- **llm-rs**: Core LLM functionality and model serving
-- **kvquant-rs**: Advanced quantization algorithms
-- **agentflow-rs**: Agent-based workflow orchestration
-- **ns-router-rs**: Neuro-symbolic routing for model execution
+### Core Components
+- **llm-rs**: Core LLM functionality with support for multiple model architectures
+- **kvquant-rs**: Advanced quantization with salience-based processing
+- **agentflow-rs**: Workflow orchestration with role-based access control
+- **attention-store**: Distributed attention mechanism management
+- **distributed-store**: Scalable key-value storage for model parameters
 
 ### Infrastructure
-- **APIs**: Actix-web for high-performance web services
-- **Containerization**: Docker + Kubernetes for deployment
-- **CI/CD**: GitHub Actions for automated testing and deployment
-- **Monitoring**: Prometheus + Grafana for observability
-
-## 🚀 Quick Start
+- **APIs**: Next.js 13+ with TypeScript for type safety
+- **gRPC Services**: High-performance inter-service communication
+- **Containerization**: Multi-stage Docker builds for optimized images
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Rust (latest stable, 1.70+ recommended)
-- Cargo (Rust's package manager)
-- LLVM/Clang (for building some dependencies)
-- OpenBLAS or Intel MKL (for optimized math operations)
+- Rust toolchain (1.70+)
+- Node.js 18+ (for API and web components)
+- Docker & Kubernetes (for containerized deployment)
 - CUDA Toolkit (for GPU acceleration, optional)
+- OpenBLAS or Intel MKL (for CPU acceleration)
 
-### Installation
+### Quick Start
 
-1. Clone the repository:
+1. **Clone and Build**
    ```bash
    git clone https://github.com/zetareticula/zeta-reticula.git
    cd zeta-reticula
+   cargo build --release --all-features
    ```
 
-2. Build the project:
+2. **Start Services**
    ```bash
-   cargo build --release
+   # Start all services in development mode
+   docker-compose up -d
+   
+   # Or deploy to Kubernetes
+   kubectl apply -k k8s/overlays/dev
    ```
 
-3. Run the quantize-cli example:
+3. **Verify Installation**
    ```bash
-   cargo run --release --bin quantize-cli -- --help
+   # Check API health
+   curl http://localhost:3000/api/health
+   
+   # Run tests
+   cargo test --all-features
    ```
 
-### Basic Usage
+## 🛠️ Core Components
 
-Quantize a model to 4-bit precision:
+### AgentFlow-RS
+Orchestrates agent workflows and manages the execution pipeline.
+
+```rust
+// Example: Initializing AgentFlow
+let config = AgentFlowConfig {
+    max_concurrent_tasks: 8,
+    cache_size_mb: 2048,
+    ..Default::default()
+};
+let agent_flow = initialize_agent_flow(config);
+```
+
+### Attention-Store
+Manages attention mechanisms and KV cache with efficient storage.
+
+```rust
+// Example: Initializing AttentionStore
+let attention_store = AttentionStore::new(
+    vault,
+    transfer_engine,
+    client,
+    master_service
+)?;
+```
+
+### KVQuant-RS
+Handles model quantization and optimization.
+
+```yaml
+# Example: KVQuant Configuration
+quantization:
+  block_size: 1024
+  precision: int8
+  use_mixed_precision: true
+  salience_threshold: 0.8
+```
+
+### LLM-RS
+Core language model inference engine with support for multiple model architectures.
+
+## 🚀 Deployment
+
+### Prerequisites
+
+- Kubernetes cluster (v1.24+)
+- `kubectl` and `kustomize` installed
+- Container registry access
+- Sufficient resources (CPU/GPU, memory)
+
+### 1. Initialize Models Directory
+
+```bash
+# Initialize models directory with a sample model
+chmod +x scripts/init_models.sh
+./scripts/init_models.sh
+```
+
+### 2. Deploy NS Router
+
+```bash
+# Deploy NS Router to Kubernetes
+chmod +x scripts/deploy_ns_router.sh
+./scripts/deploy_ns_router.sh
+```
+
+### 3. Quantize Models
+
+```bash
+# Quantize models using kvquant_rs and store in p2pstore
+chmod +x scripts/quantize_models.sh
+./scripts/quantize_models.sh
+```
+
+### 4. Verify Deployment
+
+```bash
+# Verify all components are running
+chmod +x scripts/verify_deployment.sh
+./scripts/verify_deployment.sh
+```
+
+### 5. Configure AgentFlow Semaphores
+
+Create or update `agentflow-rs/config/semaphore.toml`:
+
+```toml
+[components]
+attention_store = { max_concurrent = 5, timeout_secs = 30 }
+llm_rs = { max_concurrent = 3, timeout_secs = 60 }
+zeta_vault = { max_concurrent = 2, timeout_secs = 120 }
+```
+
+## 🔄 Component Integration
+
+### Kubernetes Deployment
+
+#### Prerequisites
+- Kubernetes cluster (v1.24+)
+- `kubectl` and `kustomize`
+- Container registry access
+- Sufficient resources (CPU/GPU, memory)
+
+#### Deployment Steps
+
+1. **Configure Environment**
+   ```bash
+   # Set environment variables
+   export NAMESPACE=zeta-reticula
+   export REGISTRY=your-registry
+   export TAG=latest
+   ```
+
+2. **Deploy Dependencies**
+   ```bash
+   # Create namespace
+   kubectl create namespace $NAMESPACE
+   
+   # Deploy monitoring stack
+   helm install prometheus prometheus-community/kube-prometheus-stack \
+     -n $NAMESPACE \
+     --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+   ```
+
+3. **Deploy Zeta Reticula**
+   ```bash
+   # Apply base configuration
+   kubectl apply -k k8s/base
+   
+   # Deploy with production settings
+   kubectl apply -k k8s/overlays/prod
+   ```
+
+### Docker Compose (Development)
+
+```yaml
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+## 📊 Performance Tuning
+
+### KV Cache Optimization
+
+```yaml
+# config/production.yaml
+kv_cache:
+  block_size: 1024
+  max_blocks: 1024
+  eviction_policy: lru
+  compression: zstd
+```
+
+### Resource Management
+
+```bash
+# Monitor resource usage
+kubectl top pods -n zeta-reticula
+
+# Adjust resource limits
+kubectl edit deployment/api -n zeta-reticula
+```
+
+## 🔄 Basic Usage
+
+### Model Quantization
+
+Quantize models to various precision levels:
+
 ```bash
 cargo run --release --bin quantize-cli -- quantize \
     --input model.bin \
     --output model_quantized.bin \
-    --precision int4
+    --precision int4  # Options: int1, int2, int4, int8, fp16, fp32
 ```
 
-Run inference with mixed precision:
+### Running Inference
+
+Perform inference with optimized models:
+
 ```bash
 cargo run --release --bin quantize-cli -- infer \
     --model model_quantized.bin \
     --input "Your prompt here" \
-    --precision f16
+    --precision int4  # Match the precision used during quantization
 ```
 
-### Kubernetes Deployment
+### Integration with LLMs
 
-Zeta Reticula can be deployed to a Kubernetes cluster using the provided configurations.
+Zeta Reticula supports various open-source LLMs:
 
-#### Prerequisites
+```rust
+// Example: Using with a custom model
+let model = LLMModel::load("path/to/model.bin")?;
+let config = InferenceConfig {
+    max_tokens: 512,
+    temperature: 0.7,
+    ..Default::default()
+};
 
-1. A running Kubernetes cluster (minikube, EKS, GKE, AKS, etc.)
-2. `kubectl` configured to communicate with your cluster
-3. `kustomize` installed
-4. GPU nodes available in your cluster (for optimal performance)
+let output = model.generate("Your prompt here", &config)?;
+println!("Generated: {}", output);
+```
 
-#### Deployment Steps
+### Testing
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/zetareticula/zeta-reticula.git
-   cd zeta-reticula
-   ```
-
-2. **Deploy to Development Environment**
-   ```bash
-   ./scripts/deploy-k8s.sh --env dev
-   ```
-
-3. **Deploy to Production**
-   ```bash
-   ./scripts/deploy-k8s.sh --env prod
-   ```
-
-4. **Verify Deployment**
-   ```bash
-   kubectl -n zeta-reticula get pods
-   kubectl -n zeta-reticula get svc
-   ```
-
-5. **Access the API**
-   ```bash
-   # Get the external IP of the API service
-   kubectl -n zeta-reticula get svc api-service
-   ```
-
-#### Advanced Configuration
-
-You can customize the deployment by modifying the files in the `k8s/overlays/` directory.
-
-- `k8s/base/` - Base configurations
-- `k8s/overlays/dev/` - Development environment overrides
-- `k8s/overlays/prod/` - Production environment overrides
-
-#### Monitoring and Logs
+Run the full test suite:
 
 ```bash
-# View logs for all pods
-kubectl -n zeta-reticula logs -l app=zeta-reticula --tail=50
+# Unit tests
+cargo test
 
-# View metrics (if enabled)
-kubectl -n zeta-reticula port-forward svc/grafana 3000:3000
+# Integration tests
+cargo test --test integration_tests -- --nocapture
+
+# Performance benchmarks
+cargo bench
 ```
 
-### Local Development
+## 📞 Support
 
-1. **Clone & Build**
-   ```bash
+For support, please open an issue or join our [Discord community](https://discord.gg/zetareticula).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📚 Resources
+
+- [API Documentation](https://docs.zeta-reticula.dev/api)
+- [Architecture Guide](docs/ARCHITECTURE.md)
+- [Performance Benchmarks](docs/BENCHMARKS.md)
+- [Contributing Guide](CONTRIBUTING.md)
+
+## 📊 Monitoring & Observability
+
+### Metrics
+Zeta Reticua exposes Prometheus metrics at `/metrics`:
+- Request latency
+- Error rates
+- Resource utilization
+- Cache hit/miss ratios
+
+### Logging
+Structured JSON logging with the following fields:
+- `timestamp`
+- `level` (info, warn, error, debug)
+- `target` (module path)
+- `message`
+- `request_id` (for request tracing)
+
+### Distributed Tracing
+Supports OpenTelemetry for end-to-end request tracing across services.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
    git clone https://github.com/zetareticula/zeta-reticula.git
    cd zeta-reticula
    cargo build --release

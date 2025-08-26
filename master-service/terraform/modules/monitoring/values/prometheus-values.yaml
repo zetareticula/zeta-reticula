@@ -1,0 +1,117 @@
+# Default values for kube-prometheus-stack
+nameOverride: ""
+fullnameOverride: ""
+
+# Alertmanager configuration
+alertmanager:
+  enabled: ${alertmanager_enabled}
+  podSecurityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: ${prometheus_storage_class}
+        resources:
+          requests:
+            storage: 10Gi
+
+# Prometheus configuration
+prometheus:
+  enabled: true
+  podSecurityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  service:
+    type: ClusterIP
+  prometheusSpec:
+    retention: ${prometheus_retention}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${prometheus_storage_class}
+          resources:
+            requests:
+              storage: ${prometheus_storage_size}
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: ${grafana_admin_password}
+  persistence:
+    enabled: true
+    storageClassName: ${prometheus_storage_class}
+    size: 10Gi
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+  dashboards:
+    default:
+      kubernetes-cluster:
+        gnetId: 315
+        revision: 1
+        datasource: Prometheus
+
+# Node Exporter configuration
+prometheus-node-exporter:
+  enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
+    - effect: NoExecute
+      operator: Exists
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+      operator: Exists
+
+# Kube State Metrics configuration
+kube-state-metrics:
+  enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+
+# Prometheus Operator configuration
+prometheusOperator:
+  enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  admissionWebhooks:
+    enabled: true
+    patch:
+      enabled: true
+
+# Default rules for monitoring the cluster
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: true
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubelet: true
+    kubernetesApps: true
+    node: true
+    prometheus: true

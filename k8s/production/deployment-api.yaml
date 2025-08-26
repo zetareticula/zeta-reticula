@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zeta-api
+  namespace: zeta-prod
+  labels:
+    app: zeta-api
+    tier: backend
+    environment: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zeta-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: zeta-api
+        tier: backend
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: zeta-api
+        image: zeta-reticula/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9102
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: zeta-config
+        - secretRef:
+            name: zeta-secrets
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 1
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: zeta-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeta-api
+  namespace: zeta-prod
+  labels:
+    app: zeta-api
+    tier: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  selector:
+    app: zeta-api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zeta-api
+  namespace: zeta-prod
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+spec:
+  tls:
+  - hosts:
+    - api.zeta-reticula.com
+    secretName: zeta-tls
+  rules:
+  - host: api.zeta-reticula.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: zeta-api
+            port:
+              number: 80

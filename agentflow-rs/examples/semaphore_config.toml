@@ -1,0 +1,18 @@
+# AgentFlow Semaphore Configuration
+
+[components]
+attention_store = { max_concurrent = 5, timeout_secs = 30 }
+llm_rs = { max_concurrent = 3, timeout_secs = 60 }
+zeta_vault = { max_concurrent = 2, timeout_secs = 120 }
+
+[retry]
+max_attempts = 3
+backoff_ms = 1000
+
+[monitoring]
+prometheus_enabled = true
+metrics_port = 9091
+
+[logging]
+level = "info"
+format = "json"

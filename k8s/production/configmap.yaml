@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeta-config
+  namespace: zeta-prod
+data:
+  # Application configuration
+  RUST_LOG: "info"
+  RUST_BACKTRACE: "1"
+  ENVIRONMENT: "production"
+  
+  # API configuration
+  API_HOST: "0.0.0.0"
+  API_PORT: "8080"
+  API_WORKERS: "4"
+  
+  # Redis configuration
+  REDIS_HOST: "zeta-redis-master"
+  REDIS_PORT: "6379"
+  
+  # Database configuration
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "zetadb"
+  
+  # Model configuration
+  MODEL_CACHE_SIZE: "10"
+  DEFAULT_PRECISION: "int8"
+  
+  # Monitoring
+  METRICS_ADDR: ":9102"
+  
+  # Feature flags
+  ENABLE_QUANTIZATION: "true"
+  ENABLE_FUSION_ANNS: "true"
+  ENABLE_SPOT_DISK: "true"
+  
+  # Resource limits
+  MAX_CONCURRENT_REQUESTS: "100"
+  MAX_BATCH_SIZE: "32"
+  
+  # Timeouts (in seconds)
+  REQUEST_TIMEOUT: "30"
+  MODEL_LOAD_TIMEOUT: "300"
+  
+  # Caching
+  CACHE_TTL: "3600"
+  ENABLE_RESPONSE_CACHE: "true"
+  
+  # Security
+  CORS_ORIGINS: "https://app.zeta-reticula.com,https://api.zeta-reticula.com"
+  RATE_LIMIT: "1000"
+  
+  # External services
+  TRACING_ENABLED: "true"
+  TRACING_COLLECTOR_URL: "jaeger-collector.jaeger.svc.cluster.local:14268"
+  
+  # Logging
+  LOG_LEVEL: "info"
+  JSON_LOGGING: "true"
+  
+  # Performance tuning
+  TOKEN_CHUNK_SIZE: "512"
+  MAX_SEQUENCE_LENGTH: "4096"
+  
+  # Model serving
+  MODEL_SERVING_MODE: "batched"
+  BATCH_TIMEOUT_MS: "100"
+  
+  # Quantization
+  QUANTIZATION_BITS: "8"
+  ENABLE_MIXED_PRECISION: "true"
+  
+  # FusionANNs
+  FUSION_ANNS_INDEX_PATH: "/data/indices"
+  FUSION_ANNS_DIM: "768"
+  FUSION_ANNS_M: "16"
+  FUSION_ANNS_EF_CONSTRUCTION: "200"
+  FUSION_ANNS_EF_SEARCH: "50"
+  
+  # Mesolimbic system
+  MESOLIMBIC_ALPHA: "0.5"
+  MESOLIMBIC_BETA: "0.1"
+  
+  # KV Cache
+  KV_CACHE_SIZE: "16384"
+  KV_CACHE_PRECISION: "int8"
+  
+  # Attention store
+  ATTENTION_STORE_BLOCK_SIZE: "1024"
+  ATTENTION_STORE_CAPACITY: "64"
+  
+  # Spot disk
+  SPOT_DISK_ENABLED: "true"
+  SPOT_DISK_PATH: "/data/spot"
+  SPOT_DISK_SIZE_GB: "100"
+  
+  # Monitoring
+  METRICS_NAMESPACE: "zeta_reticula"
+  ENABLE_PROMETHEUS: "true"
+  
+  # Health checks
+  HEALTH_CHECK_PATH: "/healthz"
+  READINESS_PATH: "/ready"
+  
+  # Performance
+  TOKENIZER_PARALLELISM: "4"
+  MODEL_PARALLELISM: "1"
+  
+  # Advanced
+  ENABLE_JIT: "true"
+  ENABLE_FUSED_OPS: "true"

@@ -1,0 +1,154 @@
+name: Zeta Reticula CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'master-service/**'
+      - '.github/workflows/ci-cd.yaml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'master-service/**'
+      - '.github/workflows/ci-cd.yaml'
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY: zeta-reticula
+  EKS_CLUSTER: zeta-reticula-production
+  KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          profile: minimal
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: |
+          cd master-service
+          make test
+
+  build:
+    name: Build and Push Docker Images
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha,format=long
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./master-service
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to EKS
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Update kubeconfig
+        run: |
+          aws eks --region ${{ env.AWS_REGION }} update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER }} \
+            --kubeconfig kubeconfig
+          
+          echo "KUBE_CONFIG_BASE64=$(cat kubeconfig | base64 -w 0)" >> $GITHUB_ENV
+
+      - name: Deploy to Kubernetes
+        run: |
+          echo "${{ env.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=./kubeconfig
+          
+          cd master-service/k8s/base
+          kustomize edit set image \
+            zeta-reticula=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          
+          kustomize build | kubectl apply -f -
+          
+          # Wait for deployment to complete
+          kubectl rollout status deployment/zeta-reticula -n zeta-reticula --timeout=300s
+
+  notify:
+    name: Notify Status
+    needs: [test, build, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: "Deployment ${{ job.status }} for ${{ github.repository }}"
+          SLACK_MESSAGE: "${{ github.workflow }} run ${{ github.run_id }} completed with ${{ job.status }}"
+          SLACK_COLOR: ${{ job.status == 'success' && 'good' || 'danger' }}
+          MSG_MINIMAL: "${{ job.status }}: ${{ github.workflow }} #${{ github.run_id }} (${{ github.sha }})"
+          SLACK_USERNAME: GitHub Actions
+          SLACK_ICON: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png

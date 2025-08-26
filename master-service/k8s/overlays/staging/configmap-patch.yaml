@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: master-service-config
+data:
+  RUST_LOG: "debug"
+  NODE_TIMEOUT_SECONDS: "600"  # Longer timeout for staging
+  GRPC_MAX_CONNECTION_AGE: "7200"  # Longer connection age for staging
+  GRPC_MAX_CONNECTION_AGE_GRACE: "600"
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  # Staging-specific configurations
+  ENVIRONMENT: "staging"
+  LOG_LEVEL: "debug"  # More verbose logs in staging
+  # Add any other staging-specific configurations here

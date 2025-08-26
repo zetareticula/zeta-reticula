@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: master-service-config
+data:
+  RUST_LOG: "info"
+  NODE_TIMEOUT_SECONDS: "300"
+  # gRPC settings
+  GRPC_MAX_CONNECTION_AGE: "3600"
+  GRPC_MAX_CONNECTION_AGE_GRACE: "300"
+  # Metrics (disabled by default)
+  METRICS_ENABLED: "false"
+  METRICS_PORT: "9090"

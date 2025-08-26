@@ -1,0 +1,15 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: master-service-pdb
+  namespace: production
+  labels:
+    app: master-service
+    component: master
+    environment: production
+spec:
+  minAvailable: 2  # Keep at least 2 pods available during voluntary disruptions
+  selector:
+    matchLabels:
+      app: master-service
+      component: master

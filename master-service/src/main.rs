@@ -1,3 +1,17 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use master_service::MasterService;
 use std::error::Error;
 use std::net::SocketAddr;
@@ -5,7 +19,8 @@ use std::time::Duration;
 use log::{info, error, warn};
 use std::process;
 use tokio::signal;
-use tokio::time::{sleep, timeout};
+use tonic::transport::Server;
+use master_service::proto::master_service_server::MasterServiceServer;
 
 /// Configuration for the master service
 #[derive(Debug)]
@@ -79,13 +94,11 @@ async fn handle_shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {
-            info!("Received Ctrl+C, shutting down...");
-        },
-        _ = terminate => {
-            info!("Received terminate signal, shutting down...");
-        },
+        _ = ctrl_c => {}
+        _ = terminate => {}
     }
+
+    info!("Shutting down gracefully...");
 }
 
 /// Background task to clean up stale nodes periodically
@@ -100,7 +113,7 @@ async fn start_cleanup_task(service: MasterService, interval_seconds: u64, max_a
                 info!("Cleaned up {} stale nodes", removed);
             }
             Err(e) => {
-                error!("Error cleaning up stale nodes: {}", e);
+                error!("Failed to clean up stale nodes: {}", e);
             }
             _ => {}
         }
@@ -113,49 +126,44 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = match Config::from_env() {
         Ok(cfg) => cfg,
         Err(e) => {
-            eprintln!("Error loading configuration: {}", e);
+            eprintln!("Failed to load configuration: {}", e);
             process::exit(1);
         }
     };
-    
+
     // Initialize logging
     if let Err(e) = init_logging(&config.log_level) {
-        eprintln!("Error initializing logging: {}", e);
+        eprintln!("Failed to initialize logging: {}", e);
         process::exit(1);
     }
-    
-    info!("Starting Zeta Reticula Master Service");
-    info!("Configuration: {:#?}", config);
-    
+
+    info!("Starting master service with config: {:?}", config);
+
     // Create the master service
     let service = MasterService::new();
-    
-    // Start the cleanup task for stale nodes
+
+    // Start the cleanup task
+    let cleanup_interval = config.node_timeout_seconds / 6; // Clean up more frequently than the timeout
     let cleanup_service = service.clone();
-    let cleanup_interval = config.node_timeout_seconds / 2;
-    tokio::spawn(async move {
+    let _cleanup_handle = tokio::spawn(async move {
         start_cleanup_task(cleanup_service, cleanup_interval, config.node_timeout_seconds).await;
     });
+
+    // Create the gRPC server
+    let addr = config.bind_addr;
+    let svc = MasterServiceServer::new(service);
     
-    // Start the HTTP server
-    let server = MasterService::start_server(service, config.bind_addr);
+    info!("Starting gRPC server on {}", addr);
     
-    // Wait for server to start with a timeout
-    let server_handle = tokio::spawn(server);
-    
-    // Wait for server task or shutdown signal
-    tokio::select! {
-        result = server_handle => {
-            if let Err(e) = result {
-                error!("Server error: {}", e);
-                process::exit(1);
-            }
-        },
-        _ = handle_shutdown_signal() => {
-            info!("Shutting down gracefully...");
-            // Add any cleanup logic here
-        },
-    }
+    // Start the server with graceful shutdown
+    Server::builder()
+        .add_service(svc)
+        .serve_with_shutdown(addr, async {
+            handle_shutdown_signal().await;
+        })
+        .await?;
+
+    info!("Master service stopped");
     
     info!("Shutdown complete");
     Ok(())

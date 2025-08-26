@@ -1,0 +1,115 @@
+# Production configuration for Zeta Reticula
+
+# Global configuration
+global:
+  environment: production
+  domain: api.zeta-reticula.com
+  tls:
+    enabled: true
+    secretName: zeta-tls
+
+# API server configuration
+api:
+  replicaCount: 3
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 1
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Worker configuration
+worker:
+  replicaCount: 5
+  resources:
+    limits:
+      cpu: 4
+      memory: 16Gi
+      nvidia.com/gpu: 1  # Request one GPU per worker
+    requests:
+      cpu: 2
+      memory: 8Gi
+      nvidia.com/gpu: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetGPUUtilizationPercentage: 70
+
+# Redis cache configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+  master:
+    resources:
+      limits:
+        cpu: 1
+        memory: 4Gi
+      requests:
+        cpu: 0.5
+        memory: 2Gi
+
+# Monitoring stack
+monitoring:
+  enabled: true
+  prometheus:
+    retention: 30d
+  grafana:
+    adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Storage configuration
+storage:
+  persistentVolume:
+    enabled: true
+    size: 100Gi
+    storageClass: gp2
+    accessModes:
+      - ReadWriteOnce
+
+# Security configuration
+security:
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+        - podSelector: {}
+        ports:
+        - protocol: TCP
+          port: 8080
+
+# Environment variables
+env:
+  - name: RUST_LOG
+    value: "info"
+  - name: RUST_BACKTRACE
+    value: "1"
+  - name: ENVIRONMENT
+    value: "production"
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: zeta-secrets
+        key: database-url
+  - name: REDIS_URL
+    value: "redis://zeta-redis-master:6379"

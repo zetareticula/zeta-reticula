@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Import the base configuration
+bases:
+- ../../base
+
+# Staging-specific patches
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - configmap-patch.yaml
+
+# Set the namespace
+namespace: staging
+
+# Add staging-specific labels
+commonLabels:
+  environment: staging
+  tier: backend
+
+# Configure image to use the staging tag
+images:
+  - name: zetareticula/master-service
+    newTag: latest-staging

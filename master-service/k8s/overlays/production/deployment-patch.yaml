@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-service
+spec:
+  replicas: 5  # Higher number of replicas for production
+  template:
+    spec:
+      containers:
+      - name: master-service
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 2000m
+            memory: 1Gi
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: NODE_TIMEOUT_SECONDS
+          value: "300"
+        - name: GRPC_MAX_CONNECTION_AGE
+          value: "3600"
+        - name: GRPC_MAX_CONNECTION_AGE_GRACE
+          value: "300"
+        - name: METRICS_ENABLED
+          value: "true"
+        - name: METRICS_PORT
+          value: "9090"

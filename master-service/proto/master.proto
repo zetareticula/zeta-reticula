@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package master;
+
+// The master service definition.
+service MasterService {
+  // Register a new node with the master
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+  
+  // Send a heartbeat to indicate the node is still alive
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+  
+  // Get information about all registered nodes
+  rpc GetNodes(GetNodesRequest) returns (GetNodesResponse) {}
+}
+
+// The request message containing the node's registration information.
+message RegisterRequest {
+  string node_id = 1;  // Optional, if not provided, a new ID will be generated
+  map<string, string> metadata = 2;  // Additional metadata about the node
+}
+
+// The response message containing the node's ID.
+message RegisterResponse {
+  string node_id = 1;  // The ID assigned to the node
+}
+
+// The request message for heartbeats.
+message HeartbeatRequest {
+  string node_id = 1;  // The ID of the node sending the heartbeat
+}
+
+// The response message for heartbeats.
+message HeartbeatResponse {
+  bool success = 1;  // Whether the heartbeat was processed successfully
+}
+
+// The request message for getting node information.
+message GetNodesRequest {
+  // Can be extended with filtering options in the future
+}
+
+// The response message containing node information.
+message GetNodesResponse {
+  repeated NodeInfo nodes = 1;  // List of all registered nodes
+}
+
+// Information about a registered node.
+message NodeInfo {
+  string id = 1;  // The node's unique identifier
+  int64 last_seen = 2;  // Seconds since the last heartbeat
+  map<string, string> metadata = 3;  // Additional metadata about the node
+}
