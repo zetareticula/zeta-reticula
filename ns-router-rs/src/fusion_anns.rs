@@ -20,6 +20,9 @@ use zeta_vault::ZetaVault;
 use zeta_vault::VaultConfig;
 use attention_store::AttentionStore;
 
+
+
+///! 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FusionANNS {
     pub vault: Arc<ZetaVault>,

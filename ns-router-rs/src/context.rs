@@ -25,29 +25,38 @@ use super::{TokenFeatures, ModelConfig, KVCacheConfig};
 use log;
 
 /// Analysis of the context for neurosymbolic routing
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NSContextAnalysis {
-    /// The input text being analyzed
-    pub input: String,
-    
-    /// Features extracted from each token in the input
-    pub token_features: Vec<TokenFeatures>,
-    
-    /// Number of tokens in the input
-    pub token_count: usize,
-    
-    /// Profile of salience scores for the input
-    pub salience_profile: Vec<QuantizationResult>,
-    
-    /// Estimated complexity of the input
-    pub theory_complexity: f32,
-    
+    /// Salience scores for each token
+    pub token_salience: Vec<f32>,
+    /// Average salience score
+    pub avg_salience: f32,
+    /// Maximum salience score
+    pub max_salience: f32,
+    /// Salient phrases and their scores
+    pub salient_phrases: Vec<(String, f32)>,
+    /// Overall sentiment score (-1.0 to 1.0)
+    pub sentiment: f32,
+    /// Detected language
+    pub language: String,
+    /// Whether the input contains sensitive content
+    pub is_sensitive: bool,
+    /// Complexity score (higher means more complex)
+    pub complexity: f32,
+    /// Whether the input contains questions
+    pub has_questions: bool,
+    /// Whether the input contains commands
+    pub has_commands: bool,
+    /// Whether to use forward time direction (true) or backward (false)
+    pub use_forward_time: bool,
+    /// Time direction confidence score (0.0 to 1.0)
+    pub time_direction_confidence: f32,
+    /// Context length scaling factor for time directionality
+    pub time_context_scale: f32,
     /// Any symbolic constraints derived from the input
     pub symbolic_constraints: Vec<String>,
-    
     /// User ID for the current request
     pub user_id: Option<String>,
-    
     /// Batch size for the current request
     pub batch_size: usize,
     
@@ -149,42 +158,105 @@ impl NSContextAnalyzer {
     }
 
     /// Analyze the input and token features to produce context analysis
-    pub fn analyze(&self, input: &str, token_features: Vec<TokenFeatures>) -> NSContextAnalysis {
-        let token_count = token_features.len();
-        
-        // Calculate theory complexity based on average salience
-        let theory_complexity = if token_count > 0 {
-            let avg_salience: f32 = token_features.iter()
-                .map(|f| f.salience)
-                .sum::<f32>() / token_count as f32;
+    pub fn analyze(&self, text: &str, token_features: Vec<TokenFeatures>, use_forward_time: bool) -> NSContextAnalysis {
+        // Calculate basic statistics
+        let salience_scores: Vec<f32> = token_features.iter()
+            .map(|f| f.salience)
+            .collect();
             
-            // Higher complexity for more salient tokens
-            avg_salience
+        let token_count = token_features.len();
+        let avg_salience = if !salience_scores.is_empty() {
+            salience_scores.iter().sum::<f32>() / salience_scores.len() as f32
         } else {
             0.0
         };
         
-        // Create salience profile (simplified for now)
-        let salience_profile = token_features.iter()
-            .map(|f| {
-                // Use salience as the original value, quantize to the same value for now
-                let salience = f.salience;
-                QuantizationResult {
-                    original: salience,
-                    quantized: salience,  // No quantization for now
-                    scale: 1.0,  // No scaling
-                    zero_point: None,  // No zero point for now
-                    precision: PrecisionLevel::Bit32,  // Use Bit32 instead of FP32
-                }
-            })
-            .collect();
+        let max_salience = salience_scores.iter()
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
+            
+        // Analyze time directionality
+        let (time_direction_confidence, time_context_scale) = self.analyze_time_directionality(
+            text, 
+            &token_features,
+            use_forward_time
+        );
+            
+        // For now, use placeholder values for other fields
+        NSContextAnalysis {
+            token_salience: salience_scores,
+            avg_salience,
+            max_salience,
+            salient_phrases: Vec::new(),
+            sentiment: 0.0,
+            language: "en".to_string(),
+            is_sensitive: false,
+            complexity: 0.5,
+            has_questions: false,
+            has_commands: false,
+            use_forward_time,
+            time_direction_confidence,
+            time_context_scale: time_context_scale as f32,
+            symbolic_constraints: Vec::new(),
+            user_id: None,
+            batch_size: 1,
+            model_config: None,
+            cache_config: None,
+        }
+    }
+
+    /// Analyze time directionality of the input text
+    /// 
+    /// Returns a tuple of (confidence, context_scale) where:
+    /// - confidence: 0.0 to 1.0 indicating confidence in the time direction
+    /// - context_scale: Suggested context scaling factor based on input length
+    fn analyze_time_directionality(&self, text: &str, token_features: &[TokenFeatures], use_forward_time: bool) -> (f32, i32) {
+        let text_len = text.len();
+        let token_count = token_features.len();
         
-        NSContextAnalysis::new()
-            .with_input(input)
-            .with_token_features(token_features)
-            .with_token_count(token_count)
-            .with_theory_complexity(theory_complexity)
-            .with_salience_profile(salience_profile)
+        // Calculate basic statistics
+        let avg_token_len = if token_count > 0 {
+            text_len as f32 / token_count as f32
+        } else {
+            0.0
+        };
+        
+        // Simple heuristic: longer inputs benefit more from forward direction
+        let length_confidence = (text_len as f32 / 1000.0).min(1.0);
+        
+        // Check for time-related words/phrases that might indicate direction
+        let time_indicators = [
+            ("after", 0.2), ("before", -0.2),
+            ("later", 0.15), ("earlier", -0.15),
+            ("next", 0.1), ("previous", -0.1),
+            ("will", 0.1), ("was", -0.1),
+        ];
+        
+        let mut time_bias = 0.0;
+        let text_lower = text.to_lowercase();
+        
+        for (word, bias) in &time_indicators {
+            if text_lower.contains(word) {
+                time_bias += bias;
+            }
+        }
+        
+        // Calculate final confidence based on heuristics
+        let base_confidence = if use_forward_time {
+            0.6 + (length_confidence * 0.3) + time_bias
+        } else {
+            0.4 + (length_confidence * 0.2) - time_bias
+        };
+        
+        // Calculate context scale factor based on input length
+        let context_scale = match text_len {
+            0..=100 => 1,
+            101..=500 => 2,
+            501..=2000 => 4,
+            _ => 8
+        };
+        
+        (base_confidence.max(0.0).min(1.0), context_scale)
     }
 }
 

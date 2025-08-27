@@ -51,16 +51,56 @@ impl MesolimbicSystem {
         }
     }
 
-    pub fn compute_salience(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<SalienceResult> {
+    /// Computes salience scores with time directionality awareness
+    /// 
+    /// # Arguments
+    /// * `features` - Vector of token features to compute salience for
+    /// * `theory_key` - Key identifying the theory to use for role inference
+    /// * `context_length` - Length of the context window
+    /// * `is_forward` - Whether to use forward (true) or backward (false) time direction
+    pub fn compute_salience(
+        &self, 
+        features: Vec<TokenFeatures>, 
+        theory_key: &str,
+        context_length: usize,
+        is_forward: bool
+    ) -> Vec<SalienceResult> {
         let role_results = self.role_inferer.infer_roles(features.clone(), theory_key);
-
+        let context_factor = (context_length as f32).ln_1p() / 10.0; // Scale factor based on context length
+        
         features
             .into_iter()
             .zip(role_results)
-            .map(|(feature, role_result)| {
+            .enumerate()
+            .map(|(idx, (feature, role_result))| {
                 let mut rng = rand::thread_rng();
+                
+                // Time directionality factor (higher for forward direction)
+                let time_direction_factor = if is_forward { 1.0 } else { 0.8 };
+                
+                // Position-based decay (tokens earlier in context get higher weights in forward direction)
+                let position = idx as f32 / context_length as f32;
+                let position_factor = if is_forward {
+                    1.0 - (position * 0.5) // Decay for forward direction
+                } else {
+                    0.5 + (position * 0.5) // Increase for backward direction
+                };
 
-                let weights = [0.3, 0.25, 0.2, 0.1, 0.05, 0.15];
+                // Base weights with time directionality incorporated
+                let mut weights = [
+                    0.3,  // frequency
+                    0.25, // sentiment
+                    0.2,  // context relevance
+                    0.1,  // scaled context relevance
+                    0.05, // random noise
+                    0.15, // scaled sentiment
+                    0.1   // time direction factor
+                ];
+                
+                // Adjust weights based on time direction and context length
+                weights[0] *= time_direction_factor * context_factor;
+                weights[1] *= position_factor;
+                
                 let inputs = [
                     feature.frequency,
                     feature.sentiment_score.abs(),
@@ -68,13 +108,17 @@ impl MesolimbicSystem {
                     feature.context_relevance * 0.1,
                     rng.gen_range(-0.05..0.05),
                     feature.sentiment_score.abs() * 0.15,
+                    time_direction_factor
                 ];
 
-                let mut salience_score: f32 = weights
+                let salience_score: f32 = weights
                     .iter()
                     .zip(inputs.iter())
-                    .map(|(w, v)| w * v)
+                    .map(|(w, i)| w * i)
                     .sum();
+                    
+                // Apply position-based adjustment
+                let salience_score = salience_score * position_factor;
 
                 let role_modulation = match role_result.role.as_str() {
                     "negation" => 0.2,

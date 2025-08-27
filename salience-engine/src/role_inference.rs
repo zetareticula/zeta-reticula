@@ -69,6 +69,7 @@ pub struct RoleInfererImpl {
     pub(crate) inner_loop_iterations: usize,
 }
 
+
 impl RoleInfererImpl {
     pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
         let theories = DashMap::new();

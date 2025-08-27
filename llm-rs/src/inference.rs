@@ -24,6 +24,7 @@ use std::cmp::Ordering;
 use crate::fusion_anns::FusionANNSConfig;
 
 
+//FusionANNS struct for ANN 
 pub struct FusionANNS {
     raw_vectors_path: PathBuf,
     pq_vectors: Array2<f32>,
@@ -57,13 +58,15 @@ impl FusionANNS {
         }
     }
 
-  
+    //Heuristic reranking
     pub async fn heuristic_rerank(&self, query: &Array1<f32>, candidates: Vec<u32>) -> Vec<u32> {
+        //ranked set of ranks
         let mut ranked = vec![];
         let mut prev_accuracy = 0.0;
         let file = File::open(&self.raw_vectors_path).await.unwrap();
         let mut reader = BufReader::new(file);
 
+        
         for batch in candidates.chunks(self.batch_size) {
             let mut raw_vectors = Array2::zeros((batch.len(), self.vector_dim));
             let mut buffer = vec![0u8; batch.len() * self.vector_dim * 4];

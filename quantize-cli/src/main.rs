@@ -51,6 +51,10 @@ async fn main() -> Result<()> {
                 &args.output,
                 args.bits,
                 args.use_salience,
+                args.update,
+                args.enable_time_direction,
+                args.forward_time,
+                args.time_context_scale,
             ).await?;
         }
         cli::Commands::Infer(args) => {
@@ -59,6 +63,9 @@ async fn main() -> Result<()> {
                 &args.input,
                 args.use_ns_router,
                 args.max_tokens,
+                args.enable_time_direction,
+                args.forward_time,
+                args.time_context_scale,
             ).await?;
             
             // Print the inference result

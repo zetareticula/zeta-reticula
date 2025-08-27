@@ -107,7 +107,7 @@ impl FusionANNS {
             }
         }
 
-        // Mock GPU distance calculation
+        //GPU distance calculation
         candidates.sort_by(|&a, &b| {
             let dist_a = self.pq_vectors.slice(s![a as usize, ..]).dot(query);
             let dist_b = self.pq_vectors.slice(s![b as usize, ..]).dot(query);

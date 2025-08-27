@@ -1,4 +1,16 @@
-
+// Copyright 2025 ZETA RETICULA
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //! Command-line interface for the Zeta Reticula quantization tool
 
@@ -58,26 +70,54 @@ pub struct QuantizeArgs {
     /// Use salience-aware quantization
     #[clap(long)]
     pub use_salience: bool,
+    
+    /// Update existing quantized model with time directionality optimizations
+    #[clap(long)]
+    pub update: bool,
+    
+    /// Enable time directionality for quantization (requires --update)
+    #[clap(long, requires = "update")]
+    pub enable_time_direction: bool,
+    
+    /// Default time direction (true = forward, false = backward)
+    #[clap(long, default_value = "true", requires = "enable_time_direction")]
+    pub forward_time: bool,
+    
+    /// Time direction context scale factor
+    #[clap(long, default_value = "1.0", requires = "enable_time_direction")]
+    pub time_context_scale: f32,
 }
 
 /// Arguments for the infer command
 #[derive(Parser, Debug)]
 pub struct InferArgs {
-    /// Model path
+    /// Path to the model file
     #[clap(short, long)]
     pub model: PathBuf,
     
-    /// Input text or path to input file
+    /// Input text for inference
     #[clap(short, long)]
     pub input: String,
     
-    /// Use neurosymbolic routing
-    #[clap(long)]
-    pub use_ns_router: bool,
+    /// Use neuro-symbolic routing
+    #[clap(short = 'r', long)]
+    pub use_router: bool,
     
-    /// Maximum tokens to generate
-    #[clap(short, long, default_value = "100")]
+    /// Maximum number of tokens to generate
+    #[clap(short = 'n', long, default_value = "128")]
     pub max_tokens: usize,
+    
+    /// Enable time directionality (forward/backward)
+    #[clap(long)]
+    pub enable_time_direction: bool,
+    
+    /// Default time direction (true = forward, false = backward)
+    #[clap(long, default_value = "true")]
+    pub forward_time: bool,
+    
+    /// Time direction context scale factor
+    #[clap(long, default_value = "1.0")]
+    pub time_context_scale: f32,
 }
 
 /// Arguments for the optimize command

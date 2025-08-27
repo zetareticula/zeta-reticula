@@ -1,3 +1,19 @@
+// Copyright 2025 ZETA RETICULA INC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+
 //! # NS Router Module
 //! 
 //! The main router that handles inference requests and routes them based on
@@ -67,18 +83,67 @@ pub struct TokenFeatures {
     pub sentiment_score: f32,
 }
 
+/// Configuration for model execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelConfig {
+    /// Name of the model to use
+    pub model_name: String,
+    /// Supported precision levels
+    pub precision: Vec<PrecisionLevel>,
+    /// Maximum sequence length
+    pub max_length: u32,
+    /// Whether to use forward time direction (true) or backward (false)
+    pub use_forward_time: bool,
+    /// Confidence score for the time direction (0.0 to 1.0)
+    pub time_direction_confidence: f32,
+}
+
+impl Default for ModelConfig {
+    fn default() -> Self {
+        Self {
+            model_name: "default".to_string(),
+            precision: vec![PrecisionLevel::FP16],
+            max_length: 2048,
+            use_forward_time: true,  // Default to forward time direction
+            time_direction_confidence: 0.8,  // Default confidence
+        }
+    }
+}
+
+/// Configuration for the KV cache
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KVCacheConfig {
+    /// Whether KV caching is enabled
+    pub enabled: bool,
+    /// Size of the KV cache in MB
+    pub size_mb: usize,
+    /// Whether the cache should be time-aware
+    pub time_aware: bool,
+}
+
 /// Configuration for the NSRouter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouterConfig {
     /// Maximum number of tokens to process
     pub max_tokens: usize,
-    
+    /// Maximum number of cached routing plans
+    pub max_cached_plans: usize,
     /// Default model configuration
     pub default_model: String,
-    
-    /// Enable/disable symbolic reasoning
+    /// Default precision level for inference
+    pub default_precision: PrecisionLevel,
+    /// Whether to enable symbolic reasoning
     pub enable_symbolic: bool,
-    
+    /// Whether to enable salience analysis
+    pub enable_salience: bool,
+    /// Context window size for analysis
+    pub context_window: usize,
+    /// Whether to use time directionality (forward/backward) in routing
+    pub enable_time_directionality: bool,
+    /// Default time direction (true for forward, false for backward)
+    pub default_time_direction: bool,
+    /// Context length scaling factor for time directionality
+    pub time_direction_context_scale: f32,
     /// Cache size for router decisions
     pub cache_size: usize,
 }
@@ -88,8 +153,15 @@ impl Default for RouterConfig {
         RouterConfig {
             max_tokens: 4096,
             default_model: "default".to_string(),
+            max_cached_plans: 1000,
+            default_precision: PrecisionLevel::FP16,
             enable_symbolic: true,
-            cache_size: 1000,
+            enable_salience: true,
+            context_window: 2048,
+            enable_time_directionality: true,
+            default_time_direction: true, // Default to forward direction
+            time_direction_context_scale: 1.0,
+            cache_size: 1024,
         }
     }
 }
@@ -191,6 +263,23 @@ impl NSRouter {
             return Ok(cached_plan);
         }
         
+        // Determine time direction based on config and input characteristics
+        let use_forward = if self.config.enable_time_directionality {
+            // Simple heuristic: use forward direction for most cases, 
+            // but consider input length for direction decision
+            let input_len = input.len();
+            if input_len > (self.config.context_window * 2) {
+                // For very long inputs, prefer forward direction
+                true
+            } else {
+                // For shorter inputs, use config default
+                self.config.default_time_direction
+            }
+        } else {
+            // Time directionality disabled, use forward as default
+            true
+        };
+        
         // Tokenize input and analyze salience
         let salience_results = self.salience_analyzer.analyze_text(input);
         let salient_phrases = self.salience_analyzer.extract_salient_phrases(input, 0.5);
@@ -198,18 +287,26 @@ impl NSRouter {
         // Extract token features with salience information
         let token_features = self.extract_token_features_with_salience(&salience_results);
         
-        // Analyze context with salience information
-        let mut context = self.context_analyzer.analyze(input, token_features);
+        // Analyze context with salience information and time directionality
+        let mut context = self.context_analyzer.analyze(input, token_features, use_forward);
+        
+        // Update context with time directionality information
+        context.use_forward_time = use_forward;
         
         // Apply symbolic reasoning if enabled
-        if self.config.enable_symbolic {
-            let symbolic_constraints = self.apply_symbolic_reasoning(input, &context.salience_profile).await?;
-            context.symbolic_constraints = symbolic_constraints;
-        }
+        let symbolic_constraints = if self.config.enable_symbolic {
+            self.apply_symbolic_reasoning(input, &salience_results).await?
+        } else {
+            Vec::new()
+        };
         
-        // Update context with salience information
-        context.salience_profile = salience_results.into_iter()
-            .map(|sr| {
+        // Log time directionality decision
+        let direction = if use_forward { "forward" } else { "backward" };
+        log::info!(
+            "Using {} time direction (confidence: {:.2}%)", 
+            direction, 
+            context.time_direction_confidence * 100.0
+        );
                 let mut qr = QuantizationResult::default();
                 qr.token_id = sr.token_id;
                 qr.score = sr.salience_score;
@@ -222,21 +319,33 @@ impl NSRouter {
             .await
             .map_err(|e| RouterError::StrategyError(e.to_string()))?;
         
-        // Create routing plan with salience-informed configuration
+        // Create routing plan with time directionality and salience information
         let plan = NSRoutingPlan {
             model_config: ModelConfig {
                 model_name: self.config.default_model.clone(),
                 max_length: self.config.max_tokens as u32,
                 precision: self.select_precision(&context),
+                use_forward_time: context.use_forward_time,
+                time_direction_confidence: context.time_direction_confidence,
             },
             execution_strategy: strategy,
             kv_cache_config: KVCacheConfig {
                 enabled: true,
                 size_mb: self.calculate_cache_size(&context),
+                time_aware: context.use_forward_time,
             },
             symbolic_rules: context.symbolic_constraints,
-            salient_phrases, // Add salient phrases to the routing plan
+            salient_phrases,
+            time_context_scale: context.time_context_scale as i32,
         };
+        
+        // Log the routing decision with time directionality
+        log::info!(
+            "Routing with {} time direction (confidence: {:.2}%, context scale: {})",
+            if context.use_forward_time { "forward" } else { "backward" },
+            context.time_direction_confidence * 100.0,
+            context.time_context_scale
+        );
         
         // Cache the routing decision
         {
@@ -350,23 +459,24 @@ pub struct NSRoutingPlan {
     
     /// Salient phrases identified in the input
     pub salient_phrases: Vec<String>,
+    
+    /// Time directionality information
+    pub time_context_scale: i32,
 }
 
 impl Default for NSRoutingPlan {
     fn default() -> Self {
         Self {
-            model_config: ModelConfig {
-                model_name: "default".to_string(),
-                precision: vec![PrecisionLevel::FP16],
-                max_length: 2048,
-            },
+            model_config: ModelConfig::default(),
             execution_strategy: "local".to_string(),
             kv_cache_config: KVCacheConfig {
                 enabled: true,
                 size_mb: 1024,
+                time_aware: false,
             },
             symbolic_rules: Vec::new(),
             salient_phrases: Vec::new(),
+            time_context_scale: 1,  // Default to scale of 1 (no scaling)
         }
     }
 }
@@ -384,29 +494,10 @@ impl NSRoutingPlan {
             kv_cache_config,
             symbolic_rules,
             salient_phrases: Vec::new(),
+            time_context_scale: 1,  // Default to scale of 1 (no scaling)
         }
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ExecutionStrategy {
-    Local,
-    Federated,
-    Distributed,
-    OnDevice,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelConfig {
-    pub model_name: String,
-    pub precision: Vec<PrecisionLevel>,
-    pub max_length: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KVCacheConfig {
-    pub enabled: bool,
-    pub size_mb: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
