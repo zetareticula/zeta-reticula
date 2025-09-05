@@ -5,12 +5,26 @@ on:
     branches: [ main ]
     paths:
       - 'master-service/**'
+      - 'ns-router-rs/**'
+      - 'salience-engine/**'
+      - 'quantize-cli/**'
+      - 'llm-rs/**'
+      - 'shared/**'
       - '.github/workflows/ci-cd.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     branches: [ main ]
     paths:
       - 'master-service/**'
+      - 'ns-router-rs/**'
+      - 'salience-engine/**'
+      - 'quantize-cli/**'
+      - 'llm-rs/**'
+      - 'shared/**'
       - '.github/workflows/ci-cd.yaml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 env:
   AWS_REGION: us-west-2
@@ -51,8 +65,14 @@ jobs:
 
       - name: Run tests
         run: |
-          cd master-service
-          make test
+          # Test the entire workspace
+          cargo test --workspace --all-features
+          
+          # Test master-service specifically if Makefile exists
+          if [ -f "master-service/Makefile" ]; then
+            cd master-service
+            make test
+          fi
 
   build:
     name: Build and Push Docker Images
@@ -82,10 +102,11 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=long
 
-      - name: Build and push
+      - name: Build and push workspace
         uses: docker/build-push-action@v4
         with:
-          context: ./master-service
+          context: .
+          file: ./Dockerfile.optimized
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
