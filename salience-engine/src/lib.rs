@@ -181,8 +181,8 @@ impl SalienceQuantizer {
     pub fn quantize_tokens(
         &self,
         features: Vec<TokenFeatures>,
-        theory_key: &str,
-        bump: &Bump,
+        _theory_key: &str,
+        _bump: &Bump,
     ) -> (Vec<QuantizationResult>, YoungTableau) {
         let mut results = Vec::with_capacity(features.len());
         let mut tableau = YoungTableau::new(10, self.threshold);
@@ -196,9 +196,9 @@ impl SalienceQuantizer {
         frames.par_iter_mut().enumerate().for_each(|(i, frame)| {
             let chunk = chunks[i];
             // Create a new Bump allocator for this thread (not used for allocations here)
-            let thread_bump = Bump::new();
+            let _thread_bump = Bump::new();
             *frame = Frame::new(i as u32, chunk);
-            frame.compute_salience(self.threshold, &thread_bump);
+            frame.compute_salience(self.threshold, &_thread_bump);
         });
 
         // Parallel frame processing for quantization
@@ -206,7 +206,7 @@ impl SalienceQuantizer {
             .par_iter()
             .map(|frame| {
                 // Create a new Bump allocator for this thread
-                let thread_bump = Bump::new();
+                let _thread_bump = Bump::new();
                 
                 // Allocate results using the thread-local bump allocator
                 let mut frame_results = Vec::with_capacity(frame.tokens.len());

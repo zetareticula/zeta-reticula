@@ -83,11 +83,11 @@ impl NSStrategySelector {
         context: &NSContextAnalysis
     ) -> (ModelConfig, ExecutionStrategy, KVCacheConfig, Vec<String>) {
         // Simple strategy selection based on input length and tokens
-        let input_len = context.token_features.len();
+        let input_len = context.token_salience.len();
         
-        // Count subjects and modifiers
-        let subject_count = context.token_features.iter()
-            .filter(|t| t.role == "subject")
+        // Count high salience tokens (as proxy for important tokens)
+        let subject_count = context.token_salience.iter()
+            .filter(|&&salience| salience > 0.5)
             .count();
         
         // Choose model size based on input length

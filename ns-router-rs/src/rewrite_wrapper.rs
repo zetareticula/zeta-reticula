@@ -70,7 +70,7 @@ impl SerializableRewrite {
                 self.name.clone(),
                 left_pat,
                 right_pat,
-            ));
+            ).unwrap());
         }
         
         self.rewrite.as_ref().ok_or_else(|| 

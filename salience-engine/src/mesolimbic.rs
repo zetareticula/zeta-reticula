@@ -20,6 +20,7 @@ use std::sync::Arc;
 use crate::role_inference::{RoleInfererImpl, RoleInferenceResult, TokenFeatures, SalienceResult};
 use crate::role_inferer::RoleInferer;
 
+
 /// Mesolimbic configuration
 #[derive(Serialize, Deserialize)]
 pub struct MesolimbicConfig {
@@ -27,12 +28,21 @@ pub struct MesolimbicConfig {
     pub inner_loop_iterations: usize,
 }
 
-//
+
 impl MesolimbicConfig {
     pub fn new(outer_loop_iterations: usize, inner_loop_iterations: usize) -> Self {
         Self {
             outer_loop_iterations,
             inner_loop_iterations,
+        }
+    }
+}
+
+impl Default for MesolimbicConfig {
+    fn default() -> Self {
+        Self {
+            outer_loop_iterations: 10,
+            inner_loop_iterations: 5,
         }
     }
 }
@@ -118,7 +128,7 @@ impl MesolimbicSystem {
                     .sum();
                     
                 // Apply position-based adjustment
-                let salience_score = salience_score * position_factor;
+                let mut salience_score = salience_score * position_factor;
 
                 let role_modulation = match role_result.role.as_str() {
                     "negation" => 0.2,

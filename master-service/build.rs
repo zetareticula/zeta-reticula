@@ -15,13 +15,8 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_file = "proto/master.proto";
-    let out_dir = "src/proto";
-    
-    // Create the output directory if it doesn't exist
-    std::fs::create_dir_all(out_dir)?;
     
     tonic_build::configure()
-        .out_dir(out_dir)
         .compile(
             &[proto_file],
             &["."], // specify the root location to search proto dependencies

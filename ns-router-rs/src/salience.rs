@@ -43,7 +43,7 @@ impl SalienceAnalyzer {
         let token_features = self.tokenize_text(&tokens);
         
         // Compute salience using the mesolimbic system
-        self.mesolimbic.compute_salience(token_features, &self.theory_key)
+        self.mesolimbic.compute_salience(token_features, &self.theory_key, tokens.len(), true)
     }
     
     /// Convert raw tokens to the format expected by the salience engine

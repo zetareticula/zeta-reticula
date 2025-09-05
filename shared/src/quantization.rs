@@ -39,6 +39,8 @@ pub enum PrecisionLevel {
     Bit8,
     /// 16-bit quantization
     Bit16,
+    /// 16-bit floating point
+    FP16,
     /// 32-bit quantization (full precision)
     Bit32,
     /// Custom bit width

@@ -225,10 +225,22 @@ impl fmt::Display for CliConfig {
 
 // Output module for writing results to file
 mod output {
-    use super::*;
-    use serde_json::to_string;
-    use std::fs::File;
-    use std::io::{self, BufWriter};
+    use clap::{Arg, ArgAction, Command};
+    use serde_json;
+    use std::fs;
+    use std::io::{self, Write, BufWriter};
+    use std::path::PathBuf;
+    use std::fmt;
+    use tracing::{info, error, Level};
+    use tracing_subscriber::{self, filter::LevelFilter};
+    use env_logger;
+    use anyhow::Result;
+    use tokio::runtime::Runtime;
+    use salience_engine::{TokenFeatures, SalienceQuantizer};
+    use shared::PrecisionLevel;
+    use ns_router_rs::{NSRoutingPlan, initialize_ns_router};
+    use shared::QuantizationResult;
+    use llm_rs::InferenceOutput;
 
     #[derive(Serialize, Deserialize)]
     pub struct CliOutput {
@@ -252,11 +264,13 @@ mod output {
             let json_output = to_string(output)?;
             writer.write_all(json_output.as_bytes())?;
         } else if config.format == "csv" {
-            let mut csv_writer = Writer::from_writer(writer);
+            // Write CSV headers and data
+            writeln!(writer, "token,salience_score,quantized_value,precision")?;
             for result in &output.quantization_results {
-                csv_writer.serialize(result)?;
+                writeln!(writer, "{},{},{},{:?}", 
+                    result.original_value, result.quantized_value, 
+                    result.scale, result.precision)?;
             }
-            csv_writer.flush()?;
         } else {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported format"));
         }

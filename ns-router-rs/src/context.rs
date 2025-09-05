@@ -71,14 +71,22 @@ impl NSContextAnalysis {
     /// Create a new NSContextAnalysis with default values
     pub fn new() -> Self {
         Self {
-            input: String::new(),
-            token_features: Vec::new(),
-            token_count: 0,
-            salience_profile: Vec::new(),
-            theory_complexity: 0.0,
+            token_salience: Vec::new(),
+            avg_salience: 0.0,
+            max_salience: 0.0,
+            salient_phrases: Vec::new(),
+            sentiment: 0.0,
+            language: "en".to_string(),
+            is_sensitive: false,
+            complexity: 0.0,
+            has_questions: false,
+            has_commands: false,
+            use_forward_time: true,
+            time_direction_confidence: 0.5,
+            time_context_scale: 1.0,
             symbolic_constraints: Vec::new(),
             user_id: None,
-            batch_size: 1,  // Default batch size is 1
+            batch_size: 1,
             model_config: None,
             cache_config: None,
         }
@@ -102,33 +110,17 @@ impl NSContextAnalysis {
         self
     }
     
-    /// Set the input text
-    pub fn with_input(mut self, input: impl Into<String>) -> Self {
-        self.input = input.into();
+    /// Set the token salience scores
+    pub fn with_token_salience(mut self, salience: Vec<f32>) -> Self {
+        self.avg_salience = if salience.is_empty() { 0.0 } else { salience.iter().sum::<f32>() / salience.len() as f32 };
+        self.max_salience = salience.iter().fold(0.0, |a, &b| a.max(b));
+        self.token_salience = salience;
         self
     }
     
-    /// Set the token features
-    pub fn with_token_features(mut self, features: Vec<TokenFeatures>) -> Self {
-        self.token_features = features;
-        self
-    }
-    
-    /// Set the token count
-    pub fn with_token_count(mut self, count: usize) -> Self {
-        self.token_count = count;
-        self
-    }
-    
-    /// Set the theory complexity
-    pub fn with_theory_complexity(mut self, complexity: f32) -> Self {
-        self.theory_complexity = complexity;
-        self
-    }
-    
-    /// Set the salience profile
-    pub fn with_salience_profile(mut self, profile: Vec<QuantizationResult>) -> Self {
-        self.salience_profile = profile;
+    /// Set the complexity score
+    pub fn with_complexity(mut self, complexity: f32) -> Self {
+        self.complexity = complexity;
         self
     }
     

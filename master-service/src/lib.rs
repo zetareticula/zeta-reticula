@@ -131,7 +131,8 @@ impl MasterService {
         self,
         addr: std::net::SocketAddr,
     ) -> Result<(), MasterServiceError> {
-        let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
+        let (_shutdown_tx, mut cleanup_shutdown_rx) = mpsc::channel::<()>(1);
+        let (_server_shutdown_tx, mut server_shutdown_rx) = mpsc::channel::<()>(1);
         
         // Create the gRPC server
         let svc = MasterServiceServer::new(self.clone());
@@ -149,7 +150,7 @@ impl MasterService {
                             log::error!("Failed to clean up stale nodes: {}", e);
                         }
                     }
-                    _ = shutdown_rx.recv() => {
+                    _ = cleanup_shutdown_rx.recv() => {
                         log::info!("Shutting down cleanup task");
                         break;
                     }
@@ -162,7 +163,7 @@ impl MasterService {
         Server::builder()
             .add_service(svc)
             .serve_with_shutdown(addr, async move {
-                let _ = shutdown_rx.recv().await;
+                let _: Option<()> = server_shutdown_rx.recv().await;
             })
             .await?;
         
@@ -177,7 +178,11 @@ impl MasterServiceTrait for MasterService {
         request: Request<RegisterRequest>,
     ) -> Result<Response<RegisterResponse>, Status> {
         let req = request.into_inner();
-        let node_id = req.node_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let node_id = if req.node_id.is_empty() {
+            Uuid::new_v4().to_string()
+        } else {
+            req.node_id
+        };
         
         self.register_node(&node_id, req.metadata)
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -213,7 +218,7 @@ impl MasterServiceTrait for MasterService {
         })?;
         
         let nodes_proto = nodes.values()
-            .map(|node| NodeInfo {
+            .map(|node| proto::NodeInfo {
                 id: node.id.clone(),
                 last_seen: node.last_seen.elapsed()
                     .map(|d| d.as_secs() as i64)

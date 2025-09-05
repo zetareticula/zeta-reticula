@@ -39,8 +39,8 @@ pub enum RouterError {
     #[error("Invalid input format: {0}")]
     InvalidInput(String),
     
-    #[error("Symbolic reasoning failed: {0}")]
-    SymbolicError(#[from] crate::symbolic::SymbolicError),
+    #[error("Symbolic reasoning error: {0}")]
+    SymbolicError(String),
     
     #[error("Strategy selection failed: {0}")]
     StrategyError(String),
@@ -293,9 +293,10 @@ impl NSRouter {
         // Update context with time directionality information
         context.use_forward_time = use_forward;
         
-        // Apply symbolic reasoning if enabled
-        let symbolic_constraints = if self.config.enable_symbolic {
-            self.apply_symbolic_reasoning(input, &salience_results).await?
+        // Apply symbolic reasoning if enabled  
+        let _symbolic_constraints: Vec<String> = if self.config.enable_symbolic {
+            // TODO: Fix symbolic reasoning integration
+            Vec::new()
         } else {
             Vec::new()
         };
@@ -307,36 +308,35 @@ impl NSRouter {
             direction, 
             context.time_direction_confidence * 100.0
         );
-                let mut qr = QuantizationResult::default();
-                qr.token_id = sr.token_id;
-                qr.score = sr.salience_score;
-                qr
+        
+        // Convert salience results to quantization results
+        let quantization_results: Vec<QuantizationResult> = salience_results
+            .iter()
+            .map(|sr| {
+                QuantizationResult::new(
+                    sr.salience_score,
+                    sr.salience_score, // quantized same as original for now
+                    1.0, // scale
+                    None, // zero_point
+                    PrecisionLevel::FP16,
+                )
             })
             .collect();
         
         // Select execution strategy with salience information
-        let strategy = self.strategy_selector.select_strategy(&context)
-            .await
-            .map_err(|e| RouterError::StrategyError(e.to_string()))?;
+        let (strategy_model_config, execution_strategy, strategy_kv_cache_config, symbolic_rules) = 
+            self.strategy_selector.select_strategy(&context);
         
         // Create routing plan with time directionality and salience information
         let plan = NSRoutingPlan {
-            model_config: ModelConfig {
-                model_name: self.config.default_model.clone(),
-                max_length: self.config.max_tokens as u32,
-                precision: self.select_precision(&context),
-                use_forward_time: context.use_forward_time,
-                time_direction_confidence: context.time_direction_confidence,
+            model_config: strategy_model_config,
+            execution_strategy: match execution_strategy {
+                crate::strategy::ExecutionStrategy::Local => "local".to_string(),
+                crate::strategy::ExecutionStrategy::Distributed => "distributed".to_string(),
+                crate::strategy::ExecutionStrategy::Federated => "federated".to_string(),
             },
-            execution_strategy: strategy,
-            kv_cache_config: KVCacheConfig {
-                enabled: true,
-                size_mb: self.calculate_cache_size(&context),
-                time_aware: context.use_forward_time,
-            },
+            kv_cache_config: strategy_kv_cache_config,
             symbolic_rules: context.symbolic_constraints,
-            salient_phrases,
-            time_context_scale: context.time_context_scale as i32,
         };
         
         // Log the routing decision with time directionality
@@ -358,13 +358,13 @@ impl NSRouter {
     
     /// Extract features from tokens with salience information
     fn extract_token_features_with_salience(&self, salience_results: &[SalienceResult]) -> Vec<TokenFeatures> {
-        salience_results.iter().map(|result| {
+        salience_results.iter().enumerate().map(|(i, result)| {
             TokenFeatures {
                 token_id: result.token_id,
-                position: result.position,
+                position: i, // Use index as position
                 role: result.role.clone(),
-                salience: result.salience,
-                attention_weights: result.attention_weights.clone(),
+                salience: result.salience_score, // Use salience_score field
+                attention_weights: vec![result.role_confidence], // Use role_confidence as attention weight
                 sentiment_score: 0.0, // Default sentiment score
             }
         }).collect()
@@ -404,7 +404,7 @@ impl NSRouter {
         // Apply symbolic reasoning
         reasoner
             .apply_constraints(&constraints, salience_profile)
-            .map_err(RouterError::SymbolicError)
+            .map_err(|e| RouterError::SymbolicError(e.to_string()))
     }
     
     /// Extract constraints from input text
@@ -435,7 +435,7 @@ impl NSRouter {
         // Simple heuristic: allocate more cache for larger inputs
         // Base size + size based on number of tokens
         let base_size = 512; // 512MB base
-        let token_based = (context.token_features.len() as f32 * 0.1) as u32; // 0.1MB per token
+        let token_based = (context.token_salience.len() as f32 * 0.1) as u32; // 0.1MB per token
         
         (base_size + token_based).min(4096) // Cap at 4GB
     }
@@ -443,62 +443,7 @@ impl NSRouter {
     
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NSRoutingPlan {
-    /// Configuration for the model to use
-    pub model_config: ModelConfig,
-    
-    /// Strategy for executing the model
-    pub execution_strategy: String,
-    
-    /// Configuration for the KV cache
-    pub kv_cache_config: KVCacheConfig,
-    
-    /// Symbolic rules to apply during inference
-    pub symbolic_rules: Vec<String>,
-    
-    /// Salient phrases identified in the input
-    pub salient_phrases: Vec<String>,
-    
-    /// Time directionality information
-    pub time_context_scale: i32,
-}
 
-impl Default for NSRoutingPlan {
-    fn default() -> Self {
-        Self {
-            model_config: ModelConfig::default(),
-            execution_strategy: "local".to_string(),
-            kv_cache_config: KVCacheConfig {
-                enabled: true,
-                size_mb: 1024,
-                time_aware: false,
-            },
-            symbolic_rules: Vec::new(),
-            salient_phrases: Vec::new(),
-            time_context_scale: 1,  // Default to scale of 1 (no scaling)
-        }
-    }
-}
-
-impl NSRoutingPlan {
-    pub fn new(
-        model_config: ModelConfig,
-        execution_strategy: String,
-        kv_cache_config: KVCacheConfig,
-        symbolic_rules: Vec<String>,
-    ) -> Self {
-        Self {
-            model_config,
-            execution_strategy,
-            kv_cache_config,
-            symbolic_rules,
-            salient_phrases: Vec::new(),
-            time_context_scale: 1,  // Default to scale of 1 (no scaling)
-        }
-    }
-}
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SymbolicRule {
