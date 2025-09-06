@@ -366,7 +366,6 @@ dependencies = [
  "mlua",
  "ndarray",
  "ns-router-rs",
- "openblas-src",
  "prost 0.12.6",
  "pyo3",
  "rand 0.8.5",

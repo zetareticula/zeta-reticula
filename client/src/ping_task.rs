@@ -28,21 +28,18 @@ pub async fn ping_task(client: Arc<Client>) {
     let mut etcd_client = EtcdClient::connect(["http://127.0.0.1:2379"], None).await.unwrap();
 
     loop {
-        if !client.ping_running.load(std::sync::atomic::Ordering::SeqCst) {
+        if !client.is_running() {
             break;
         }
 
-        let ping_result = client.master_client.ping(client.client_id.clone()).await;
+        let ping_result = client.ping_master(client.client_id()).await;
         match ping_result {
             Ok(status) => {
                 ping_fail_count = 0;
                 if status.client_status == 1 { // NEED_REMOUNT
-                    let client_clone = Arc::clone(&client);
-                    tokio::spawn(async move {
-                        if let Err(e) = client_clone.remount_segments(&mut etcd_client).await {
-                            log::error!("Failed to remount segments: {}", e);
-                        }
-                    });
+                    if let Err(e) = client.remount_segments(&mut etcd_client).await {
+                        log::error!("Failed to remount segments: {}", e);
+                    }
                 }
                 sleep(Duration::from_millis(SUCCESS_PING_INTERVAL)).await;
             }
@@ -51,7 +48,7 @@ pub async fn ping_task(client: Arc<Client>) {
                 if ping_fail_count >= MAX_PING_FAIL_COUNT {
                     log::error!("Failed to ping master {} times, reconnecting", ping_fail_count);
                     if let Ok(new_master) = client.get_new_master_address(&mut etcd_client).await {
-                        if let Err(reconnect_err) = client.master_client.reconnect(new_master).await {
+                        if let Err(reconnect_err) = client.reconnect_master(new_master.0).await {
                             log::error!("Failed to reconnect to master: {}", reconnect_err);
                         } else {
                             ping_fail_count = 0;

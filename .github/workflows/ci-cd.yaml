@@ -10,6 +10,9 @@ on:
       - 'quantize-cli/**'
       - 'llm-rs/**'
       - 'shared/**'
+      - 'client/**'
+      - 'attention-store/**'
+      - 'p2pstore/**'
       - '.github/workflows/ci-cd.yaml'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -22,6 +25,9 @@ on:
       - 'quantize-cli/**'
       - 'llm-rs/**'
       - 'shared/**'
+      - 'client/**'
+      - 'attention-store/**'
+      - 'p2pstore/**'
       - '.github/workflows/ci-cd.yaml'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -63,9 +69,15 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
+      - name: Build, Lint, and Test Workspace
         run: |
-          # Test the entire workspace
+          # Format check
+          cargo fmt --all -- --check
+          # Clippy
+          cargo clippy --workspace --all-features -- -D warnings
+          # Build the entire workspace
+          cargo build --workspace --all-features
+          # Run tests for the entire workspace
           cargo test --workspace --all-features
           
           # Test master-service specifically if Makefile exists

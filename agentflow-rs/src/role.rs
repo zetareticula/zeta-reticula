@@ -28,11 +28,11 @@
 /// A tuple containing two vectors: one for the token strings and one for the role probabilities.
 /// The role probabilities are represented as a vector of floats, where each element corresponds
 /// to the probability of the token having a certain role.
-pub fn compute_llm_roles(tokens: Vec<String>) -> (Vec<String>, Vec<Vec<f32>>) {
+pub fn compute_llm_roles(tokens: Vec<String>) -> (Vec<String>, Vec<String>) {
     let mut roles = Vec::new();
-    for token in tokens {
-        let role_probs = vec![0.0, 0.0, 0.0, 0.0];
-        roles.push(role_probs);
+    for _token in &tokens {
+        // Compute role for token
+        roles.push("role".to_string());
     }
     (tokens, roles)
 }

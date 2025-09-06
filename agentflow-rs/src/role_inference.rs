@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use salience_engine::role_inference::{RoleInferenceResult, TokenFeatures};
+
 /// Implementation of the RoleInferer trait that uses a Belief Propagation MLP to infer roles
 /// The MLP is trained using an outer loop and an inner loop, per the salience-engine directory
+#[derive(Debug)]
 pub struct RoleInfererMLP {
     pub outer_iterations: usize,
     pub inner_iterations: usize,
 }
 
-impl RoleInferer for RoleInfererMLP {
+impl salience_engine::role_inferer::RoleInferer for RoleInfererMLP {
     fn infer_roles(&self, features: Vec<TokenFeatures>, theory_key: &str) -> Vec<RoleInferenceResult> {
         // Outer loop: Run beliefPropagationMLP
 

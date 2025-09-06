@@ -16,9 +16,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use log;
-use p2pstore::{KVCache, TransferEngine, AllocatedBufferDescriptor, TransferEngineError};
+use p2pstore::{KVCache, TransferEngine, AllocatedBufferDescriptor, TransferEngineError, Segment};
 use zeta_vault_synergy::ZetaVaultSynergy;
 use parking_lot::Mutex as ParkingMutex;
 use llm_rs::LLMModel; // Assumed interface from llm-rs
@@ -42,7 +42,7 @@ pub enum AttentionStoreError {
     LLM(String),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct SessionContext {
     session_id: String,
     kv_cache: Vec<KVCache>,
@@ -51,9 +51,13 @@ pub struct SessionContext {
     segment: Option<String>, // Associated segment from master-service
 }
 
-pub struct AttentionStore {
+impl SessionContext {
+    pub fn session_id(&self) -> &str { &self.session_id }
+}
+
+pub struct AttentionStore<T: TransferEngine> {
     kv_caching_system: Arc<ZetaVaultSynergy>,
-    transfer_engine: Arc<TransferEngine>,
+    transfer_engine: Arc<T>,
     client: Arc<Client>,    // For session and transfer management
     master_service: Arc<MasterService>, // For segment allocation
     sessions: RwLock<std::collections::HashMap<String, SessionContext>>,
@@ -66,10 +70,10 @@ pub struct AttentionStore {
     model: Arc<LLMModel>,       // Transformer model from llm-rs
 }
 
-impl AttentionStore {
+impl<T: TransferEngine + Send + Sync + 'static> AttentionStore<T> {
     pub fn new(
         vault: Arc<ZetaVaultSynergy>,
-        transfer_engine: Arc<TransferEngine>,
+        transfer_engine: Arc<T>,
         client: Arc<Client>,
         master_service: Arc<MasterService>,
     ) -> Result<Arc<Self>, AttentionStoreError> {
@@ -166,12 +170,10 @@ impl AttentionStore {
     }
 
     async fn async_save(&self, kv_cache: Vec<KVCache>) -> Result<(), AttentionStoreError> {
-        let save_task = self.transfer_engine.async_save(kv_cache);
-        tokio::spawn(async move {
-            if let Err(e) = save_task.await {
-                log::error!("Async save failed: {}", e);
-            }
-        });
+        if let Err(e) = self.transfer_engine.async_save(kv_cache).await {
+            log::error!("Async save failed: {}", e);
+            return Err(AttentionStoreError::Storage(e.to_string()));
+        }
         Ok(())
     }
 

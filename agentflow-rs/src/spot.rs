@@ -50,9 +50,9 @@ pub fn modf(number: f32) -> (i32, f32) {
     let mantissa = if exponent == 0 {
         (bits & 0x7fffff) as i32
     } else {
-        (bits & 0x7fffff) | 0x800000
+        ((bits & 0x7fffff) | 0x800000) as i32
     };
     let integer_part = (number / 2f32.powi(exponent - 23)).trunc() as i32;
-    let decimal_part = f32::from_bits(mantissa << 23) - integer_part as f32 * 2f32.powi(exponent - 23);
+    let decimal_part = f32::from_bits((mantissa << 23) as u32) - integer_part as f32 * 2f32.powi(exponent - 23);
     (integer_part, decimal_part)
 }

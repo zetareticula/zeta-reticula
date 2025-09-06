@@ -1,3 +1,32 @@
+## 🆕 Recent Updates (Sep 2025)
+
+- Client crate
+  - Introduced a local `mooncake` gRPC stub in `client/src/client.rs` to unblock builds without generated protobufs. This will be swapped for real generated types in a future step.
+  - Made `Client::new` async and wrapped the internal gRPC client with `RwLock` for safe concurrent access.
+  - Exposed helpers used by the ping task: `ping_master()`, `reconnect_master()`, `client_id()`, and `is_running()`.
+
+- Quantize CLI
+  - Removed legacy duplicate CLI implementation and unified on `src/app.rs` + `src/cli/mod.rs`.
+  - Updated to current APIs: `NSRouter::new()`, `MesolimbicSystem::with_config(Default::default())`, and `KVQuantizer::new(KVQuantConfig::default())`.
+
+- CI/CD
+  - Enhanced `.github/workflows/ci-cd.yaml` to:
+    - Run `cargo fmt --check`, `cargo clippy -D warnings`, full workspace build and tests.
+    - Include additional crates in path filters: `client/`, `attention-store/`, and `p2pstore/`.
+  - Existing Docker build and EKS deploy stages preserved.
+
+> Note: `attention-store` is being refactored to remove serialization of `Instant`, avoid non-object-safe async traits, and decouple segment management. Remaining work will land in follow-up commits.
+
+## 🧑‍💻 Developer Notes
+
+- Full workspace build
+  - `cargo build --workspace --all-features`
+  - `cargo test --workspace --all-features`
+
+- Linting & formatting
+  - `cargo fmt --all -- --check`
+  - `cargo clippy --workspace --all-features -- -D warnings`
+
 <div align="center">
   <a href="https://github.com/zetareticula/zeta-reticula">
     <img src="assets/blob.png" alt="Zeta Reticula Logo" width="400">

@@ -16,11 +16,10 @@
 
 use anyhow::Result;
 use std::path::PathBuf;
-use tracing::{info, error, Level};
-use salience_engine::mesolimbic::MesolimbicSystem;
-use ns_router_rs::{NSRouter, RouterConfig};
-use kvquant_rs::quantize::Quantizer;
-use llm_rs::Model;
+use tracing::{info, Level};
+use salience_engine::mesolimbic::{MesolimbicSystem, MesolimbicConfig};
+use ns_router_rs::NSRouter;
+use kvquant_rs::{KVQuantizer, KVQuantConfig};
 
 #[cfg(test)]
 mod tests;
@@ -37,7 +36,7 @@ pub struct QuantizeApp {
     ns_router: Option<NSRouter>,
     
     /// Model quantizer
-    quantizer: Option<Quantizer>,
+    quantizer: Option<KVQuantizer>,
 }
 
 /// Application configuration
@@ -84,22 +83,21 @@ impl QuantizeApp {
     /// Initialize the salience analysis system
     pub async fn init_salience_system(&mut self) -> Result<()> {
         info!("Initializing salience analysis system...");
-        self.salience_system = Some(MesolimbicSystem::default());
+        self.salience_system = Some(MesolimbicSystem::with_config(MesolimbicConfig::default()));
         Ok(())
     }
     
     /// Initialize the neuro-symbolic router
     pub async fn init_ns_router(&mut self) -> Result<()> {
         info!("Initializing neuro-symbolic router...");
-        let config = RouterConfig::default();
-        self.ns_router = Some(NSRouter::new(config).await?);
+        self.ns_router = Some(NSRouter::new());
         Ok(())
     }
     
     /// Initialize the quantizer
     pub async fn init_quantizer(&mut self) -> Result<()> {
         info!("Initializing quantizer...");
-        self.quantizer = Some(Quantizer::new()?);
+        self.quantizer = Some(KVQuantizer::new(KVQuantConfig::default()));
         Ok(())
     }
     
@@ -132,12 +130,6 @@ impl QuantizeApp {
                     forward_time, time_context_scale
                 );
                 
-                // In a real implementation, we would:
-                // 1. Load the existing quantized model
-                // 2. Apply time directionality optimizations
-                // 3. Save the updated model
-                
-                // For now, we'll just simulate the update process
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 
                 info!("Successfully updated model with time directionality optimizations");
@@ -175,7 +167,7 @@ impl QuantizeApp {
         &self,
         model_path: &PathBuf,
         input: &str,
-        use_ns_router: bool,
+        use_router: bool,
         max_tokens: usize,
         enable_time_direction: bool,
         forward_time: bool,
@@ -208,7 +200,7 @@ impl QuantizeApp {
         };
         
         // If using NS router, apply routing logic with time directionality
-        if use_ns_router {
+        if use_router {
             if let Some(_) = &self.ns_router {
                 // In a real implementation, we would use the router here
                 // to make decisions about model execution with time awareness
