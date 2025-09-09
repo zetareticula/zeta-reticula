@@ -11,7 +11,7 @@
 pub mod pb;
 pub mod service;
 pub mod error;
-ppub mod config;
+pub mod config;
 
 /// Re-exports for common types
 pub use error::Error;

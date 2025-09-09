@@ -1,5 +1,5 @@
 # Stage 1: Base builder with all build dependencies
-FROM --platform=linux/amd64 rust:1.78-slim-bullseye as builder
+FROM --platform=linux/amd64 rustlang/rust:nightly-slim as builder
 
 # Install build dependencies with cleanup in one layer
 RUN apt-get update && \
@@ -8,32 +8,17 @@ RUN apt-get update && \
     libssl-dev \
     lld \
     clang \
+    protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a dummy project to cache dependencies
+# Set up workspace
 WORKDIR /usr/src/zeta
-RUN cargo init --bin .
 
-# Copy only the files needed for dependency resolution
-COPY Cargo.toml Cargo.lock ./
-
-# Install cargo-chef for better dependency caching
-RUN cargo install cargo-chef --locked
-
-# Prepare the recipe file
-RUN cargo chef prepare --recipe-path recipe.json
-
-# Build dependencies (cached unless Cargo.toml or Cargo.lock changes)
-RUN cargo chef cook --release --recipe-path recipe.json
-
-# Copy the rest of the source code
+# Copy all source code
 COPY . .
 
-# Touch build.rs to ensure it's newer than the target directory
-RUN touch build.rs
-
 # Build the application with optimizations
-RUN cargo build --release --bins \
+RUN cargo build --release --bin zeta-infer \
     && strip /usr/src/zeta/target/release/zeta-infer
 
 # Runtime image (ultra-slim)
