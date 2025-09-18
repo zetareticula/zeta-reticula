@@ -1,0 +1,15 @@
+[package]
+name = "quantization"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+clap = { version = "4.0", features = ["derive"], optional = true }
+
+[features]
+clap = ["dep:clap"]

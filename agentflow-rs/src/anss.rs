@@ -18,9 +18,13 @@ use rayon::prelude::*;
 use crate::server::AgentFlowServer;
 
 
+// Federated ANSS are used for collaborative filtering
 #[derive(Serialize, Deserialize)]
 pub struct FederatedANSS;
 
+// Search for similar items using ANSS
+// This implementation uses federated ANSS
+// Each client has its own ANSS instance
 impl FederatedANSS {
     pub async fn search(&self, server: &AgentFlowServer, query: &Array1<f32>, top_m: usize) -> Vec<u32> {
         let results: Vec<_> = server.clients.par_iter()

@@ -1,0 +1,12 @@
+[package]
+name = "zeta-shared"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kv-cache = { path = "../kv-cache" }
+quantization = { path = "../quantization" }
+salience = { path = "../salience" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

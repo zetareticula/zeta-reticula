@@ -18,16 +18,25 @@
 
 Zeta Reticula is a high-performance, open-source framework for optimizing large language model (LLM) inference through advanced quantization techniques. Built in Rust for maximum performance and safety, it provides fine-grained control over numerical precision to balance model accuracy, memory usage, and computational efficiency.
 
-### System Architecture
+## 🏗️ Refactored Architecture (2025)
 
-Zeta Reticula follows a modular, microservices-based architecture with the following core components:
+**Major Refactoring Completed**: The codebase has been completely restructured to eliminate bloat and improve maintainability. The new architecture consolidates 19+ scattered crates into a clean, modular design:
 
-1. **AgentFlow-RS**: Core orchestration and workflow management
-2. **Attention-Store**: Manages attention mechanisms and KV cache
-3. **KVQuant-RS**: Handles model quantization and optimization
-4. **LLM-RS**: Core language model inference engine
-5. **API Layer**: Next.js-based REST API for model serving
-6. **Sidecar Services**: gRPC services for low-level operations
+### Core Modules
+- **`core/kv-cache`**: Unified KV cache with multiple eviction policies (LRU, LFU, salience-based)
+- **`core/quantization`**: Consolidated quantization engine with multiple algorithms and precision levels
+- **`core/salience`**: Unified salience and mesolimbic system for intelligent token processing
+- **`core/shared`**: Common types, configurations, and utilities
+
+### Runtime & Interfaces
+- **`runtime/inference`**: Unified inference engine consolidating multiple inference implementations
+- **`interfaces/cli`**: Single unified CLI (`zeta`) replacing scattered command-line tools
+
+### Legacy Components (Preserved)
+- **AgentFlow-RS**: Core orchestration and workflow management
+- **Attention-Store**: Manages attention mechanisms and KV cache
+- **LLM-RS**: Core language model inference engine
+- **NS-Router-RS**: Neural network routing and salience analysis
 
 ## ✨ Features
 
@@ -86,16 +95,16 @@ Zeta Reticula follows a modular, microservices-based architecture with the follo
 
 ### Build Status ✅
 
-**Latest Update (January 2025)**: All compilation errors have been resolved across the entire workspace!
+**Latest Update (September 2025)**: Major refactoring completed with all modules compiling successfully!
 
-- ✅ **master-service**: Fixed protobuf build and ownership issues
-- ✅ **salience-engine**: Resolved type visibility and method signatures
-- ✅ **ns-router-rs**: Major fixes to routing logic, symbolic reasoning, and type compatibility
-- ✅ **shared**: Added FP16 precision support
-- ✅ **quantize-cli**: Modular structure with successful compilation
-- ✅ **llm-rs**: Core inference engine building successfully
+- ✅ **Core Modules**: All unified core modules (`kv-cache`, `quantization`, `salience`, `shared`) compile successfully
+- ✅ **Runtime Engine**: Unified inference runtime consolidating multiple implementations
+- ✅ **CLI Interface**: Single `zeta` command with comprehensive subcommands for all operations
+- ✅ **Legacy Components**: All existing components maintained and functional
+- ✅ **Integration**: Full workspace integration with resolved dependency conflicts
 
 **Workspace Build**: `cargo build --workspace` ✅ **SUCCESS**
+**CLI Build**: `cargo build --bin zeta` ✅ **SUCCESS**
 
 ### Quick Start
 
@@ -318,26 +327,41 @@ kubectl edit deployment/api -n zeta-reticula
 
 ## 🔄 Basic Usage
 
-### Model Quantization
+### Unified CLI Usage
 
-Quantize models to various precision levels:
+The new unified `zeta` CLI provides comprehensive functionality:
 
 ```bash
-cargo run --release --bin quantize-cli -- quantize \
+# Build the CLI
+cargo build --bin zeta --release
+
+# View available commands
+./target/release/zeta --help
+
+# Quantize models
+./target/release/zeta quantize model \
     --input model.bin \
     --output model_quantized.bin \
     --precision int4  # Options: int1, int2, int4, int8, fp16, fp32
-```
 
-### Running Inference
-
-Perform inference with optimized models:
-
-```bash
-cargo run --release --bin quantize-cli -- infer \
+# Run inference
+./target/release/zeta infer run \
     --model model_quantized.bin \
     --input "Your prompt here" \
-    --precision int4  # Match the precision used during quantization
+    --precision int4
+
+# Manage KV cache
+./target/release/zeta cache status
+./target/release/zeta cache clear
+
+# Analyze salience patterns
+./target/release/zeta salience analyze \
+    --input "Your text here" \
+    --preserve-phonemes
+
+# System management
+./target/release/zeta system status
+./target/release/zeta system config
 ```
 
 ### Integration with LLMs

@@ -12,32 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
-use crate::component::Component;
-use crate::agent::Agent;
-use crate::message::Message;
+use cli::run_cli;
 
-#[derive(Clone)]
-pub struct Block {
-    id: u32,
-    components: HashMap<u32, Component>,
-}
-
-
-
-pub struct Component {
-    id: u32,
-}
-
-impl Block {
-    pub fn new(id: u32) -> Block {
-        Block { id, components: HashMap::new() }
+#[tokio::main]
+async fn main() {
+    if let Err(e) = run_cli().await {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
     }
 }
-
-impl Component {
-    pub fn new(id: u32) -> Component {
-        Component { id }
-    }
-}
-

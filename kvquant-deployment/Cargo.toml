@@ -1,0 +1,28 @@
+[package]
+name = "kvquant-deployment"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4"] }
+thiserror = "1.0"
+anyhow = "1.0"
+dashmap = "5.0"
+
+# Local dependencies from zeta-reticula ecosystem
+kvquant_rs = { path = "../kvquant_rs" }
+attention-store = { path = "../attention-store" }
+agentflow-rs = { path = "../agentflow-rs" }
+llm-rs = { path = "../llm-rs" }
+quantize-cli = { path = "../quantize-cli" }
+
+[features]
+default = ["serverless"]
+serverless = []
+gpu = []

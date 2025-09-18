@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  zeta-quantize:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zetareticula/zeta-quantize:latest
+    container_name: zeta-quantize-dev
+    environment:
+      - RUST_LOG=debug
+      - MODEL_PATH=/app/models
+      - OUTPUT_PATH=/app/output
+      - QUANT_BITS=8
+      - ENABLE_GPU=false
+    volumes:
+      - ./models:/app/models
+      - ./output:/app/output
+      - ./config:/app/config
+    ports:
+      - "8080:8080"
+    memory: 8g
+    restart: unless-stopped
+    command: ["quantize", "--help"]
+
+  ns-router:
+    image: zetareticula/ns-router:latest
+    container_name: ns-router-dev
+    environment:
+      - RUST_LOG=info
+      - ROUTER_PORT=8081
+    ports:
+      - "8081:8081"
+    memory: 2g
+    restart: unless-stopped
+    depends_on:
+      - kvquant-cache
+
+  salience-engine:
+    image: zetareticula/salience-engine:latest
+    container_name: salience-engine-dev
+    environment:
+      - RUST_LOG=info
+      - SALIENCE_PORT=8082
+    ports:
+      - "8082:8082"
+    memory: 4g
+    restart: unless-stopped
+
+  kvquant-cache:
+    image: zetareticula/kvquant:latest
+    container_name: kvquant-cache-dev
+    environment:
+      - RUST_LOG=info
+      - CACHE_SIZE=1000
+      - BLOCK_SIZE=1024
+    ports:
+      - "8083:8083"
+    memory: 4g
+    restart: unless-stopped
+    volumes:
+      - kvquant_data:/app/data
+
+  agentflow:
+    image: zetareticula/agentflow:latest
+    container_name: agentflow-dev
+    environment:
+      - RUST_LOG=info
+      - AGENTFLOW_PORT=8084
+      - NUM_CLIENTS=10
+    ports:
+      - "8084:8084"
+    memory: 2g
+    restart: unless-stopped
+    depends_on:
+      - ns-router
+      - salience-engine
+
+volumes:
+  kvquant_data:
+    driver: local
+
+networks:
+  default:
+    name: zeta-reticula-dev

@@ -1,8 +1,20 @@
 [workspace]
 members = [
+    # Core functionality (consolidated)
+    "core/kv-cache",
+    "core/quantization", 
+    "core/salience",
+    "core/shared",
+    
+    # Runtime engines (merged)
+    "runtime/inference",
+    
+    # Interfaces (consolidated)
+    "interfaces/cli",
+    
+    # Legacy (to be removed)
     "agentflow-rs",
-    "api",
-    "attention-store",
+    "attention-store", 
     "client",
     "kvquant_rs",
     "llm-rs",
@@ -10,13 +22,7 @@ members = [
     "ns-router-rs",
     "p2pstore",
     "protos",
-    "quantize-cli",
-    "salience-engine",
-    "shared",
-    "zeta-infer",
-    "zeta-integration",
-    "zeta-sidecar",
-    "zeta-vault-synergy"
+    # Note: legacy "shared" crate excluded to avoid naming conflict
 ]
 resolver = "2"
 
