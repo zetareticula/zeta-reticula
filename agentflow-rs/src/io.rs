@@ -19,6 +19,8 @@ use crate::server::AgentFlowServer;
 use rayon::prelude::*;
 use futures::future::join_all;
 use dashmap::DashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 
 // This module defines the DistributedIO struct which provides parallel read functionality
@@ -43,7 +45,18 @@ impl DistributedIO {
             })
             .collect();
 
-        let results = futures::join_all(futures).await;
+        let results = join_all(futures).await;
         results.into_iter().flatten().collect()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct IOConfig {
+    pub chunk_size: usize,
+}
+
+impl IOConfig {
+    pub fn new(chunk_size: usize) -> Self {
+        IOConfig { chunk_size }
     }
 }

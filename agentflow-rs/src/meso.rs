@@ -16,22 +16,37 @@
 // MesolimbicSystem implements a two-loop stochastic foraging search
 // within the context of the salience-engine and its working in collaboration
 // with the llm-rs, zeta-vault-synergy, and the zeta-reticula crate in general.
-pub struct MesolimbicSystem {
-    // Outer loop parameters
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use serde::{Serialize, Deserialize};
+use llm_rs;
+use salience_engine::mesolimbic::MesolimbicSystem as SalienceMesolimbicSystem;
+use salience_engine::role_inference::SalienceResult;
+use salience_engine::tableaux::YoungTableau;
+use zeta_vault_synergy;
+
+#[derive(Serialize, Deserialize)]
+
+
+
+pub struct AgentFlowMesolimbicSystem {
+    // Outer loop parameters are of usize
     pub outer_loop_iterations: usize,
+    
     pub outer_loop_threshold: f64,
     // Inner loop parameters
     pub inner_loop_iterations: usize,
     pub inner_loop_threshold: f64,
     // Salience engine parameters
-    pub salience_engine: Arc<salience_engine::MesolimbicSystem>,
+    pub salience_engine: Arc<SalienceMesolimbicSystem>,
     // LLM parameters
-    pub llm: Arc<llm_rs::YoungTableau>,
+    pub llm: Arc<YoungTableau>,
     // ZetaVaultSynergy parameters
     pub zeta_vault_synergy: Arc<zeta_vault_synergy::ZetaVaultSynergy>,
 }
 
-impl MesolimbicSystem {
+impl AgentFlowMesolimbicSystem {
     // Create a new MesolimbicSystem with default parameters
     pub fn new() -> Self {
         Self {
@@ -39,8 +54,8 @@ impl MesolimbicSystem {
             outer_loop_threshold: 0.5,
             inner_loop_iterations: 10,
             inner_loop_threshold: 0.5,
-            salience_engine: Arc::new(salience_engine::MesolimbicSystem::new()),
-            llm: Arc::new(llm_rs::YoungTableau::new()),
+            salience_engine: Arc::new(SalienceMesolimbicSystem::new()),
+            llm: Arc::new(YoungTableau::new()),
             zeta_vault_synergy: Arc::new(zeta_vault_synergy::ZetaVaultSynergy::new()),
         }
     }
@@ -69,4 +84,4 @@ impl MesolimbicSystem {
             foraging_probabilities,
         }
     }
-
+}

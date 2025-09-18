@@ -27,6 +27,7 @@ use std::marker::PhantomData;
 use crate::kvquant_config::{KVQuantConfig, PrecisionLevel, QuantizationResult, QuantizationData, QuantizationDataTrait};
 use crate::role_inferer::RoleInferer;
 use crate::mesolimbic_system::MesolimbicSystem;
+use crate::block::{KVQuantizer, KVCache};
 // Re-export the client for use in other modules
 pub use crate::pb::sidecar_service_client::SidecarServiceClient;
 
@@ -66,14 +67,146 @@ impl<T: QuantizationDataTrait> KVQuantModel<T> {
     }
 
     pub fn load_from_flash(&mut self, file_path: &str) -> io::Result<()> {
+        // Backward-compatible wrapper that constructs ephemeral quantizer and cache
+        let default_cfg = KVQuantConfig::default();
+        let kvq = KVQuantizer::new(default_cfg.clone());
+        let cache = KVCache::new(default_cfg);
+        self.load_from_flash_with(file_path, &kvq, &cache)
+    }
+
+    /// Load serialized model data from a flash file in streaming fashion and materialize it
+    /// via the KVQuantizer and KVCache. This method supports two wire formats:
+    /// 1) bincode of Vec<SerializableEntry>
+    /// 2) NDJSON fallback: one JSON object per line matching SerializableEntry
+    pub fn load_from_flash_with(&mut self, file_path: &str, kvq: &KVQuantizer, cache: &KVCache) -> io::Result<()> {
         let file = File::open(file_path)?;
         let mut reader = BufReader::new(file);
         let mut buffer = vec![0; self.chunk_size];
-        while let Ok(n) = reader.read(&mut buffer) {
-            if n == 0 { break; }
-            // Process the chunk (e.g., deserialize or load into the model)
+        let mut remainder: Vec<u8> = Vec::new();
+
+        loop {
+            let n = reader.read(&mut buffer)?;
+            if n == 0 {
+                // flush remainder if any
+                if !remainder.is_empty() {
+                    match Self::process_chunk(&remainder, kvq, cache, self) {
+                        Ok(()) => {
+                            remainder.clear();
+                        }
+                        Err(ProcessError::NeedMoreData(_unconsumed)) => {
+                            // End of file: ignore leftover partial entry
+                        }
+                        Err(ProcessError::Io(e)) => return Err(e),
+                    }
+                }
+                break;
+            }
+
+            // Concatenate remainder + new bytes
+            let mut chunk = Vec::with_capacity(remainder.len() + n);
+            chunk.extend_from_slice(&remainder);
+            chunk.extend_from_slice(&buffer[..n]);
+
+            // Try to process; if partial bincode buffer remains, keep it in remainder
+            match Self::process_chunk(&chunk, kvq, cache, self) {
+                Ok(()) => {
+                    remainder.clear();
+                }
+                Err(ProcessError::NeedMoreData(unconsumed)) => {
+                    remainder = unconsumed;
+                }
+                Err(ProcessError::Io(e)) => return Err(e),
+            }
         }
         Ok(())
+    }
+}
+
+/// Minimal serializable entry for streaming ingestion through the quantizer and cache.
+/// This captures the essentials needed by `KVQuantizer::quantize` and `KVCache::update`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SerializableEntry {
+    token_id: u32,
+    value: f32,
+    pointer: usize,
+    bias: f32,
+    vector_id: u32,
+    /// Optional navigation adjacency list entry (key + neighbors)
+    #[serde(default)]
+    nav_key: Option<usize>,
+    #[serde(default)]
+    nav_neighbors: Option<Vec<usize>>,
+    /// Optional precomputed salience; if absent, derive a simple heuristic.
+    #[serde(default)]
+    salience: Option<f32>,
+}
+
+enum ProcessError {
+    NeedMoreData(Vec<u8>),
+    Io(io::Error),
+}
+
+impl From<io::Error> for ProcessError {
+    fn from(e: io::Error) -> Self { ProcessError::Io(e) }
+}
+
+impl<T: QuantizationDataTrait> KVQuantModel<T> {
+    /// Attempt to parse and process a chunk.
+    /// Strategy:
+    /// - First attempt: bincode a Vec<SerializableEntry>. If deserialize fails due to EOF,
+    ///   return NeedMoreData with original bytes.
+    /// - Second attempt: NDJSON lines (each line a SerializableEntry JSON). Any partially read
+    ///   last line is kept as remainder.
+    fn process_chunk(chunk: &[u8], kvq: &KVQuantizer, cache: &KVCache, model: &mut Self) -> Result<(), ProcessError> {
+        // Try bincode path
+        if let Ok(entries) = bincode::deserialize::<Vec<SerializableEntry>>(chunk) {
+            for e in entries { Self::ingest_entry(e, kvq, cache, model); }
+            return Ok(());
+        }
+
+        // NDJSON fallback: split by lines; keep last incomplete line as remainder
+        let mut last_newline = None;
+        for (i, b) in chunk.iter().enumerate() {
+            if *b == b'\n' { last_newline = Some(i); }
+        }
+        if let Some(end) = last_newline {
+            let (complete, remainder) = chunk.split_at(end + 1);
+            for line in complete.split(|c| *c == b'\n') {
+                if line.is_empty() { continue; }
+                if let Ok(entry) = serde_json::from_slice::<SerializableEntry>(line) {
+                    Self::ingest_entry(entry, kvq, cache, model);
+                }
+            }
+            return Err(ProcessError::NeedMoreData(remainder.to_vec()));
+        }
+
+        // No newline found and bincode failed: likely need more data
+        Err(ProcessError::NeedMoreData(chunk.to_vec()))
+    }
+
+    fn ingest_entry(entry: SerializableEntry, kvq: &KVQuantizer, cache: &KVCache, model: &mut Self) {
+        // Derive salience if not provided
+        let salience = entry.salience.unwrap_or_else(|| entry.value.abs());
+        let graph_entry = (entry.nav_key.unwrap_or(0usize), entry.nav_neighbors.unwrap_or_default());
+
+        // Quantize writes into a block; result provides metadata (ignored here but could be used)
+        let _qres: Option<QuantizationResult<QuantizationData>> = kvq.quantize(
+            entry.token_id,
+            entry.value,
+            entry.pointer,
+            entry.bias,
+            entry.vector_id,
+            graph_entry,
+        );
+
+        // Update KV cache with salience-aware write
+        cache.update(entry.token_id, entry.value, salience, entry.pointer, entry.bias);
+
+        // Update model book-keeping (pointers/biases/matrix layout)
+        // Keep this lightweight: bump counters and last_k_active ring.
+        model.num_used = model.num_used.saturating_add(1);
+        if model.last_k_active.len() >= 1024 { model.last_k_active.remove(0); }
+        model.last_k_active.push(entry.token_id as usize);
     }
 }
 

@@ -17,7 +17,7 @@ use tokio::sync::mpsc;
 use std::sync::Arc;
 use dashmap::DashMap;
 use llm_rs::fusion_anns::FusionANNS;
-use kvquant::LogStructuredKVCache;
+use kvquant_rs::LogStructuredKVCache;
 
 #[derive(Serialize, Deserialize)]
 pub struct Client {

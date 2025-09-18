@@ -19,7 +19,10 @@ services:
       - ./config:/app/config
     ports:
       - "8080:8080"
-    memory: 8g
+    deploy:
+      resources:
+        limits:
+          memory: 8g
     restart: unless-stopped
     command: ["quantize", "--help"]
 
@@ -31,7 +34,10 @@ services:
       - ROUTER_PORT=8081
     ports:
       - "8081:8081"
-    memory: 2g
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     restart: unless-stopped
     depends_on:
       - kvquant-cache
@@ -44,7 +50,10 @@ services:
       - SALIENCE_PORT=8082
     ports:
       - "8082:8082"
-    memory: 4g
+    deploy:
+      resources:
+        limits:
+          memory: 4g
     restart: unless-stopped
 
   kvquant-cache:
@@ -56,7 +65,10 @@ services:
       - BLOCK_SIZE=1024
     ports:
       - "8083:8083"
-    memory: 4g
+    deploy:
+      resources:
+        limits:
+          memory: 4g
     restart: unless-stopped
     volumes:
       - kvquant_data:/app/data
@@ -70,7 +82,10 @@ services:
       - NUM_CLIENTS=10
     ports:
       - "8084:8084"
-    memory: 2g
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     restart: unless-stopped
     depends_on:
       - ns-router

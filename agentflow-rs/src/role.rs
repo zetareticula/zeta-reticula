@@ -30,7 +30,7 @@
 /// to the probability of the token having a certain role.
 pub fn compute_llm_roles(tokens: Vec<String>) -> (Vec<String>, Vec<Vec<f32>>) {
     let mut roles = Vec::new();
-    for token in tokens {
+    for _token in &tokens {
         let role_probs = vec![0.0, 0.0, 0.0, 0.0];
         roles.push(role_probs);
     }

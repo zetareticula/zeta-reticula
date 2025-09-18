@@ -14,8 +14,10 @@
 
 use serde::{Serialize, Deserialize};
 use ndarray::Array1;
-use rayon::prelude::*;
+use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 use crate::server::AgentFlowServer;
+
 
 
 // Federated ANSS are used for collaborative filtering
@@ -42,7 +44,7 @@ impl FederatedANSS {
         let ranked: Vec<_> = server.clients.par_iter()
             .map(|entry| {
                 let client = entry.value();
-                rt.block_on(client.fusion_anns.heuristic_rerank(query, candidates.clone())).unwrap()
+                Handle::current().block_on(client.fusion_anns.heuristic_rerank(query, candidates.clone())).unwrap()
             })
             .collect();
 

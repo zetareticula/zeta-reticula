@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod inference;
 pub mod kv_cache;
-mod fusion_anns;
 mod metrics;
 mod utils;
 

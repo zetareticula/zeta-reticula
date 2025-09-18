@@ -8,6 +8,7 @@ salience-engine = { path = "../salience-engine", features = ["wasm"], package = 
 ns-router-rs = { path = "../ns-router-rs", optional = true }
 kvquant_rs = { path = "../kvquant_rs" }
 llm_rs = { path = "../llm-rs", optional = true, features = ["wasm"] }
+zeta-vault-synergy = { path = "../zeta-vault-synergy", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 rayon = { version = "1.8" }
@@ -44,7 +45,7 @@ crossbeam = { version = "0.8", optional = true }
 
 [features]
 default = []
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin", "tonic", "prost", "llm_rs", "zeta-vault-synergy"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm_rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3"]
 lua = ["mlua"]

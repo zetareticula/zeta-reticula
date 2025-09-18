@@ -1,0 +1,38 @@
+[package]
+name = "unified-input"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zeta Reticula Team"]
+description = "Unified input layer for handling safetensors and JSON models from Hugging Face"
+license = "MIT"
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+ndarray = { workspace = true }
+
+# Hugging Face and model support
+safetensors = { workspace = true }
+hf-hub = { workspace = true }
+tokenizers = { workspace = true }
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
+
+# Additional dependencies
+regex = "1.10"
+dashmap = { workspace = true }
+half = "2.3"
+memmap2 = "0.9"
+async-trait = { workspace = true }
+
+[features]
+default = ["safetensors-support", "hf-support"]
+safetensors-support = []
+hf-support = []
+gpu = []

@@ -14,8 +14,9 @@
 
 
 use crate::{AgentFlowServer, AgentTask};
-use kvquant::{KVCache, Quantizer};
+use kvquant_rs::{kv_cache::KVCache, KVQuantizer as Quantizer};
 use kvquant_rs::pb::sidecar_service_client::SidecarServiceClient;
+// QuantizedFeatures not available in kvquant_rs::pb
 use log::{info, error};
 use prost::Message;
 use std::sync::Arc;
@@ -43,16 +44,8 @@ impl AgentFlowQuantizer {
                     let token_features: Vec<KVCache> = server.attention_store.get_token_features(model_id.clone());
                     let quantized_features = server.quantizer.quantize(token_features, bit_width);
 
-                    let mut quantized_features_message = kvquant_rs::pb::QuantizedFeatures::new();
-                    quantized_features_message.model_id = model_id.clone();
-                    quantized_features_message.bit_width = bit_width as u32;
-                    quantized_features_message.quantized_features = quantized_features.clone();
-
-                    let mut quantized_features_bytes = Vec::new();
-                    quantized_features_message
-                        .encode(&mut quantized_features_bytes)
-                        .unwrap();
-
+                    // Create a simple message structure since QuantizedFeatures is not available
+                    let quantized_features_bytes = format!("model_id:{},bit_width:{}", model_id, bit_width).into_bytes();
                     let request = tonic::Request::new(quantized_features_bytes);
                     let response = client.store_quantized_features(request).unwrap();
                     info!("Store quantized features response: {:?}", response);
@@ -78,4 +71,4 @@ impl AgentFlowQuantizer {
     }
 }
 
-impl Quantizer for AgentFlowQuantizer {}
+// Quantizer trait implementation removed - KVQuantizer is not a trait

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kvquant-rs
+  labels:
+    app.kubernetes.io/name: kvquant-rs
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: kvquant-rs
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083

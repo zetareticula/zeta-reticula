@@ -40,9 +40,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 
 # Linear Algebra
-ndarray = { version = "0.15", features = ["blas"] }
-blas-src = { version = "0.10", features = ["netlib"] }
-lapack-src = { version = "0.9", features = ["netlib"] }
+ndarray = "0.15"
 
 # Concurrency
 dashmap = "5.4"
@@ -53,6 +51,11 @@ anyhow = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
 log = "0.4"
+
+# Hugging Face and Model Support
+safetensors = "0.4.0"
+hf-hub = "0.3.2"
+tokenizers = "0.19.0"
 
 # Common features
 [workspace.package]
@@ -65,6 +68,7 @@ rust-version = "1.70"
 opt-level = 0
 debug = true
 split-debuginfo = 'unpacked'
+lto = false
 
 [profile.release]
 opt-level = 3

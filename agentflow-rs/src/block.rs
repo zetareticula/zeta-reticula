@@ -13,9 +13,6 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use crate::component::Component;
-use crate::agent::Agent;
-use crate::message::Message;
 
 #[derive(Clone)]
 pub struct Block {
@@ -25,6 +22,7 @@ pub struct Block {
 
 
 
+#[derive(Clone)]
 pub struct Component {
     id: u32,
 }

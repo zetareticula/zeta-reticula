@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kvquant-rs
+  labels:
+    app.kubernetes.io/name: kvquant-rs
+spec:
+  serviceName: kvquant-rs
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kvquant-rs
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kvquant-rs
+    spec:
+      containers:
+        - name: kvquant
+          image: zetareticula/kvquant:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8083
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: SERVICE_PORT
+              value: "8083"
+            # Total partitions (shards)
+            - name: PARTITIONS
+              value: "3"
+            # Expose pod name so the app can derive its partition from ordinal suffix
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MODEL_PATH
+              value: /data/models
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

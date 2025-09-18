@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  kvquant:
+    image: zetareticula/kvquant:latest
+    container_name: kvquant-rs
+    environment:
+      - RUST_LOG=info
+      - SERVICE_PORT=8083
+      # Total number of partitions (shards) for joint-sum partitioning
+      - PARTITIONS=3
+      # Partition ID for this instance (0..PARTITIONS-1). When scaling via
+      # docker compose, the PARTITION_ID should be provided per replica via env
+      # or derived from the instance index.
+      - PARTITION_ID=0
+      # Optional: bind to a specific model path if using local volumes
+      - MODEL_PATH=/data/models
+    volumes:
+      - kvquant_data:/data
+    # Expose a single instance for local debugging. When scaling with
+    # `--scale kvquant=N`, omit static port mapping to avoid conflicts.
+    ports:
+      - "8083:8083"
+    deploy:
+      # Note: docker compose (non-swarm) ignores replicas here. Use:
+      #   docker compose up --scale kvquant=N
+      replicas: 1
+      resources:
+        limits:
+          memory: 4g
+    restart: unless-stopped
+
+volumes:
+  kvquant_data:
+    driver: local

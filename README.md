@@ -38,6 +38,20 @@ Zeta Reticula is a high-performance, open-source framework for optimizing large 
 - **LLM-RS**: Core language model inference engine
 - **NS-Router-RS**: Neural network routing and salience analysis
 
+## 🔧 Recent Updates (v1.0.0)
+
+### Input Layer Deduplication & Hugging Face Integration
+- **Unified Input Processing**: Consolidated duplicate input layer implementations across multiple crates
+- **Hugging Face Support**: Added native support for safetensors and JSON model formats
+- **Enhanced Dependencies**: Integrated `safetensors`, `hf-hub`, and `tokenizers` for seamless model loading
+- **Truth Table Analysis**: Applied systematic debugging methodology to resolve all compilation issues
+
+### Compilation Fixes Applied
+- **agentflow-rs**: Fixed missing method implementations, struct field mismatches, and ownership issues
+- **llm-rs**: Removed missing module imports and fixed module structure
+- **Workspace Dependencies**: Resolved BLAS conflicts and simplified dependency management
+- **Type System**: Corrected all type casting and field access errors across modules
+
 ## ✨ Features
 
 ### 🎯 Core Capabilities
@@ -132,6 +146,141 @@ Zeta Reticula is a high-performance, open-source framework for optimizing large 
    # Run tests
    cargo test --all-features
    ```
+
+## 🖥️ CLI Usage Guide
+
+The unified `zeta` CLI provides comprehensive access to all Zeta Reticula functionality. Here's how engineers should execute queries:
+
+### System Status & Configuration
+
+```bash
+# Check system status
+./target/debug/zeta system status
+
+# View system configuration
+./target/debug/zeta --help
+
+# Use verbose logging
+./target/debug/zeta --verbose system status
+```
+
+### Salience Analysis
+
+```bash
+# Analyze token salience for text input
+./target/debug/zeta salience analyze --input "Your text here"
+
+# Analyze with Unicode and special characters
+./target/debug/zeta salience analyze --input "测试 🚀 émojis and ñoñó"
+
+# Check mesolimbic system state
+./target/debug/zeta salience state
+
+# Train salience model
+./target/debug/zeta salience train --dataset "training_data.json" --epochs 100 --learning-rate 0.01
+```
+
+### Model Quantization
+
+```bash
+# Quantize a single model
+./target/debug/zeta quantize model \
+  --input "model.safetensors" \
+  --output "quantized_model.bin" \
+  --precision int8 \
+  --preserve-salience \
+  --block-size 4096
+
+# Batch quantize multiple models
+./target/debug/zeta quantize batch \
+  --input-dir "./models/" \
+  --output-dir "./quantized/" \
+  --precision fp16 \
+  --parallel
+
+# Validate quantized model
+./target/debug/zeta quantize validate \
+  --model "quantized_model.bin" \
+  --reference "original_model.safetensors" \
+  --threshold 0.95
+
+# Available precision levels: int1, int2, int4, int8, fp16, fp32
+```
+
+### Inference Operations
+
+```bash
+# Single inference
+./target/debug/zeta infer single \
+  --model "quantized_model.bin" \
+  --input "Generate a story about AI" \
+  --max-tokens 100 \
+  --temperature 0.7 \
+  --use-cache
+
+# Batch inference from file
+./target/debug/zeta infer batch \
+  --model "quantized_model.bin" \
+  --input-file "prompts.txt" \
+  --output-file "results.txt" \
+  --batch-size 32
+
+# Benchmark inference performance
+./target/debug/zeta infer benchmark \
+  --model "quantized_model.bin" \
+  --iterations 100 \
+  --warmup 10
+```
+
+### KV Cache Management
+
+```bash
+# View cache statistics
+./target/debug/zeta cache stats
+
+# Configure cache settings
+./target/debug/zeta cache config \
+  --max-size 10000 \
+  --eviction-policy "salience-based"
+
+# Clear cache
+./target/debug/zeta cache clear
+
+# Export cache contents
+./target/debug/zeta cache export --output "cache_backup.json"
+```
+
+### Advanced Usage Examples
+
+```bash
+# Process from different directories
+cd src && ../target/debug/zeta system status
+
+# Handle large inputs (stress testing)
+./target/debug/zeta salience analyze --input "$(python3 -c "print('Large text ' * 1000)")"
+
+# Concurrent operations
+./target/debug/zeta salience analyze --input "Text 1" &
+./target/debug/zeta salience analyze --input "Text 2" &
+./target/debug/zeta system status &
+wait
+
+# Configuration file usage
+./target/debug/zeta --config custom_config.toml quantize model --input model.bin --output out.bin --precision int4
+```
+
+### Error Handling Examples
+
+```bash
+# Invalid precision (shows proper error)
+./target/debug/zeta quantize model --input model.bin --output out.bin --precision invalid
+
+# Missing model (shows proper error)
+./target/debug/zeta infer single --model "nonexistent.bin" --input "test"
+
+# Missing config file (shows proper error)
+./target/debug/zeta --config missing.toml system status
+```
 
 ## 🛠️ Core Components
 
