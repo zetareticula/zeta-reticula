@@ -18,8 +18,8 @@ WORKDIR /usr/src/zeta
 COPY . .
 
 # Build the application with optimizations
-RUN cargo build --release --bin zeta-infer \
-    && strip /usr/src/zeta/target/release/zeta-infer
+RUN cargo build --release --bin zeta \
+    && strip /usr/src/zeta/target/release/zeta
 
 # Runtime image (ultra-slim)
 FROM debian:bullseye-slim
@@ -33,7 +33,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy only the binary from the builder
-COPY --from=builder /usr/src/zeta/target/release/zeta-infer /usr/local/bin/
+COPY --from=builder /usr/src/zeta/target/release/zeta /usr/local/bin/
 
 # Set environment variables for better performance
 ENV RUST_LOG=info \
@@ -45,8 +45,8 @@ RUN useradd -m zeta
 USER zeta
 
 # Default command
-ENTRYPOINT ["zeta-infer"]
+ENTRYPOINT ["zeta"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD ["sh", "-c", "curl -f http://localhost:8080/health || exit 1"]
+    CMD ["zeta", "system", "status"]
