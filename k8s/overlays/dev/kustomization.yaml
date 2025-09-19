@@ -13,5 +13,5 @@ images:
   - name: zetareticula/zeta-reticula
     newTag: latest
 
-labels:
+commonLabels:
   environment: dev

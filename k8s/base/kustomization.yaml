@@ -11,6 +11,6 @@ resources:
   - worker-deployment.yaml
   - storage.yaml
 
-labels:
+commonLabels:
   app: zeta-reticula
   environment: base

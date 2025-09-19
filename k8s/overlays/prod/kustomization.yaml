@@ -13,5 +13,5 @@ images:
   - name: zetareticula/zeta-reticula
     newTag: v1.0.0  # Should be set to the current version
 
-labels:
+commonLabels:
   environment: production
