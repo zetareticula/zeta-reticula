@@ -26,6 +26,8 @@ use crate::role_inference::{RoleInferenceResult, TokenFeatures};
 use crate::role_inference::RoleInfererImpl;
 use crate::role_inferer::{RoleInferer, BoxedRoleInferer, boxed_role_inferer};
 use crate::quantization::{QuantizationResult, PrecisionLevel};
+use crate::mesolimbic::MesolimbicSystem;
+
 
 
 // ---- Salience Optimization Engine ----
@@ -33,6 +35,9 @@ use crate::quantization::{QuantizationResult, PrecisionLevel};
 // using a Young tableau structure and parallel processing with caching.
 // It leverages Gaussian weighting for frame-based convolution and supports dynamic role inference.
 // It is designed to handle large-scale token processing efficiently.
+
+
+
 
 // RoleInferer is now defined locally in this file
 

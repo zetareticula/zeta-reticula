@@ -19,9 +19,11 @@ use std::collections::HashMap;
 use crate::VaultConfig;
 use async_trait::async_trait;
 
+
+// BinaryWeightSet struct for binary weights
 #[derive(Debug, Clone)]
 pub struct BinaryWeightSet {
-    pub data: Vec<u8>,
+    pub data: Vec<u8>, // binary weights
 }
 
 #[derive(Error, Debug)]
@@ -30,6 +32,8 @@ pub enum WeightManagerError {
     Serialization(#[from] bincode::Error),
 }
 
+// WeightManager trait for weight management which extends the WeightManager trait
+// binary weights are stored in a HashMap with the model id as the key
 #[async_trait]
 pub trait WeightManager: Send + Sync {
     async fn store_binary_weights(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError>;
@@ -45,11 +49,12 @@ pub struct WeightManagerImpl {
 impl WeightManagerImpl {
     pub async fn new(node_id: usize, _config: VaultConfig) -> Result<Self, WeightManagerError> {
         Ok(WeightManagerImpl {
-            binary_weights: Arc::new(RwLock::new(HashMap::new())),
-            node_id,
+            binary_weights: Arc::new(RwLock::new(HashMap::new())), // binary weights HashMap
+            node_id, // node id
         })
     }
 
+        // store binary weights in the HashMap
         async fn store_binary_weights_impl(&self, model_id: &str, binary_set: BinaryWeightSet) -> Result<(), WeightManagerError> {
         let key = format!("binary_weights_{}", model_id);
         self.binary_weights.write().await.insert(key.clone(), binary_set);

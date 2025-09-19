@@ -20,6 +20,21 @@ use std::sync::Arc;
 use crate::role_inference::{RoleInfererImpl, RoleInferenceResult, TokenFeatures, SalienceResult};
 use crate::role_inferer::RoleInferer;
 
+/// Mesolimbic system
+/// 
+/// # Arguments
+/// * `role_inferer` - Role inferer to use for role inference
+/// 
+/// # Returns
+/// * `MesolimbicSystem` - Mesolimbic system
+/// 
+/// # Examples
+/// 
+/// ```
+/// let role_inferer = RoleInfererImpl::new(10, 5);
+/// let mesolimbic_system = MesolimbicSystem::with_config(MesolimbicConfig::new(10, 5));
+/// ```
+
 
 /// Mesolimbic configuration
 #[derive(Serialize, Deserialize)]
