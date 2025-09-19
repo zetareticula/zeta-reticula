@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: zetareticula/api:latest
+        image: zetareticula/zeta-reticula:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
@@ -29,6 +29,10 @@ spec:
           value: "http://master-service.zeta-reticula.svc.cluster.local"
         - name: RUST_LOG
           value: "info"
+        - name: ZETA_MODE
+          value: "api"
+        command: ["./target/release/zeta"]
+        args: ["system", "status"]
         resources:
           limits:
             cpu: "1"

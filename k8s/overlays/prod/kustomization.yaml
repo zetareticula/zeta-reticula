@@ -6,12 +6,12 @@ namespace: zeta-reticula
 resources:
   - ../../base
 
-patchesStrategicMerge:
-  - patch-deployment.yaml
+patches:
+  - path: patch-deployment.yaml
 
 images:
-  - name: zetareticula/*
+  - name: zetareticula/zeta-reticula
     newTag: v1.0.0  # Should be set to the current version
 
-commonLabels:
+labels:
   environment: production

@@ -14,6 +14,9 @@
 
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
+use privacy::PrivacyPolicy;
+
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AllocatedBufferDescriptor {

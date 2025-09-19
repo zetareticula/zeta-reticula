@@ -2,6 +2,9 @@
 name = "agentflow_rs"
 version = "0.1.0"
 edition = "2021"
+description = "Distributed AI system for Zeta Reticula"
+license = "Apache-2.0"
+
 
 [dependencies]
 salience-engine = { path = "../salience-engine", features = ["wasm"], package = "salience-engine" }
@@ -45,7 +48,7 @@ crossbeam = { version = "0.8", optional = true }
 
 [features]
 default = []
-server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin", "tonic", "prost", "llm_rs", "zeta-vault-synergy"]
+server = ["tokio", "actix-web", "actix-multipart", "sled", "crossbeam", "dashmap", "ndarray", "half", "openblas-src", "argmin", "tonic", "llm_rs", "zeta-vault-synergy"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "llm_rs/wasm", "salience-engine/wasm", "ndarray", "half"]
 python = ["pyo3"]
 lua = ["mlua"]

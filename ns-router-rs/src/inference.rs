@@ -20,7 +20,15 @@ use zeta_vault::ZetaVault;
 use zeta_vault::VaultConfig;
 use attention_store::AttentionStore;
 use quantize::Quantizer;
+use kvquant_rs::KVQuantizer;
+use kvquant_rs::KVQuantService;
 
+
+
+
+
+
+// Inference struct 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Inference {
     pub vault: Arc<ZetaVault>,

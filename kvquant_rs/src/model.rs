@@ -31,6 +31,9 @@ use crate::block::{KVQuantizer, KVCache};
 // Re-export the client for use in other modules
 pub use crate::pb::sidecar_service_client::SidecarServiceClient;
 
+// KVQuantModel is a generic model for KVQuant. 
+// It is a wrapper around a preallocated matrix and a set of pointers to the original neuron indices.
+// It also contains a bias vector for the up project and a number of used rows.
 #[derive(Serialize, Deserialize)]
 pub struct KVQuantModel<T: QuantizationDataTrait> {
     pub matrix: Array2<f32>,  // Preallocated FFN matrix (up + down project)
@@ -45,6 +48,9 @@ pub struct KVQuantModel<T: QuantizationDataTrait> {
     _phantom: PhantomData<T>,
 }
 
+// The new function creates a new KVQuantModel instance.
+// It takes the size of the model and a slice of quantization results as arguments.
+// It returns a new KVQuantModel instance.
 impl<T: QuantizationDataTrait> KVQuantModel<T> {
     pub fn new(size: usize, quantization_results: &[QuantizationResult<T>]) -> Self {
         let d_model = 768;  // Example dimension (adjust based on model)

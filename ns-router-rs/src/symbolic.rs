@@ -11,14 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-
-
 use egg::{EGraph, SymbolLang, Rewrite, RecExpr, Runner};
 use thiserror::Error;
 use std::collections::HashMap;
 use shared::QuantizationResult;
 use serde::{Serialize, Deserialize};
+
 
 /// Errors that can occur during symbolic reasoning
 #[derive(Error, Debug)]

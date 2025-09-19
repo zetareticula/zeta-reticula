@@ -14,6 +14,23 @@
 
 pub mod store;
 pub mod resource_tracker;
+pub mod kv_cache;
+pub mod kv_quantizer;
 
 pub use store::DistributedObjectStore;
 pub use resource_tracker::ResourceTracker;
+pub use kv_cache::LogStructuredKVCache;
+pub use kv_quantizer::KVQuantizer;
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_distributed_object_store() {
+        let store = DistributedObjectStore::new();
+        assert!(store.is_empty());
+    }
+}
+

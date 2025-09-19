@@ -20,6 +20,7 @@ use log::{info, error, debug};
 use serde::Serialize;
 use thiserror::Error;
 
+
 // Include the generated protobuf code and re-export the service traits and types
 pub mod pb {
     tonic::include_proto!("sidecar");

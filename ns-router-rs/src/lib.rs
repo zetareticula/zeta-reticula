@@ -23,6 +23,7 @@
 use log;
 use serde::{Serialize, Deserialize};
 
+
 // Re-export commonly used types
 pub use shared::{QuantizationResult, PrecisionLevel};
 
@@ -85,3 +86,5 @@ mod tests {
         assert!(router.route_inference("test input", "user1").is_ok());
     }
 }
+
+

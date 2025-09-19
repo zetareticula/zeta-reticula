@@ -4,9 +4,8 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A neurosymbolic router for inference requests that combines neural and symbolic approaches"
-repository = "https://github.com/yourusername/ns-router-rs"
-homepage = "https://github.com/yourusername/ns-router-rs"
-documentation = "https://docs.rs/ns-router-rs"
+repository = "https://github.com/zetareticula/zeta-reticula/ns-router-rs"
+homepage = "https://www.zetareticula.com"
 keywords = ["neurosymbolic", "router", "inference", "nlp"]
 categories = ["algorithms", "api-bindings", "artificial-intelligence"]
 

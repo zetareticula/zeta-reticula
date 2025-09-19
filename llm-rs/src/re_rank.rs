@@ -24,7 +24,9 @@ use std::cmp::Ordering;
 use crate::fusion_anns::FusionANNSConfig;
 
 
+
 //FusionANNS struct for ANN 
+
 pub struct FusionANNS {
     raw_vectors_path: PathBuf,
     pq_vectors: Array2<f32>,

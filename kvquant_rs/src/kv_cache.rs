@@ -1,3 +1,5 @@
+///! 
+
 // Lightweight module shim to expose KV cache types under `kv_cache`.
 // The concrete implementations live in `block.rs`.
 

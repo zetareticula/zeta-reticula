@@ -21,6 +21,7 @@ pub mod role_inferer;
 pub mod tableaux;
 pub mod quantization;
 
+
 use bumpalo::Bump;
 use ndarray::{Array, Array2, Axis};
 use rayon::prelude::*;

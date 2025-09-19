@@ -24,6 +24,8 @@ use zeta_vault_synergy::ZetaVaultSynergy;
 use etcd_client::Client as EtcdClient;
 use tonic::{transport::Channel, Request};
 use crate::ping_task;
+use crate::privacy;
+
 
 include!(concat!(env!("OUT_DIR"), "/mooncake.rs")); // Generated protobuf definitions
 

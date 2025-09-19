@@ -8,6 +8,10 @@ data:
   RUST_LOG: "info"
   ENVIRONMENT: "production"
   
+  # Unified Zeta CLI configuration
+  ZETA_CONFIG_PATH: "/app/config/zeta.toml"
+  ZETA_LOG_LEVEL: "info"
+  
   # Master service configuration
   MASTER_PORT: "8080"
   MASTER_HOST: "0.0.0.0"
@@ -19,7 +23,16 @@ data:
   # Model configuration
   MODEL_CACHE_DIR: "/app/models"
   DEFAULT_QUANTIZATION_BITS: "8"
+  PRECISION_LEVELS: "int1,int2,int4,int8,fp16,fp32"
   
   # API configuration
   API_PORT: "3000"
   CORS_ORIGIN: "*"
+  
+  # Salience configuration
+  SALIENCE_THRESHOLD: "0.8"
+  MESOLIMBIC_LEARNING_RATE: "0.01"
+  
+  # KV Cache configuration
+  KV_CACHE_SIZE: "10000"
+  KV_CACHE_EVICTION_POLICY: "salience-based"

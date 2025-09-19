@@ -20,13 +20,17 @@ spec:
     spec:
       containers:
       - name: worker
-        image: zetareticula/worker:latest
+        image: zetareticula/zeta-reticula:latest
         imagePullPolicy: Always
         env:
         - name: MASTER_SERVICE_URL
           value: "http://master-service.zeta-reticula.svc.cluster.local"
         - name: RUST_LOG
           value: "info"
+        - name: ZETA_MODE
+          value: "worker"
+        command: ["./target/release/zeta"]
+        args: ["infer", "benchmark", "--model", "/app/models/default.bin", "--iterations", "1000"]
         resources:
           limits:
             cpu: "4"

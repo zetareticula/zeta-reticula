@@ -21,7 +21,13 @@ use serde::{Serialize, Deserialize};
 use thiserror::Error;
 use ndarray::{Array2, Array3};
 use crate::llm_rs::{LLMModel, AttentionWeights};
+use bincode;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use tempfile::tempdir;
 
+//! Model serialization and deserialization support
+//! A custom serializer is used to serialize the model weights
 #[derive(Error, Debug)]
 pub enum SerializationError {
     #[error("IO error: {0}")]
@@ -122,3 +128,4 @@ mod tests {
         assert_eq!(model.layer_count, loaded.layer_count);
     }
 }
+

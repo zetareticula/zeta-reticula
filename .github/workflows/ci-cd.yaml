@@ -4,25 +4,39 @@ on:
   push:
     branches: [ main ]
     paths:
+      - 'core/**'
+      - 'runtime/**'
+      - 'interfaces/**'
       - 'master-service/**'
       - 'ns-router-rs/**'
       - 'salience-engine/**'
       - 'quantize-cli/**'
       - 'llm-rs/**'
+      - 'agentflow-rs/**'
+      - 'kvquant_rs/**'
       - 'shared/**'
+      - 'k8s/**'
       - '.github/workflows/ci-cd.yaml'
+      - 'Dockerfile*'
       - 'Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     branches: [ main ]
     paths:
+      - 'core/**'
+      - 'runtime/**'
+      - 'interfaces/**'
       - 'master-service/**'
       - 'ns-router-rs/**'
       - 'salience-engine/**'
       - 'quantize-cli/**'
       - 'llm-rs/**'
+      - 'agentflow-rs/**'
+      - 'kvquant_rs/**'
       - 'shared/**'
+      - 'k8s/**'
       - '.github/workflows/ci-cd.yaml'
+      - 'Dockerfile*'
       - 'Cargo.toml'
       - 'Cargo.lock'
 
@@ -50,7 +64,7 @@ jobs:
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           components: rustfmt, clippy
           profile: minimal
 
@@ -65,8 +79,15 @@ jobs:
 
       - name: Run tests
         run: |
+          # Build the unified CLI first
+          cargo build --bin zeta
+          
           # Test the entire workspace
           cargo test --workspace --all-features
+          
+          # Test CLI functionality
+          ./target/debug/zeta system status
+          ./target/debug/zeta --help
           
           # Test master-service specifically if Makefile exists
           if [ -f "master-service/Makefile" ]; then
@@ -74,9 +95,40 @@ jobs:
             make test
           fi
 
+  validate-k8s:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: |
+          # Validate base manifests
+          kubectl apply --dry-run=client -k k8s/base/
+          
+          # Validate dev overlay
+          kubectl apply --dry-run=client -k k8s/overlays/dev/
+          
+          # Validate prod overlay
+          kubectl apply --dry-run=client -k k8s/overlays/prod/
+          
+          # Validate master-service k8s if exists
+          if [ -d "master-service/k8s/base" ]; then
+            kubectl apply --dry-run=client -k master-service/k8s/base/
+          fi
+
   build:
     name: Build and Push Docker Images
-    needs: test
+    needs: [test, validate-k8s]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -147,18 +199,25 @@ jobs:
           echo "${{ env.KUBE_CONFIG }}" | base64 -d > kubeconfig
           export KUBECONFIG=./kubeconfig
           
-          cd master-service/k8s/base
+          # Install kustomize
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+          
+          # Deploy using the main k8s manifests
+          cd k8s/overlays/prod
           kustomize edit set image \
-            zeta-reticula=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            zetareticula/zeta-reticula=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           
           kustomize build | kubectl apply -f -
           
-          # Wait for deployment to complete
-          kubectl rollout status deployment/zeta-reticula -n zeta-reticula --timeout=300s
+          # Wait for deployments to complete
+          kubectl rollout status deployment/api-service -n zeta-reticula --timeout=300s
+          kubectl rollout status deployment/master-service -n zeta-reticula --timeout=300s
+          kubectl rollout status deployment/worker -n zeta-reticula --timeout=300s
 
   notify:
     name: Notify Status
-    needs: [test, build, deploy]
+    needs: [test, validate-k8s, build, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:

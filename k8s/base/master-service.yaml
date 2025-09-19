@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: master
-        image: zetareticula/master-service:latest
+        image: zetareticula/zeta-reticula:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -29,6 +29,10 @@ spec:
           value: "info"
         - name: ZETA_ENV
           value: production
+        - name: ZETA_MODE
+          value: "master"
+        command: ["./target/release/zeta"]
+        args: ["system", "status"]
         resources:
           limits:
             cpu: "2"
