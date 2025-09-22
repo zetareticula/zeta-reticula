@@ -14,10 +14,10 @@ categories = ["science", "concurrency", "asynchronous"]
 rust-version = "1.70"
 
 [dependencies]
-zeta-shared = "0.1"
-zeta-kv-cache = "0.1"
-zeta-quantization = "0.1"
-zeta-salience = "0.1"
+zeta-shared = { path = "../../core/shared" }
+zeta-kv-cache = { path = "../../core/kv-cache" }
+zeta-quantization = { path = "../../core/quantization" }
+zeta-salience = { path = "../../core/salience" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

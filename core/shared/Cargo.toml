@@ -14,9 +14,6 @@ categories = ["rust-patterns", "data-structures", "development-tools"]
 rust-version = "1.70"
 
 [dependencies]
-zeta-kv-cache = "0.1"
-zeta-quantization = "0.1"
-zeta-salience = "0.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

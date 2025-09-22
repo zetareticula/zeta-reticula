@@ -18,11 +18,11 @@ name = "zeta"
 path = "src/main.rs"
 
 [dependencies]
-zeta-shared = "0.1"
-zeta-inference = "0.1"
-zeta-kv-cache = "0.1"
-zeta-quantization = "0.1"
-zeta-salience = "0.1"
+zeta-shared = { path = "../../core/shared" }
+zeta-inference = { path = "../../runtime/inference" }
+zeta-kv-cache = { path = "../../core/kv-cache" }
+zeta-quantization = { path = "../../core/quantization" }
+zeta-salience = { path = "../../core/salience" }
 clap = { version = "4.0", features = ["derive"] }
 tokio = { workspace = true }
 serde = { workspace = true }
