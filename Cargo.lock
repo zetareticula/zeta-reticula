@@ -6590,6 +6590,16 @@ dependencies = [
 [[package]]
 name = "zeta-kv-cache"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dashmap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "zeta-protos"
@@ -6605,6 +6615,14 @@ dependencies = [
 [[package]]
 name = "zeta-quantization"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
 
 [[package]]
 name = "zeta-reticula"
@@ -6626,6 +6644,13 @@ dependencies = [
 [[package]]
 name = "zeta-salience"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
 
 [[package]]
 name = "zeta-shared"
