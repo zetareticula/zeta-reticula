@@ -20,9 +20,9 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 // Re-export core types
-pub use kv_cache::{KVCacheConfig, KVCacheError, PrecisionLevel as KVPrecisionLevel};
-pub use quantization::{QuantizationConfig, QuantizationError, PrecisionLevel, QuantizationResult};
-pub use salience::{SalienceConfig, SalienceError, SalienceResult, MesolimbicState};
+pub use zeta_kv_cache::{KVCacheConfig, KVCacheError, PrecisionLevel as KVPrecisionLevel};
+pub use zeta_quantization::{QuantizationConfig, QuantizationError, PrecisionLevel, QuantizationResult};
+pub use zeta_salience::{SalienceConfig, SalienceError, SalienceResult, MesolimbicState};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZetaConfig {

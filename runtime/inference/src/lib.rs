@@ -23,9 +23,9 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use zeta_shared::{ZetaConfig, ProcessingStats, ModelMetadata, Result, ZetaError};
-use kv_cache::UnifiedKVCache;
-use quantization::UnifiedQuantizer;
-use salience::UnifiedSalienceSystem;
+use zeta_kv_cache::UnifiedKVCache;
+use zeta_quantization::UnifiedQuantizer;
+use zeta_salience::UnifiedSalienceSystem;
 use serde::{Serialize, Deserialize};
 use tracing::{info, debug, error};
 
@@ -72,9 +72,9 @@ impl UnifiedInferenceEngine {
     pub async fn new(config: ZetaConfig) -> Result<Self> {
         info!("Initializing Unified Inference Engine");
 
-        let kv_cache = Arc::new(kv_cache::create_kv_cache(config.kv_cache.clone()));
-        let quantizer = Arc::new(RwLock::new(quantization::create_quantizer(config.quantization.clone())));
-        let salience_system = Arc::new(RwLock::new(salience::create_salience_system(config.salience.clone())));
+        let kv_cache = Arc::new(zeta_kv_cache::create_kv_cache(config.kv_cache.clone()));
+        let quantizer = Arc::new(RwLock::new(zeta_quantization::create_quantizer(config.quantization.clone())));
+        let salience_system = Arc::new(RwLock::new(zeta_salience::create_salience_system(config.salience.clone())));
         let models = Arc::new(RwLock::new(std::collections::HashMap::new()));
 
         Ok(Self {
