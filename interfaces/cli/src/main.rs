@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cli::run_cli;
+use zeta_reticula::run_cli;
 
 #[tokio::main]
 async fn main() {

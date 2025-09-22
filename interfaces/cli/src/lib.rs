@@ -21,10 +21,13 @@
 
 use clap::{Parser, Subcommand};
 use zeta_shared::{ZetaConfig, Result, ZetaError, PrecisionLevel};
-use inference::{create_inference_engine, InferenceRequest};
+use zeta_inference::{create_inference_engine, InferenceRequest, InferenceResponse, infer};
 use serde_json;
 use std::path::PathBuf;
-use tracing::{info, error};
+use tracing::{info};
+use zeta_kv_cache as kv_cache;
+use zeta_quantization as quantization;
+use zeta_salience as salience;
 
 #[derive(Parser)]
 #[command(name = "zeta")]
@@ -78,8 +81,8 @@ pub enum QuantizeCommands {
         input: PathBuf,
         #[arg(short, long)]
         output: PathBuf,
-        #[arg(short, long, value_enum)]
-        precision: PrecisionLevel,
+        #[arg(short, long)]
+        precision: String,
         #[arg(long)]
         preserve_salience: bool,
         #[arg(long)]
@@ -91,8 +94,8 @@ pub enum QuantizeCommands {
         input_dir: PathBuf,
         #[arg(short, long)]
         output_dir: PathBuf,
-        #[arg(short, long, value_enum)]
-        precision: PrecisionLevel,
+        #[arg(short, long)]
+        precision: String,
         #[arg(long)]
         parallel: bool,
     },
@@ -252,7 +255,7 @@ async fn handle_quantize_commands(action: QuantizeCommands, config: &ZetaConfig)
             
             // Configure quantization
             let mut quant_config = config.quantization.clone();
-            quant_config.precision = precision;
+            quant_config.precision = parse_precision(&precision);
             if let Some(size) = block_size {
                 quant_config.block_size = size;
             }
@@ -282,7 +285,7 @@ async fn handle_quantize_commands(action: QuantizeCommands, config: &ZetaConfig)
                 // Process each model (simplified)
                 let model_data = load_model_data(model_file).await?;
                 let mut quant_config = config.quantization.clone();
-                quant_config.precision = precision.clone();
+                quant_config.precision = parse_precision(&precision);
                 
                 let quantizer = quantization::create_quantizer(quant_config);
                 let result = quantizer.quantize(&model_data)?;
@@ -374,13 +377,13 @@ async fn handle_infer_commands(action: InferCommands, config: &ZetaConfig) -> Re
             
             // Warmup
             for _ in 0..warmup {
-                let _ = inference::infer(&engine, model.clone(), vec![1, 2, 3], vec![1.0, 2.0, 3.0]).await;
+                let _ = infer(&engine, model.clone(), vec![1, 2, 3], vec![1.0, 2.0, 3.0]).await;
             }
             
             // Benchmark
             let start = std::time::Instant::now();
             for _ in 0..iterations {
-                let _ = inference::infer(&engine, model.clone(), vec![1, 2, 3], vec![1.0, 2.0, 3.0]).await;
+                let _ = infer(&engine, model.clone(), vec![1, 2, 3], vec![1.0, 2.0, 3.0]).await;
             }
             let duration = start.elapsed();
             
@@ -531,6 +534,18 @@ async fn handle_system_commands(action: SystemCommands, config: &ZetaConfig) -> 
 
 // Helper functions (simplified implementations)
 
+fn parse_precision(s: &str) -> PrecisionLevel {
+    match s.to_lowercase().as_str() {
+        "int1" => PrecisionLevel::Int1,
+        "int2" => PrecisionLevel::Int2,
+        "int4" => PrecisionLevel::Int4,
+        "int8" => PrecisionLevel::Int8,
+        "fp16" => PrecisionLevel::FP16,
+        "fp32" => PrecisionLevel::FP32,
+        _ => PrecisionLevel::FP32,
+    }
+}
+
 async fn load_model_data(_path: &PathBuf) -> Result<Vec<f32>> {
     // Simplified: return dummy data
     Ok(vec![1.0, 2.0, 3.0, 4.0, 5.0])
@@ -571,7 +586,7 @@ async fn load_batch_inputs(_path: &PathBuf) -> Result<Vec<String>> {
     Ok(vec!["input1".to_string(), "input2".to_string()])
 }
 
-async fn save_batch_outputs(_path: &PathBuf, _responses: &[inference::InferenceResponse]) -> Result<()> {
+async fn save_batch_outputs(_path: &PathBuf, _responses: &[InferenceResponse]) -> Result<()> {
     // Simplified: would save to file
     Ok(())
 }
