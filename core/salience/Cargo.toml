@@ -10,7 +10,7 @@ repository = "https://github.com/zetareticula/zeta-reticula"
 documentation = "https://docs.rs/zeta-salience"
 readme = "../../README.md"
 keywords = ["salience", "attention", "llm", "inference", "prioritization"]
-categories = ["science", "algorithms", "artificial-intelligence"]
+categories = ["science", "algorithms"]
 rust-version = "1.70"
 
 [dependencies]
