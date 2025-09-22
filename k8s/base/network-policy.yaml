@@ -1,0 +1,106 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zeta-reticula-default-deny
+  namespace: zeta-reticula
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zeta-reticula-api-allow
+  namespace: zeta-reticula
+spec:
+  podSelector:
+    matchLabels:
+      app: zeta-reticula
+      component: api
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app: zeta-reticula
+          component: master
+    ports:
+    - protocol: TCP
+      port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zeta-reticula-master-allow
+  namespace: zeta-reticula
+spec:
+  podSelector:
+    matchLabels:
+      app: zeta-reticula
+      component: master
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: zeta-reticula
+          component: api
+    - podSelector:
+        matchLabels:
+          app: zeta-reticula
+          component: worker
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zeta-reticula-worker-allow
+  namespace: zeta-reticula
+spec:
+  podSelector:
+    matchLabels:
+      app: zeta-reticula
+      component: worker
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: zeta-reticula
+          component: master
+    ports:
+    - protocol: TCP
+      port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zeta-reticula-storage-allow
+  namespace: zeta-reticula
+spec:
+  podSelector:
+    matchLabels:
+      app: zeta-reticula
+      component: storage
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: zeta-reticula
+    ports:
+    - protocol: TCP
+      port: 5001
+    - protocol: TCP
+      port: 4001

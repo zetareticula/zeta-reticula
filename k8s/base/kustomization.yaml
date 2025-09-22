@@ -10,6 +10,8 @@ resources:
   - api-service.yaml
   - worker-deployment.yaml
   - storage.yaml
+  - ingress.yaml
+  - network-policy.yaml
 
 commonLabels:
   app: zeta-reticula

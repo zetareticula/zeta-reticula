@@ -32,7 +32,19 @@ spec:
         - name: ZETA_MODE
           value: "master"
         command: ["./target/release/zeta"]
-        args: ["system", "status"]
+        args: ["master", "serve", "--port", "8080", "--host", "0.0.0.0"]
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
         resources:
           limits:
             cpu: "2"

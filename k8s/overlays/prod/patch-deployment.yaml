@@ -11,25 +11,23 @@ spec:
       - name: master
         resources:
           limits:
+            cpu: "8"
+            memory: "16Gi"
+            nvidia.com/gpu: 1
+          requests:
             cpu: "4"
             memory: "8Gi"
-          requests:
-            cpu: "2"
-            memory: "4Gi"
+            nvidia.com/gpu: 1
         livenessProbe:
-          exec:
-            command:
-            - "./target/release/zeta"
-            - "system"
-            - "status"
+          httpGet:
+            path: /health
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
-          exec:
-            command:
-            - "./target/release/zeta"
-            - "system"
-            - "status"
+          httpGet:
+            path: /ready
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
 ---
@@ -54,19 +52,15 @@ spec:
             memory: "16Gi"
             nvidia.com/gpu: 1
         livenessProbe:
-          exec:
-            command:
-            - "./target/release/zeta"
-            - "system"
-            - "status"
+          httpGet:
+            path: /health
+            port: 8000
           initialDelaySeconds: 30
           periodSeconds: 60
         readinessProbe:
-          exec:
-            command:
-            - "./target/release/zeta"
-            - "cache"
-            - "stats"
+          httpGet:
+            path: /ready
+            port: 8000
           initialDelaySeconds: 10
           periodSeconds: 30
 ---

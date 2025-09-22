@@ -32,7 +32,19 @@ spec:
         - name: ZETA_MODE
           value: "api"
         command: ["./target/release/zeta"]
-        args: ["system", "status"]
+        args: ["api", "serve", "--port", "3000", "--host", "0.0.0.0"]
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
         resources:
           limits:
             cpu: "1"
