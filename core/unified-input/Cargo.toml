@@ -12,6 +12,8 @@ readme = "../../README.md"
 keywords = ["huggingface", "safetensors", "models", "input", "unified"]
 categories = ["api-bindings", "data-structures", "encoding"]
 rust-version = "1.70"
+
+[dependencies]
 # Workspace dependencies
 tokio = { workspace = true }
 anyhow = { workspace = true }

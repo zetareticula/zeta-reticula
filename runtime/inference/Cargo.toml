@@ -6,6 +6,12 @@ authors = ["Zeta Reticula Team <team@zetareticula.com>"]
 license = "MIT OR Apache-2.0"
 description = "Unified inference runtime for high-performance LLM execution"
 homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-inference"
+readme = "../../README.md"
+keywords = ["inference", "llm", "runtime", "execution", "performance"]
+categories = ["science", "concurrency", "asynchronous"]
+rust-version = "1.70"
 
 [dependencies]
 zeta-shared = { path = "../../core/shared" }

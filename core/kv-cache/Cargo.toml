@@ -12,6 +12,8 @@ readme = "../../README.md"
 keywords = ["kv-cache", "cache", "llm", "inference", "performance"]
 categories = ["caching", "data-structures", "concurrency"]
 rust-version = "1.70"
+
+[dependencies]
 tokio = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }

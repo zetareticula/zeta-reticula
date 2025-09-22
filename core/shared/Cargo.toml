@@ -6,6 +6,12 @@ authors = ["Zeta Reticula Team <team@zetareticula.com>"]
 license = "MIT OR Apache-2.0"
 description = "Shared utilities and types for Zeta Reticula components"
 homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-shared"
+readme = "../../README.md"
+keywords = ["shared", "utilities", "types", "common", "zeta"]
+categories = ["rust-patterns", "data-structures", "development-tools"]
+rust-version = "1.70"
 
 [dependencies]
 zeta-kv-cache = { path = "../kv-cache" }

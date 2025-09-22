@@ -12,6 +12,8 @@ readme = "../../README.md"
 keywords = ["quantization", "llm", "inference", "optimization", "compression"]
 categories = ["science", "algorithms", "mathematics"]
 rust-version = "1.70"
+
+[dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
