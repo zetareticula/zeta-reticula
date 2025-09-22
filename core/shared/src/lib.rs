@@ -17,7 +17,7 @@
 //! This module consolidates common types from multiple crates
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+// use std::collections::HashMap; // Removed to fix unused import warning
 
 // Re-export core types
 pub use zeta_kv_cache::{KVCacheConfig, KVCacheError, PrecisionLevel as KVPrecisionLevel};
@@ -84,18 +84,20 @@ pub struct ModelMetadata {
     pub created_at: String,
 }
 
+use thiserror::Error as ThisError;
+
 pub type Result<T> = std::result::Result<T, ZetaError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, ThisError)]
 pub enum ZetaError {
-    #[error("KV Cache error: {0}")]
-    KVCache(#[from] KVCacheError),
-    #[error("Quantization error: {0}")]
-    Quantization(#[from] QuantizationError),
-    #[error("Salience error: {0}")]
-    Salience(#[from] SalienceError),
     #[error("Configuration error: {0}")]
     Config(String),
     #[error("Runtime error: {0}")]
     Runtime(String),
+    #[error("KV Cache error: {0}")]
+    KVCache(String),
+    #[error("Quantization error: {0}")]
+    Quantization(String),
+    #[error("Salience error: {0}")]
+    Salience(String),
 }
