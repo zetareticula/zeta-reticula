@@ -1,12 +1,17 @@
 [package]
-name = "unified-input"
+name = "zeta-unified-input"
 version = "0.1.0"
 edition = "2021"
-authors = ["Zeta Reticula Team"]
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
 description = "Unified input layer for handling safetensors and JSON models from Hugging Face"
-license = "MIT"
-
-[dependencies]
+homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-unified-input"
+readme = "../../README.md"
+keywords = ["huggingface", "safetensors", "models", "input", "unified"]
+categories = ["api-bindings", "data-structures", "encoding"]
+rust-version = "1.70"
 # Workspace dependencies
 tokio = { workspace = true }
 anyhow = { workspace = true }

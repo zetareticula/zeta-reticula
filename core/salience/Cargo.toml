@@ -1,9 +1,17 @@
 [package]
-name = "salience"
+name = "zeta-salience"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "Salience analysis engine for intelligent token prioritization in LLM inference"
+homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-salience"
+readme = "../../README.md"
+keywords = ["salience", "attention", "llm", "inference", "prioritization"]
+categories = ["science", "algorithms", "artificial-intelligence"]
+rust-version = "1.70"
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }

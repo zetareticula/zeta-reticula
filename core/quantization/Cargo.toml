@@ -1,15 +1,23 @@
 [package]
-name = "quantization"
+name = "zeta-quantization"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "Advanced quantization engine for efficient LLM inference"
+homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-quantization"
+readme = "../../README.md"
+keywords = ["quantization", "llm", "inference", "optimization", "compression"]
+categories = ["science", "algorithms", "mathematics"]
+rust-version = "1.70"
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-clap = { version = "4.0", features = ["derive"], optional = true }
+clap = { version = "4.0", features = ["derive"] }
 
 [features]
-clap = ["dep:clap"]
+clap = []

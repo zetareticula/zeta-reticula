@@ -1064,23 +1064,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "inference",
- "kv-cache",
- "quantization",
- "salience",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "zeta-shared",
-]
-
-[[package]]
 name = "client"
 version = "0.1.0"
 dependencies = [
@@ -2432,20 +2415,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
 
 [[package]]
-name = "inference"
-version = "0.1.0"
-dependencies = [
- "kv-cache",
- "quantization",
- "salience",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "zeta-shared",
-]
-
-[[package]]
 name = "inout"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2575,20 +2544,6 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "kv-cache"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "dashmap",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -4056,18 +4011,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantization"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4575,17 +4518,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96b02de82ddbe1b636e6170c21be622223aea188ef2e139be0a5b219ec215323"
 dependencies = [
  "bytemuck",
-]
-
-[[package]]
-name = "salience"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
 ]
 
 [[package]]
@@ -6642,6 +6574,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeta-inference"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "zeta-kv-cache",
+ "zeta-quantization",
+ "zeta-salience",
+ "zeta-shared",
+]
+
+[[package]]
+name = "zeta-kv-cache"
+version = "0.1.0"
+
+[[package]]
 name = "zeta-protos"
 version = "0.1.0"
 dependencies = [
@@ -6653,15 +6603,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeta-quantization"
+version = "0.1.0"
+
+[[package]]
+name = "zeta-reticula"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "zeta-inference",
+ "zeta-kv-cache",
+ "zeta-quantization",
+ "zeta-salience",
+ "zeta-shared",
+]
+
+[[package]]
+name = "zeta-salience"
+version = "0.1.0"
+
+[[package]]
 name = "zeta-shared"
 version = "0.1.0"
 dependencies = [
- "kv-cache",
- "quantization",
- "salience",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "zeta-kv-cache",
+ "zeta-quantization",
+ "zeta-salience",
 ]
 
 [[package]]

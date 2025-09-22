@@ -2,11 +2,15 @@
 name = "zeta-shared"
 version = "0.1.0"
 edition = "2021"
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "Shared utilities and types for Zeta Reticula components"
+homepage = "https://github.com/zetareticula/zeta-reticula"
 
 [dependencies]
-kv-cache = { path = "../kv-cache" }
-quantization = { path = "../quantization" }
-salience = { path = "../salience" }
+zeta-kv-cache = { path = "../kv-cache" }
+zeta-quantization = { path = "../quantization" }
+zeta-salience = { path = "../salience" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

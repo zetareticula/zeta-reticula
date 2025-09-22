@@ -1,9 +1,17 @@
 [package]
-name = "kv-cache"
+name = "zeta-kv-cache"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "High-performance key-value cache for LLM inference"
+homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-kv-cache"
+readme = "../../README.md"
+keywords = ["kv-cache", "cache", "llm", "inference", "performance"]
+categories = ["caching", "data-structures", "concurrency"]
+rust-version = "1.70"
 tokio = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }

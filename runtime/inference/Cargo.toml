@@ -1,13 +1,17 @@
 [package]
-name = "inference"
+name = "zeta-inference"
 version = "0.1.0"
 edition = "2021"
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "Unified inference runtime for high-performance LLM execution"
+homepage = "https://github.com/zetareticula/zeta-reticula"
 
 [dependencies]
 zeta-shared = { path = "../../core/shared" }
-kv-cache = { path = "../../core/kv-cache" }
-quantization = { path = "../../core/quantization" }
-salience = { path = "../../core/salience" }
+zeta-kv-cache = { path = "../../core/kv-cache" }
+zeta-quantization = { path = "../../core/quantization" }
+zeta-salience = { path = "../../core/salience" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
