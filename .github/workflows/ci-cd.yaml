@@ -1,4 +1,4 @@
-name: Zeta Reticula CI/CD
+name: Zeta Reticula CI/CD Pipeline
 
 on:
   push:
@@ -63,21 +63,23 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           components: rustfmt, clippy
-          profile: minimal
+          target: x86_64-unknown-linux-gnu
 
-      - name: Cache Cargo
-        uses: actions/cache@v3
+      - name: Cache Cargo registry and target
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run tests
         run: |
@@ -96,6 +98,132 @@ jobs:
             cd master-service
             make test
           fi
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy
+          target: x86_64-unknown-linux-gnu
+
+      - name: Cache Cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Login to crates.io
+        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Publish core packages
+        run: |
+          # Publish core packages in dependency order
+          cargo publish -p zeta-kv-cache --dry-run
+          cargo publish -p zeta-quantization --dry-run
+          cargo publish -p zeta-salience --dry-run
+
+          # Publish if dry-run passes
+          cargo publish -p zeta-kv-cache
+          cargo publish -p zeta-quantization
+          cargo publish -p zeta-salience
+          cargo publish -p zeta-shared
+
+      - name: Publish runtime packages
+        run: |
+          cargo publish -p zeta-inference --dry-run
+          cargo publish -p zeta-inference
+
+      - name: Publish CLI
+        run: |
+          cargo publish -p zeta-reticula --dry-run
+          cargo publish -p zeta-reticula
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo audit
+        run: cargo audit
+
+      - name: Run cargo clippy
+        run: cargo clippy --all-features -- -D warnings
+
+      - name: Check for security advisories
+        run: cargo audit --ignore-yanked
+
+  performance-benchmark:
+    name: Performance Benchmarking
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run performance benchmarks
+        run: |
+          # Build release binary
+          cargo build --release --bin zeta
+
+          # Run basic performance test
+          ./target/release/zeta infer benchmark \
+            --iterations 100 \
+            --output benchmark-results.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: benchmark-results.json
 
   validate-k8s:
     name: Validate Kubernetes Manifests
@@ -133,7 +261,7 @@ jobs:
 
   build:
     name: Build and Push Docker Images
-    needs: [test, validate-k8s]
+    needs: [test, validate-k8s, security-scan, performance-benchmark]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -196,33 +324,31 @@ jobs:
           aws eks --region ${{ env.AWS_REGION }} update-kubeconfig \
             --name ${{ env.EKS_CLUSTER }} \
             --kubeconfig kubeconfig
-          
-          echo "KUBE_CONFIG_BASE64=$(cat kubeconfig | base64 -w 0)" >> $GITHUB_ENV
 
       - name: Deploy to Kubernetes
         run: |
-          echo "${{ env.KUBE_CONFIG }}" | base64 -d > kubeconfig
           export KUBECONFIG=./kubeconfig
-          
+
           # Install kustomize
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
-          
-          # Deploy using the main k8s manifests
-          cd k8s/overlays/prod
-          kustomize edit set image \
-            zetareticula/zeta-reticula=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          
-          kustomize build | kubectl apply -f -
-          
-          # Wait for deployments to complete
-          kubectl rollout status deployment/api-service -n zeta-reticula --timeout=300s
-          kubectl rollout status deployment/master-service -n zeta-reticula --timeout=300s
-          kubectl rollout status deployment/worker -n zeta-reticula --timeout=300s
+
+          # Deploy with improved rollout strategy
+          kubectl apply -k k8s/overlays/prod
+
+          # Wait for deployments with better error handling
+          kubectl rollout status deployment/api-service -n zeta-reticula --timeout=600s
+          kubectl rollout status deployment/master-service -n zeta-reticula --timeout=600s
+          kubectl rollout status deployment/worker -n zeta-reticula --timeout=600s
+          kubectl rollout status statefulset/p2pstore -n zeta-reticula --timeout=600s
+
+          # Verify deployment health
+          kubectl get pods -n zeta-reticula
+          kubectl get services -n zeta-reticula
 
   notify:
     name: Notify Status
-    needs: [test, validate-k8s, build, deploy]
+    needs: [test, validate-k8s, publish-crates, build, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:
