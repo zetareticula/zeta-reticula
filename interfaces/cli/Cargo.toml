@@ -1,7 +1,17 @@
 [package]
-name = "cli"
+name = "zeta-reticula"
 version = "0.1.0"
 edition = "2021"
+authors = ["Zeta Reticula Team <team@zetareticula.com>"]
+license = "MIT OR Apache-2.0"
+description = "High-performance LLM inference engine with advanced quantization and salience-based optimization"
+homepage = "https://github.com/zetareticula/zeta-reticula"
+repository = "https://github.com/zetareticula/zeta-reticula"
+documentation = "https://docs.rs/zeta-reticula"
+readme = "../../README.md"
+keywords = ["llm", "inference", "quantization", "ai", "machine-learning"]
+categories = ["science", "algorithms", "command-line-utilities"]
+rust-version = "1.70"
 
 [[bin]]
 name = "zeta"
