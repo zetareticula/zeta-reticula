@@ -483,59 +483,196 @@ quantization:
 ### LLM-RS
 Core language model inference engine with support for multiple model architectures.
 
-## 🚀 Deployment
+## 🚀 Kubernetes Deployment (Updated 2025)
 
-### Prerequisites
+### Latest Kubernetes Infrastructure Updates
 
+**Major Update (September 2025)**: Complete Kubernetes configuration overhaul with production-ready architecture, security policies, and comprehensive validation.
+
+### 🏗️ Architecture Overview
+
+Zeta Reticula now provides a fully containerized, production-ready Kubernetes deployment with the following components:
+
+#### Core Services
+- **API Service** (Port 3000): REST API server for inference requests
+- **Master Service** (Port 8080): Coordination and load balancing
+- **Worker Service** (Port 8000): GPU-accelerated inference workers
+- **P2P Storage**: Distributed model storage with StatefulSet
+
+#### Deployment Environments
+- **Development**: Single replicas, debug logging, minimal resources
+- **Production**: Multiple replicas, production resources, monitoring enabled
+
+### 📦 Published Crates (crates.io)
+
+The following packages have been published to crates.io and are ready for use:
+
+| Package | Version | Description | Status |
+|---------|---------|-------------|---------|
+| `zeta-kv-cache` | 0.1.0 | High-performance key-value cache | ✅ Published |
+| `zeta-quantization` | 0.1.0 | Advanced quantization engine | ✅ Published |
+| `zeta-salience` | 0.1.0 | Salience analysis engine | ✅ Published |
+| `zeta-shared` | 0.1.0 | Shared utilities and types | ✅ Published |
+
+### 🚀 Quick Deployment
+
+#### Prerequisites
 - Kubernetes cluster (v1.24+)
 - `kubectl` and `kustomize` installed
-- Container registry access
-- Sufficient resources (CPU/GPU, memory)
+- Container registry access (optional for local development)
 
-### 1. Initialize Models Directory
-
+#### Development Deployment
 ```bash
-# Initialize models directory with a sample model
-chmod +x scripts/init_models.sh
-./scripts/init_models.sh
+# Validate configuration
+./scripts/validate_k8s.sh
+
+# Deploy development environment
+kubectl apply -k k8s/overlays/dev
+
+# Check deployment status
+kubectl get pods -n zeta-reticula
 ```
 
-### 2. Deploy NS Router
-
+#### Production Deployment
 ```bash
-# Deploy NS Router to Kubernetes
-chmod +x scripts/deploy_ns_router.sh
-./scripts/deploy_ns_router.sh
+# Deploy production environment
+kubectl apply -k k8s/overlays/prod
+
+# Monitor deployment
+kubectl logs -f -n zeta-reticula deployment/api-service
 ```
 
-### 3. Quantize Models
+### 🔧 Service Architecture
 
+#### API Service
 ```bash
-# Quantize models using kvquant_rs and store in p2pstore
-chmod +x scripts/quantize_models.sh
-./scripts/quantize_models.sh
+# External access
+curl http://localhost/api/health
+
+# Internal service communication
+kubectl port-forward -n zeta-reticula svc/api-service 3000:80
 ```
 
-### 4. Verify Deployment
-
+#### Master Service
 ```bash
-# Verify all components are running
-chmod +x scripts/verify_deployment.sh
-./scripts/verify_deployment.sh
+# Health check
+curl http://localhost:8080/health
+
+# Service discovery
+kubectl get endpoints -n zeta-reticula master-service
 ```
 
-### 5. Configure AgentFlow Semaphores
+#### Worker Service
+```bash
+# GPU resource allocation
+kubectl describe nodes | grep -A 10 "nvidia.com/gpu"
 
-Create or update `agentflow-rs/config/semaphore.toml`:
-
-```toml
-[components]
-attention_store = { max_concurrent = 5, timeout_secs = 30 }
-llm_rs = { max_concurrent = 3, timeout_secs = 60 }
-zeta_vault = { max_concurrent = 2, timeout_secs = 120 }
+# Worker pod logs
+kubectl logs -f -n zeta-reticula deployment/worker -c worker
 ```
 
-## 🔄 Component Integration
+### 🔒 Security Features
+
+#### Network Policies
+- **Default Deny**: All traffic blocked by default
+- **Service Isolation**: Each component can only communicate with authorized peers
+- **Ingress Control**: Restricted external access through Ingress controller
+
+#### Resource Management
+- **CPU/Memory Limits**: Prevents resource exhaustion
+- **GPU Scheduling**: NVIDIA GPU allocation for inference workloads
+- **Pod Disruption Budgets**: Ensures service availability during updates
+
+### 📊 Monitoring & Observability
+
+#### Health Checks
+- **HTTP Probes**: Service-specific `/health` and `/ready` endpoints
+- **Liveness Detection**: Automatic failure detection and recovery
+- **Readiness Gates**: Traffic routing based on service readiness
+
+#### Resource Monitoring
+```bash
+# View resource usage
+kubectl top pods -n zeta-reticula
+
+# Monitor node resources
+kubectl describe nodes | grep -A 5 "Capacity"
+
+# Check GPU utilization
+kubectl logs -n zeta-reticula deployment/worker | grep "GPU"
+```
+
+### 🛠️ Validation & Troubleshooting
+
+#### Automated Validation
+```bash
+# Run comprehensive validation
+./scripts/validate_k8s.sh
+
+# Validate specific environment
+kustomize build k8s/overlays/prod > /tmp/prod.yaml
+kubectl apply --dry-run=client -f /tmp/prod.yaml
+```
+
+#### Common Issues
+```bash
+# Check pod status
+kubectl get pods -n zeta-reticula --field-selector=status.phase!=Running
+
+# View pod events
+kubectl describe pod -n zeta-reticula <pod-name>
+
+# Check service endpoints
+kubectl get endpoints -n zeta-reticula
+```
+
+### 📈 Scaling & Performance
+
+#### Horizontal Scaling
+```bash
+# Scale API service
+kubectl scale deployment api-service -n zeta-reticula --replicas=5
+
+# Scale worker nodes
+kubectl scale deployment worker -n zeta-reticula --replicas=10
+```
+
+#### Resource Optimization
+```bash
+# Update resource limits
+kubectl edit deployment worker -n zeta-reticula
+
+# Check resource utilization
+kubectl top pods -n zeta-reticula | sort -k3 -n
+```
+
+### 🔄 CI/CD Integration
+
+The Kubernetes configuration is fully integrated with the CI/CD pipeline:
+
+#### Automated Validation
+- **Kustomize Validation**: All manifests validated before deployment
+- **Resource Checking**: GPU and memory requirements verified
+- **Security Scanning**: Network policies and RBAC reviewed
+
+#### Deployment Pipeline
+```yaml
+# .github/workflows/deploy.yml
+- name: Validate Kubernetes
+  run: ./scripts/validate_k8s.sh
+
+- name: Deploy to Production
+  run: |
+    kubectl apply -k k8s/overlays/prod
+    kubectl rollout status deployment/api-service -n zeta-reticula
+```
+
+### 📚 Additional Resources
+
+- **[Kubernetes Deployment Guide](docs/KUBERNETES.md)**: Detailed deployment instructions
+- **[Validation Script](scripts/validate_k8s.sh)**: Comprehensive configuration testing
+- **[Network Policies](k8s/base/network-policy.yaml)**: Security configuration
+- **[Ingress Configuration](k8s/base/ingress.yaml)**: External access setup
 
 ### Kubernetes Deployment
 
