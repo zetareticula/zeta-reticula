@@ -6581,15 +6581,47 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "zeta-kv-cache",
- "zeta-quantization",
- "zeta-salience",
- "zeta-shared",
+ "zeta-kv-cache 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-quantization 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-salience 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-shared 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zeta-inference"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6b9f3693011a7e17ac120d86b90fe8dd8a66e0ce42b4c712b12c8a37cd70b16"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "zeta-kv-cache 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-quantization 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-salience 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-shared 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "zeta-kv-cache"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dashmap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "zeta-kv-cache"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55dab7f204974f13ca2726111f9f7309e6cbc49637744a409d495a290596d36f"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6625,6 +6657,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeta-quantization"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6fb4e44e51ff1c06f1f1073ad78d260e511e5d5e4eaf244ac910d9685846cf2"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "zeta-reticula"
 version = "0.1.0"
 dependencies = [
@@ -6634,16 +6680,29 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "zeta-inference",
- "zeta-kv-cache",
- "zeta-quantization",
- "zeta-salience",
- "zeta-shared",
+ "zeta-inference 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-kv-cache 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-quantization 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-salience 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-shared 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "zeta-salience"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "zeta-salience"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc731380ba02c3c7a1cb79113d251f91180c18082638fbdb6eba275c2e52fc98"
 dependencies = [
  "anyhow",
  "serde",
@@ -6659,6 +6718,20 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "zeta-shared"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "073a16b2cf1fded38e2c876bb17988f568139a1df5bf9609d3485d71cd668c2f"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "zeta-kv-cache 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-quantization 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeta-salience 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

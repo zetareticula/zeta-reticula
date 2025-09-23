@@ -27,10 +27,73 @@ use reqwest;
 use log;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
+use lru;
+use uuid;
+use chrono;
+use oauth2;
+use stripe;
+use salience_engine;
+use model_store;
+use zeta_vault;
 
+//AppState defines the state of the application in actix-web using actix-web's Data struct
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+    pub oauth_client: BasicClient,
+    pub stripe_client: stripe::Client,
+    pub model_store: model_store::ModelStore,
+    pub zeta_vault: zeta_vault::ZetaVault,
+}
+
+//Main function for actix-web server
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    //Initialize logging
+    env_logger::init();
+
+    //Connect to database
+    let db_url = "postgres://postgres:postgres@localhost:5432/zeta";
+    //Create database pool
+    let db_pool = PgPool::connect(db_url).await.unwrap();
+
+    //Initialize oauth client
+    let oauth_client = BasicClient::new(
+        ClientId::new("your-client-id".to_string()),
+        Some(ClientSecret::new("your-client-secret".to_string())),
+        AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()),
+        Some(TokenUrl::new("https://oauth2.googleapis.com/token".to_string())),
+    );
+
+    let stripe_client = stripe::Client::new("your-stripe-api-key".to_string());
+
+    let model_store = model_store::ModelStore::new();
+    let zeta_vault = zeta_vault::ZetaVault::new();
+
+    let app_state = web::Data::new(AppState {
+        db: db_pool,
+        oauth_client,
+        stripe_client,
+        model_store,
+        zeta_vault,
+    });
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(app_state.clone())
+            .service(auth_callback)
+            .service(protected_route)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+
+//Lazy static variables
 static OPA_CACHE: Lazy<Mutex<lru::LruCache<String, bool>>> = Lazy::new(|| Mutex::new(lru::LruCache::new(100)));
 static USAGE_TRACKER: Lazy<Mutex<Vec<(String, u32)>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
+//Claims struct for JWT
 #[derive(Deserialize, Serialize)]
 struct Claims {
     sub: String,
@@ -38,6 +101,7 @@ struct Claims {
     attributes: serde_json::Value,
 }
 
+//AuthRequest struct for OAuth callback
 #[derive(Deserialize)]
 struct AuthRequest {
     code: String,
@@ -58,14 +122,17 @@ struct AuthResponse {
     upgrade_prompt: Option<String>,
 }
 
+//Auth callback handler
 async fn auth_callback(
     req: web::Json<AuthRequest>,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
+    //Exchange code for token
     let client = &data.oauth_client;
+    //client exchange
     let token = client
-        .exchange_code(oauth2::AuthorizationCode::new(req.code.clone()))
-        .request_async(oauth2::reqwest::async_http_client)
+        .exchange_code(oauth2::AuthorizationCode::new(req.code.clone())) //clone code
+        .request_async(oauth2::reqwest::async_http_client) //async http client
         .await
         .map_err(|e| actix_web::error::ErrorBadRequest(e))?;
 

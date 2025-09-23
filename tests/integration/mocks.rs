@@ -2,7 +2,15 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use zeta_vault_synergy::sync_manager::SyncError;
+use kvquant_rs::spot::Spot;
+use kvquant_rs::spot::SpotConfig;
+use kvquant_rs::block::DataBlock;
+use kvquant_rs::block::BlockState;
+use kvquant_rs::block::BlockConfig;
+use kvquant_rs::block::BlockManager;
 
+
+// Mock implementation of KVCacheManager for testing
 #[derive(Default)]
 pub struct MockKVCacheManager {
     data: Arc<Mutex<Vec<u8>>>,
@@ -22,6 +30,7 @@ impl zeta_vault_synergy::kv_cache_manager::KVCacheManagerTrait for MockKVCacheMa
     }
 }
 
+// Mock implementation of WeightManager for testing
 #[derive(Default)]
 pub struct MockWeightManager {
     data: Arc<Mutex<Vec<u8>>>,

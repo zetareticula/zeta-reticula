@@ -8,8 +8,8 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![Rust](https://github.com/zetareticula/zeta-reticula/actions/workflows/rust.yml/badge.svg)](https://github.com/zetareticula/zeta-reticula/actions)
   [![Docker](https://img.shields.io/docker/pulls/zetareticula/salience-engine)](https://hub.docker.com/r/zetareticula/salience-engine)
-  [![Crates.io](https://img.shields.io/crates/v/llm-rs)](https://crates.io/crates/llm-rs)
-  [![Documentation](https://docs.rs/llm-rs/badge.svg)](https://docs.rs/llm-rs)
+  [![Crates.io](https://img.shields.io/crates/v/zeta-reticula)](https://crates.io/crates/zeta-reticula)
+  [![Documentation](https://docs.rs/zeta-reticula/badge.svg)](https://docs.rs/zeta-reticula)
 </div>
 
 > "Precision-engineered intelligence for the next generation of AI applications."
@@ -38,7 +38,36 @@ Zeta Reticula is a high-performance, open-source framework for optimizing large 
 - **LLM-RS**: Core language model inference engine
 - **NS-Router-RS**: Neural network routing and salience analysis
 
-## 🔧 Recent Updates (v1.0.0)
+## 📦 Published Crates (v0.1.0)
+
+**All Zeta Reticula crates are now published on crates.io!**
+
+### Installation
+
+```bash
+# Install the unified CLI tool
+cargo install zeta-reticula
+
+# Use individual crates in your Rust projects
+cargo add zeta-inference    # Unified inference runtime
+cargo add zeta-kv-cache     # High-performance KV cache
+cargo add zeta-quantization # Advanced quantization engine
+cargo add zeta-salience     # Salience analysis system
+cargo add zeta-shared       # Shared utilities and types
+```
+
+### Available Packages
+
+| Crate | Description | Version |
+|-------|-------------|----------|
+| [`zeta-reticula`](https://crates.io/crates/zeta-reticula) | Unified CLI and main interface | [![Crates.io](https://img.shields.io/crates/v/zeta-reticula)](https://crates.io/crates/zeta-reticula) |
+| [`zeta-inference`](https://crates.io/crates/zeta-inference) | High-performance inference runtime | [![Crates.io](https://img.shields.io/crates/v/zeta-inference)](https://crates.io/crates/zeta-inference) |
+| [`zeta-kv-cache`](https://crates.io/crates/zeta-kv-cache) | Advanced KV cache with salience | [![Crates.io](https://img.shields.io/crates/v/zeta-kv-cache)](https://crates.io/crates/zeta-kv-cache) |
+| [`zeta-quantization`](https://crates.io/crates/zeta-quantization) | Multi-precision quantization | [![Crates.io](https://img.shields.io/crates/v/zeta-quantization)](https://crates.io/crates/zeta-quantization) |
+| [`zeta-salience`](https://crates.io/crates/zeta-salience) | Intelligent token prioritization | [![Crates.io](https://img.shields.io/crates/v/zeta-salience)](https://crates.io/crates/zeta-salience) |
+| [`zeta-shared`](https://crates.io/crates/zeta-shared) | Common types and utilities | [![Crates.io](https://img.shields.io/crates/v/zeta-shared)](https://crates.io/crates/zeta-shared) |
+
+## 🔧 Recent Updates (v0.1.0)
 
 ### Input Layer Deduplication & Hugging Face Integration
 - **Unified Input Processing**: Consolidated duplicate input layer implementations across multiple crates
@@ -122,12 +151,22 @@ Zeta Reticula is a high-performance, open-source framework for optimizing large 
 
 ### Quick Start
 
-1. **Clone and Build**
-   ```bash
-   git clone https://github.com/zetareticula/zeta-reticula.git
-   cd zeta-reticula
-   cargo build --workspace --release
-   ```
+#### Option 1: Install from crates.io (Recommended)
+```bash
+# Install the unified CLI
+cargo install zeta-reticula
+
+# Verify installation
+zeta --version
+zeta system status
+```
+
+#### Option 2: Build from Source
+```bash
+git clone https://github.com/zetareticula/zeta-reticula.git
+cd zeta-reticula
+cargo build --workspace --release
+```
 
 2. **Start Services**
    ```bash
@@ -155,26 +194,26 @@ The unified `zeta` CLI provides comprehensive access to all Zeta Reticula functi
 
 ```bash
 # Check system status
-./target/debug/zeta system status
+zeta system status
 
 # View system configuration
-./target/debug/zeta --help
+zeta --help
 
 # Use verbose logging
-./target/debug/zeta --verbose system status
+zeta --verbose system status
 ```
 
 ### Salience Analysis
 
 ```bash
 # Analyze token salience for text input
-./target/debug/zeta salience analyze --input "Your text here"
+zeta salience analyze --input "Your text here"
 
 # Analyze with Unicode and special characters
-./target/debug/zeta salience analyze --input "测试 🚀 émojis and ñoñó"
+zeta salience analyze --input "测试 🚀 émojis and ñoñó"
 
 # Check mesolimbic system state
-./target/debug/zeta salience state
+zeta salience state
 
 # Train salience model
 ./target/debug/zeta salience train --dataset "training_data.json" --epochs 100 --learning-rate 0.01

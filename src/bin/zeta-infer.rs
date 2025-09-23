@@ -30,6 +30,18 @@ use serde_json;
 use std::path::Path;
 use ndarray::Array2;
 
+use zeta_reticula::api::routes::InferenceRequest;
+use zeta_reticula::zeta_vault_synergy::{ZetaVaultSynergy, VaultConfig, KVCache, CacheLayer};
+use std::io::BufReader;
+use zeta_reticula::quantize::QuantizationResult;
+use zeta_reticula::api::model_store::ModelStore;
+use zeta_reticula::api::model_store::NeuronMatrix;
+use zeta_reticula::api::model_store::CompactionRequest;
+use zeta_reticula::api::model_store::CompactionResponse;
+use zeta_reticula::api::model_store::ModelStoreError;
+use zeta_reticula::api::model_store::privileged_store;
+
+//Zeta Reticula CLI for LLM quantization and inference
 #[derive(Parser)]
 #[command(author, version, about = "Zeta Reticula CLI for LLM quantization and inference", long_about = None)]
 struct Cli {
@@ -76,25 +88,37 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init(); // Initialize logging
+    //Parse CLI arguments
     let cli = Cli::parse();
 
+    //Initialize attention store
     let attention_store = Arc::new(AttentionStore::new().unwrap());
+    //Initialize agent flow
     let agent_flow = Arc::new(AgentFlow::new().await.unwrap());
+    //Initialize vault
     let vault = Arc::new(ZetaVaultSynergy::new(0, VaultConfig {
         node_count: 3,
         replication_factor: 2,
         sync_interval: std::time::Duration::from_secs(10),
     }).await.unwrap());
+    //Initialize petri engine
     let petri_engine = Arc::new(PetriEngine::new(Arc::clone(&attention_store), Arc::clone(&agent_flow), Arc::clone(&vault), 1.0).await);
+    //Initialize inference handler
     let inference_handler = InferenceHandler::new(Arc::clone(&vault), Arc::clone(&petri_engine));
+    //Initialize quantizer
     let quantizer = SalienceQuantizer::new(Arc::clone(&vault), Arc::clone(&petri_engine));
 
+    //for cli commands prune vault
     match cli.command {
+        //Quantize model
         Commands::Quantize { model, bits, chunk, output } => {
+            //Validate arguments
             if bits > 8 || bits < 2 || chunk < 32 {
+                //Return error
                 error!("Invalid bits ({}) or chunk ({})", bits, chunk);
                 return Ok(());
             }
+            //Log quantization start
             info!("{}", "Quantizing model...".blue());
 
             // Load model (mocked as a simple file read for now; replace with actual model parsing)
@@ -179,10 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-use zeta_reticula::api::routes::InferenceRequest;
-use zeta_reticula::zeta_vault_synergy::{ZetaVaultSynergy, VaultConfig, KVCache, CacheLayer};
-use std::io::BufReader;
-use zeta_reticula::quantize::QuantizationResult;
+
 
 impl Default for KVCache {
     fn default() -> Self {

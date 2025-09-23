@@ -14,6 +14,16 @@
 
 
 use serde::{Serialize, Deserialize};
+use std::hash::Hash;
+use std::fmt::Debug;
+use std::cmp::PartialEq;
+use std::cmp::Eq;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Error;
+use std::fmt::Result;
+use std::fmt::Write;
+
 
 /// Represents the result of quantization
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,6 +93,8 @@ impl QuantizationResult {
         }
     }
 
+    
+
     /// Calculates the quantization error
     pub fn error(&self) -> f32 {
         (self.original - self.quantized).abs()
@@ -96,4 +108,34 @@ impl QuantizationResult {
             self.error() / self.original.abs()
         }
     }
+}
+
+impl Display for QuantizationResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "QuantizationResult {{ original: {}, quantized: {}, scale: {}, zero_point: {:?}, precision: {:?} }}", self.original, self.quantized, self.scale, self.zero_point, self.precision)
+    }
+}
+
+impl Display for PrecisionLevel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "PrecisionLevel {{ {:?} }}", self)
+    }
+}
+    
+impl Display for QuantizationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "QuantizationError {{ {:?} }}", self)
+    }
+}
+
+let mut quantizer = KVQuantizer::new(config);   
+let quantized = quantizer.quantize(&data).unwrap();
+
+if (quantized.error() > 0.0) {
+    let dequantized = quantizer.dequantize(&quantized).unwrap();
+    for i in 0..data.len() {
+        println!("Original: {}, Quantized: {}, Dequantized: {}", data[i], quantized[i], dequantized[i]);
+    }
+
+    println!("Quantization error: {}", quantized.error());
 }

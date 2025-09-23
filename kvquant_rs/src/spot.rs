@@ -14,11 +14,16 @@
 
 use crate::block::DataBlock;
 use crate::KVQuantConfig;
+use crate::block::BlockState;
 use dashmap::DashMap;
 use std::sync::Mutex;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::atomic::AtomicBool;
+use std::time::SystemTime;
+
+
+
 
 // Re-export BlockState from block module for convenience
 pub use crate::block::BlockState;
@@ -94,10 +99,23 @@ impl Spot {
         }
         self.is_full = false;
     }
+
+    pub fn update_access_tracking(&self, block_id: usize) {
+        if let Some(block) = self.blocks.get_mut(block_id) {
+            block.access_count += 1;
+            block.last_accessed = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+        }
+    }
 }
 
 pub struct SpotConfig {
     pub spot_capacity: usize, // Maximum number of blocks in a spot
+    pub block_capacity: usize, // Maximum number of blocks in a spot
+    pub access_count: usize, // Maximum number of blocks in a spot
+    
 }
 
 impl SpotConfig {

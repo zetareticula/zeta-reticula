@@ -154,14 +154,17 @@ impl WeightManager {
             ).into());
         }
         
+        // Validate replication factor
         if config.replication_factor == 0 {
             return Err(WeightManagerError::InvalidConfig(
                 "replication_factor must be greater than 0".to_string()
             ).into());
         }
         
+        // Initialize quantizer
         let quantizer = Arc::new(Quantizer::new(config.quantization_config.clone()));
         
+        //if rl optimizer is enabled, initialize it
         let rl_optimizer = if config.enable_rl_optimization {
             Some(Arc::new(RwLock::new(
                 RLOptimizer::new(config.rl_optimizer_config.clone())

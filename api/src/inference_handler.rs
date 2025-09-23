@@ -20,6 +20,7 @@ use salience_engine::quantizer::{SalienceQuantizer, TokenFeatures, PrecisionLeve
 use salience_engine::tableaux::YoungTableau;
 use tonic::transport::Channel;
 use model_store::ModelStore;
+use zeta_vault::VaultConfig;
 use thiserror::Error;
 use validator::Validate;
 #[cfg(feature = "wasm")]
@@ -32,9 +33,18 @@ use zeta_vault::{ZetaVault, VaultConfig, KVCache, CacheLayer, SecretStore};
 use crate::lua::LuaEngine;
 use crate::python::PythonEngine;
 use crate::USAGE_TRACKER;
+use crate::privileged_store;
+use crate::model_store::ModelStore;
+
 use sqlx::PgPool;
 use std::sync::Mutex;
+use std::collections::HashMap;
+use rlua;
+use pyo3;
+use bincode;
+use chrono;
 
+// InferenceError reports errors that occur during inference.
 #[derive(Error, Debug)]
 enum InferenceError {
     #[error("Model not found: {0}")]
@@ -55,6 +65,7 @@ enum InferenceError {
     Compaction(String),
 }
 
+// InferenceRequest represents a request to perform inference.
 #[derive(Validate, Deserialize)]
 pub struct InferenceRequest {
     #[validate(length(min = 1, message = "Input cannot be empty"))]
@@ -66,6 +77,7 @@ pub struct InferenceRequest {
     user_id: String,
 }
 
+// SalienceRequest represents a request to perform salience analysis.
 #[derive(Validate, Deserialize)]
 pub struct SalienceRequest {
     #[validate(length(min = 1, message = "Text cannot be empty"))]
@@ -73,13 +85,16 @@ pub struct SalienceRequest {
     user_id: String,
 }
 
+// validate_precision validates the precision level.
 fn validate_precision(precision: &str) -> Result<(), validator::ValidationError> {
+    //for precision levels of 2, 4, 8, and 16
     match precision {
         "2" | "4" | "8" | "16" => Ok(()),
         _ => Err(validator::ValidationError::new("Precision must be 2, 4, 8, or 16")),
     }
 }
 
+// InferenceResponse represents a response to an inference request.
 #[derive(Serialize, Deserialize)]
 pub struct InferenceResponse {
     text: String,
@@ -137,6 +152,9 @@ impl InferenceHandler {
         }
     }
 
+    // infer handles an inference request, use sidecar for inference if feature "server" is enabled.
+    // sidecar is a separate process that handles inference requests.
+    // if feature "server" is not enabled, use InferenceEngine directly.
     #[cfg(feature = "server")]
     pub async fn infer(&self, req: web::Json<InferenceRequest>) -> Result<HttpResponse, Error> {
         req.validate().map_err(|e| actix_web::error::ErrorBadRequest(InferenceError::Validation(e.to_string())))?;
@@ -151,8 +169,11 @@ impl InferenceHandler {
             .ok_or_else(|| InferenceError::ModelNotFound(req.model_name.clone()))?;
         self.engine.load_weights(weights).await;
 
+        // quantize the input text
         let quantizer = SalienceQuantizer::new(0.7);
+        // split the input text into tokens
         let tokens: Vec<&str> = req.input.split_whitespace().collect();
+        // create token features
         let token_features: Vec<TokenFeatures> = tokens.iter()
             .enumerate()
             .map(|(i, _)| TokenFeatures {
@@ -165,6 +186,7 @@ impl InferenceHandler {
             .collect();
         let (mut results, mut tableau) = quantizer.quantize_tokens(token_features, "default");
 
+        // quantize the input text for kivi quantization
         let precision = match req.precision.as_str() {
             "2" => PrecisionLevel::Bit2,
             "4" => PrecisionLevel::Bit4,

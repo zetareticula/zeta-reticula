@@ -12,6 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::mem::transmute;
+use std::f32::consts::PI;
+use std::f32::consts::E;
+use std::f32::consts::LN_2;
+use std::f32::consts::LN_10;
+use std::f32::consts::FRAC_1_PI;
+use std::f32::consts::FRAC_1_SQRT_2;
+
+
+
+
 
 /// Bit precision modulation with mantissa
 ///
@@ -33,7 +44,7 @@ pub fn modulate_bit_precision(value: f32, precision: u8, mantissa: u32) -> f32 {
     modulated_value as f32
 }
 
-use std::mem::transmute;
+
 
 /// Returns the integer part of a number and the decimal part.
 ///
@@ -56,3 +67,5 @@ pub fn modf(number: f32) -> (i32, f32) {
     let decimal_part = f32::from_bits((mantissa << 23) as u32) - integer_part as f32 * 2f32.powi(exponent - 23);
     (integer_part, decimal_part)
 }
+
+

@@ -53,12 +53,53 @@ impl KVQuantizer {
 
     /// Allocate a new data block
     pub fn allocate_block(&self, id: usize) -> DataBlock {
+        if self.data_blocks.contains_key(&id) {
+            if self.data_blocks.get(&id).unwrap().state == BlockState::Free {
+                return self.data_blocks.get(&id).unwrap().clone();
+            }
+        }
+        for block in self.data_blocks.iter() {
+            if block.value().state == BlockState::Free {
+                return block.value().clone();
+            }
+        }
+        if self.data_blocks.len() >= self.config.block_size {
+        //eviction
+        let mut block = self.data_blocks.iter().min_by_key(|b| b.value().access_count).unwrap();
+        block.value().invalidate();
+        block.value().erase();
+        self.data_blocks.remove(&block.key());
+
+        
+        }
+
         DataBlock::new(id, self.config.block_size)
+        
     }
 
     /// Get a reference to a data block by ID
     pub fn get_block(&self, id: usize) -> Option<DataBlock> {
-        self.data_blocks.get(&id).map(|b| b.value().clone())
+
+        if let mut block = self.data_blocks.get_mut(&id) {
+            block.value().access_count += 1;
+            block.value().last_accessed = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            return Some(block.value().clone());
+        }
+        None
+    }
+
+    /// Update the access tracking for a block
+    pub fn update_access_tracking(&self, block_id: usize) {
+        if let mut block = self.data_blocks.get_mut(&block_id) {
+            block.value().access_count += 1;
+            block.value().last_accessed = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+        }
     }
 
     /// Insert or update a data block

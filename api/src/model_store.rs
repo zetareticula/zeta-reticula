@@ -25,7 +25,14 @@ use zeta_vault::{ZetaVault, VaultConfig, KVCache, CacheLayer, SecretStore};
 use log;
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
+use bincode;
+use chrono;
+use ndarray;
+use rayon;
+use half;
+use zeta_vault;
 
+// ModelStoreError represents errors that can occur during model storage operations.
 #[derive(Error, Debug)]
 pub enum ModelStoreError {
     #[error("IO error: {0}")]
@@ -35,6 +42,7 @@ pub enum ModelStoreError {
 
 }
 
+// privileged_store stores a value in the secret store if the "enterprise" feature is enabled.
 macro_rules! privileged_store {
     ($store:expr, $key:expr, $value:expr) => {
         #[cfg(feature = "enterprise")]
@@ -46,6 +54,7 @@ macro_rules! privileged_store {
     };
 }
 
+// CompactionRequest represents a request to compact model data.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompactionRequest {
     model_id: String,
@@ -53,12 +62,14 @@ pub struct CompactionRequest {
     data: Vec<u8>,
 }
 
+// CompactionResponse represents a response to a compaction request.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompactionResponse {
     status: String,
     compacted_data: Vec<u8>,
 }
 
+// ModelStore represents a model store.
 pub struct ModelStore {
     models: Arc<RwLock<Vec<String>>>,
     vault: ZetaVault,
@@ -68,6 +79,7 @@ pub struct ModelStore {
     compaction_queue: Arc<RwLock<Vec<CompactionRequest>>>, // CaaS queue
 }
 
+// NeuronMatrix represents a matrix of neurons.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NeuronMatrix {
     matrix: Array2<f16>,
@@ -77,6 +89,7 @@ pub struct NeuronMatrix {
     last_k_active: Vec<usize>,
 }
 
+// new creates a new ModelStore.
 impl ModelStore {
     pub async fn new() -> Self {
         ModelStore {
@@ -89,6 +102,7 @@ impl ModelStore {
         }
     }
 
+    // add_model adds a model to the store.
     pub async fn add_model(&self, model_id: String, path: &str) {
         let mut models = self.models.write().await;
         models.push(model_id.clone());
@@ -113,15 +127,18 @@ impl ModelStore {
         self.vault.store(format!("weights_{}", model_id), weights).await.unwrap_or_else(|e| log::error!("Vault store failed: {:?}", e));
     }
 
+    // get_model_path returns the path to a model.
     pub async fn get_model_path(&self, model_id: &str) -> Option<String> {
         let models = self.models.read().await;
         models.iter().find(|&id| id == model_id).cloned()
     }
 
+    // get_model_weights returns the weights of a model.
     pub async fn get_model_weights(&self, model_id: &str) -> Option<Vec<u8>> {
         self.vault.get(format!("weights_{}", model_id)).await
     }
 
+    // get_neuron_matrix returns the neuron matrix for a model.
     pub async fn get_neuron_matrix(&self, model_id: &str) -> Option<NeuronMatrix> {
         let models = self.models.read().await;
         let index = models.iter().position(|id| id == model_id)?;
@@ -129,10 +146,15 @@ impl ModelStore {
         neuron_matrices.get(index).cloned()
     }
 
+    // update_neuron_matrix updates the neuron matrix for a model.
     pub async fn update_neuron_matrix(&self, model_id: &str, new_neurons: Vec<(usize, Array2<f16>, f32)>) {
+        //models are stored in a vector, so we need to find the index of the model
         let models = self.models.read().await;
+        //for an index, we need to find the neuron matrix       
         let index = models.iter().position(|id| id == model_id).unwrap();
+        //now we need to update the neuron matrix
         let mut neuron_matrices = self.neuron_matrices.write().await;
+        //get the neuron matrix
         let matrix = &mut neuron_matrices[index];
 
         let current_time = chrono::Utc::now().timestamp() as usize;
