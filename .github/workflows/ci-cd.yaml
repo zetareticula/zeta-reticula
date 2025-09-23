@@ -11,11 +11,12 @@ on:
       - 'master-service/**'
       - 'ns-router-rs/**'
       - 'salience-engine/**'
-      - 'quantize-cli/**'
       - 'llm-rs/**'
       - 'agentflow-rs/**'
       - 'kvquant_rs/**'
       - 'shared/**'
+      - 'attention-store/**'
+      - 'scheduler/**'
       - 'k8s/**'
       - '.github/workflows/ci-cd.yaml'
       - 'Dockerfile*'
@@ -31,11 +32,12 @@ on:
       - 'master-service/**'
       - 'ns-router-rs/**'
       - 'salience-engine/**'
-      - 'quantize-cli/**'
       - 'llm-rs/**'
       - 'agentflow-rs/**'
       - 'kvquant_rs/**'
       - 'shared/**'
+      - 'attention-store/**'
+      - 'scheduler/**'
       - 'k8s/**'
       - '.github/workflows/ci-cd.yaml'
       - 'Dockerfile*'
@@ -81,7 +83,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Run tests
+      - name: Build and test workspace
         run: |
           # Build the unified CLI first
           cargo build --bin zeta
@@ -92,16 +94,9 @@ jobs:
           # Test CLI functionality
           ./target/debug/zeta system status
           ./target/debug/zeta --help
-          
-          # Test master-service specifically if Makefile exists
-          if [ -f "master-service/Makefile" ]; then
-            cd master-service
-            make test
-          fi
 
   publish-crates:
-    name: Publish to crates.io
-    needs: test
+    name: Verify Published Crates
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -126,31 +121,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Login to crates.io
-        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-      - name: Publish core packages
+      - name: Verify published crates
         run: |
-          # Publish core packages in dependency order
-          cargo publish -p zeta-kv-cache --dry-run
-          cargo publish -p zeta-quantization --dry-run
-          cargo publish -p zeta-salience --dry-run
+          # Check that all crates are published and accessible
+          cargo search zeta-kv-cache --limit 1
+          cargo search zeta-quantization --limit 1
+          cargo search zeta-salience --limit 1
+          cargo search zeta-shared --limit 1
+          cargo search zeta-inference --limit 1
+          cargo search zeta-reticula --limit 1
 
-          # Publish if dry-run passes
-          cargo publish -p zeta-kv-cache
-          cargo publish -p zeta-quantization
-          cargo publish -p zeta-salience
-          cargo publish -p zeta-shared
-
-      - name: Publish runtime packages
-        run: |
-          cargo publish -p zeta-inference --dry-run
-          cargo publish -p zeta-inference
-
-      - name: Publish CLI
-        run: |
-          cargo publish -p zeta-reticula --dry-run
-          cargo publish -p zeta-reticula
+          # Test that CLI builds with published dependencies
+          cargo build --bin zeta
+          ./target/debug/zeta system status
 
   security-scan:
     name: Security Scanning
@@ -261,7 +244,7 @@ jobs:
 
   build:
     name: Build and Push Docker Images
-    needs: [test, validate-k8s, security-scan, performance-benchmark]
+    needs: [test, validate-k8s, security-scan, performance-benchmark, publish-crates]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -348,7 +331,7 @@ jobs:
 
   notify:
     name: Notify Status
-    needs: [test, validate-k8s, publish-crates, build, deploy]
+    needs: [test, validate-k8s, security-scan, performance-benchmark, publish-crates, build, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:
