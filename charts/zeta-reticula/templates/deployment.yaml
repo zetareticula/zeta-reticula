@@ -1,144 +1,99 @@
-{{- range .Values.services }}
+{{- if .Values.zetaReticula.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .name }}
+  name: {{ include "zeta-reticula.fullname" . }}
   labels:
-    app: zeta-reticula
-    component: {{ .name }}
+    {{- include "zeta-reticula.labels" . | nindent 4 }}
 spec:
-  replicas: {{ $.Values.replicaCount }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.zetaReticula.replicas }}
+  {{- end }}
   selector:
     matchLabels:
-      app: zeta-reticula
-      component: {{ .name }}
+      {{- include "zeta-reticula.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: zeta-reticula
-        component: {{ .name }}
-    spec:
-      containers:
-      - name: {{ .name }}
-        image: "{{ $.Values.image.repository }}/{{ .name }}:{{ $.Values.image.tag }}"
-        imagePullPolicy: {{ $.Values.image.pullPolicy }}
-        ports:
-        - containerPort: {{ .port }}
-        resources:
-          requests:
-            cpu: {{ $.Values.resources.requests.cpu }}
-            memory: {{ $.Values.resources.requests.memory }}
-          limits:
-            cpu: {{ $.Values.resources.limits.cpu }}
-            memory: {{ $.Values.resources.limits.memory }}
-        {{- if eq .name "api" }}
-      - name: zeta-sidecar
-        image: "{{ $.Values.image.repository }}/zeta-sidecar:{{ $.Values.image.tag }}"
-        imagePullPolicy: {{ $.Values.image.pullPolicy }}
-        ports:
-        - containerPort: 50051
-        volumeMounts:
-        - name: cache-volume
-          mountPath: "/cache"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
+        {{- include "zeta-reticula.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "zeta-reticula.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.zetaReticula.image.repository }}:{{ .Values.zetaReticula.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.zetaReticula.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            {{- range $key, $value := .Values.zetaReticula.config }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.zetaReticula.resources | nindent 12 }}
+          {{- if .Values.zetaReticula.healthCheck.enabled }}
+          livenessProbe:
+            exec:
+              command:
+                - zeta
+                - system
+                - status
+            initialDelaySeconds: {{ .Values.zetaReticula.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.zetaReticula.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.zetaReticula.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.zetaReticula.healthCheck.failureThreshold }}
+            successThreshold: {{ .Values.zetaReticula.healthCheck.successThreshold }}
+          readinessProbe:
+            exec:
+              command:
+                - zeta
+                - system
+                - status
+            initialDelaySeconds: {{ .Values.zetaReticula.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.zetaReticula.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.zetaReticula.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.zetaReticula.healthCheck.failureThreshold }}
+            successThreshold: {{ .Values.zetaReticula.healthCheck.successThreshold }}
+          {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.sidecars }}
+      containers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.extraVolumes }}
       volumes:
-      - name: cache-volume
-        emptyDir: {}
----
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
-
-{{- if .Values.airflow.enabled }}
----
-apiVersion: helm.sh/v1beta1
-kind: HelmRelease
-metadata:
-  name: airflow
-  namespace: {{ .Values.airflow.namespace }}
-spec:
-  chart: ./charts/airflow
-  values:
-    executor: KubernetesExecutor
-    airflow:
-      defaultAirflowRepository: zetareticula/airflow
-      defaultAirflowTag: "latest"
-{{- end }}
-
-    image:
-      repository: {{ .Values.airflow.image.repository }}
-      tag: {{ .Values.airflow.image.tag }}
-      pullPolicy: {{ .Values.airflow.image.pullPolicy }}
-    kubernetes:
-      executor: KubernetesExecutor
-      kubeConfig:
-        config: /etc/kubernetes/config
-      worker:
-        resources:
-          limits:
-            cpu: 500m
-            memory: 1Gi
-          requests:
-            cpu: 200m
-            memory: 512Mi
-    dags:
-      persistence:
-        enabled: true
-        existingClaim: airflow-dags-pvc
-    persistence:
-      enabled: true
-      accessMode: {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
-      size: {{ .Values.persistence.size | default "1Gi" }}
-      storageClass: {{ .Values.persistence.storageClass | default "standard" }}
-      annotations: {}
-      existingClaim: ""
-      subPath: ""
-      mountPath: /opt/airflow/dags
-    webserver:
-      service:
-        type: LoadBalancer
-        port: 8080
-        annotations:
-          service.beta.kubernetes.io/aws-load-balancer-type: nlb
-      ingress:
-        enabled: true
-        pathType: Prefix
-        hosts:
-          - host: airflow.local
-            paths:
-              - /
-        annotations:
-          kubernetes.io/ingress.class: nginx
-          nginx.ingress.kubernetes.io/rewrite-target: /
-        tls: []
-    scheduler:
-      resources:
-        limits:
-          cpu: 500m
-          memory: 1Gi
-    
-        requests:
-            cpu: 200m
-            memory: 512Mi
-        {{- if .Values.airflow.scheduler.resources }}
-        {{- range $key, $value := .Values.airflow.scheduler.resources }}
-        {{ $key }}: {{ $value }}
-        {{- end }}
-        {{- end }}
-
-        {{- if .Values.airflow.webserver.resources }}
-        resources:
-          limits:
-            cpu: {{ .Values.airflow.webserver.resources.limits.cpu | default "500m" }}
-            memory: {{ .Values.airflow.webserver.resources.limits.memory | default "1Gi" }}
-          requests:
-            cpu: {{ .Values.airflow.webserver.resources.requests.cpu | default "200m" }}
-            memory: {{ .Values.airflow.webserver.resources.requests.memory | default "512Mi" }}
-        {{- end }}
-
-        {{- if .Values.airflow.worker.resources }}

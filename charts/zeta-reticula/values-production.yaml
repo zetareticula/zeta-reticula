@@ -1,0 +1,261 @@
+# Production values for Zeta Reticula Helm chart
+# This file is optimized for production deployment
+
+# Application configuration
+zetaReticula:
+  enabled: true
+  replicas: 3
+
+  image:
+    repository: zetareticula/zeta-reticula
+    tag: "latest"
+    pullPolicy: Always
+
+  # Production resource limits
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  # Production environment variables
+  config:
+    RUST_LOG: "warn"
+    RUST_BACKTRACE: "0"
+    RUSTFLAGS: "-C target-cpu=generic"
+
+  # Production health check settings
+  healthCheck:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+    successThreshold: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress configuration
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: zeta-reticula.prod.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: zeta-reticula-tls
+      hosts:
+        - zeta-reticula.prod.example.com
+
+# Service account
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: "zeta-reticula@project.iam.gserviceaccount.com"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Node selector for production workloads
+nodeSelector:
+  environment: production
+  workload: zeta-reticula
+
+# Tolerations for production workloads
+tolerations:
+  - key: "dedicated"
+    operator: "Equal"
+    value: "zeta-reticula"
+    effect: "NoSchedule"
+
+# Affinity for better pod distribution
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - zeta-reticula
+          topologyKey: kubernetes.io/hostname
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Persistent volumes for production
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 50Gi
+  storageClass: "fast-ssd"
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "fast-ssd"
+
+# Secrets management
+secrets:
+  - name: zeta-reticula-secrets
+    data:
+      DATABASE_URL: "postgresql://zeta:password@postgres.zeta-reticula.svc.cluster.local/zeta_prod"
+      REDIS_URL: "redis://redis.zeta-reticula.svc.cluster.local:6379"
+
+# ConfigMaps
+configMaps:
+  - name: zeta-reticula-config
+    data:
+      config.yaml: |
+        server:
+          port: 80
+          host: 0.0.0.0
+        logging:
+          level: warn
+          format: json
+        metrics:
+          enabled: true
+          port: 9090
+        cache:
+          max_size: 10GB
+          ttl: 3600
+
+# RBAC configuration
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["configmaps", "secrets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments"]
+      verbs: ["get", "list", "watch"]
+
+# Network policies
+networkPolicies:
+  enabled: true
+  ingressRules:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: zeta-reticula
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+  egressRules:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    labels:
+      release: prometheus
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+      prometheus.io/path: "/metrics"
+  prometheusRule:
+    enabled: true
+    labels:
+      release: prometheus
+    annotations:
+      prometheus.io/alerts: "true"
+
+# Service mesh configuration
+serviceMesh:
+  enabled: true
+  type: "istio"
+  annotations:
+    sidecar.istio.io/status: '{"version":"12345"}'
+
+# Security context
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Image pull secrets
+imagePullSecrets:
+  - name: registry-secret
+
+# Priority class
+priorityClassName: "high-priority"
+
+# Init containers for setup
+initContainers:
+  - name: init-config
+    image: busybox:1.35
+    command: ['sh', '-c', 'echo "Initializing configuration..." && mkdir -p /app/config && echo "Config initialized"']
+    volumeMounts:
+      - name: config-volume
+        mountPath: /app/config
+
+# Sidecar containers
+sidecars:
+  - name: metrics-collector
+    image: prometheus/node-exporter:v1.5.0
+    ports:
+      - containerPort: 9090
+        name: metrics
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# Additional volumes
+extraVolumes:
+  - name: config-volume
+    emptyDir: {}
+  - name: cache-volume
+    emptyDir:
+      sizeLimit: 10Gi
+
+# Additional volume mounts
+extraVolumeMounts:
+  - name: config-volume
+    mountPath: /app/config
+    readOnly: true
+  - name: cache-volume
+    mountPath: /app/cache

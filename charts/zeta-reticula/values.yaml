@@ -1,14 +1,48 @@
 replicaCount: 3
 
 image:
-  repository: zetareticula
+  repository: zetareticula/zeta-reticula
   tag: "latest"
   pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
-  port: 8080
+  port: 80
 
+# Unified zeta-reticula application configuration
+zetaReticula:
+  enabled: true
+  replicas: 3
+  image:
+    repository: zetareticula/zeta-reticula
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Environment variables
+  config:
+    RUST_LOG: "info"
+    RUST_BACKTRACE: "1"
+    RUSTFLAGS: "-C target-cpu=native"
+  
+  # Health check configuration
+  healthCheck:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+# Ingress configuration
 ingress:
   enabled: true
   annotations:
@@ -21,37 +55,95 @@ ingress:
           pathType: Prefix
   tls: []
 
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 200m
-    memory: 256Mi
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
 
-services:
-  - name: api
-    port: 8080
-  - name: llm-rs
-    port: 8081
-  - name: agentflow-rs
-    port: 8082
-  - name: ns-router-rs
-    port: 8083
-  - name: kvquant-rs
-    port: 8084
-  - name: salience-engine
-    port: 8085
-  - name: quantize-cli
-    port: 8086
-  - name: app
-    port: 80
-  - name: zeta-sidecar
-    port: 50051
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
 
-airflow:
-  enabled: true
-  namespace: zeta-reticula
-  chart: ./charts/airflow
+# Node selector, tolerations, and affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}
 
+# Additional volumes
+extraVolumes: []
+
+# Additional volume mounts
+extraVolumeMounts: []
+
+# Pod security context
+securityContext: {}
+
+# Container security context
+containerSecurityContext: {}
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Secrets management
+secrets: []
+
+# ConfigMaps
+configMaps: []
+
+# Persistent volumes
+persistence:
+  enabled: false
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
+  storageClass: ""
+  annotations: {}
+
+# Service mesh configuration
+serviceMesh:
+  enabled: false
+  type: "istio" # istio, linkerd
   
+# Monitoring configuration
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: monitoring
+    labels: {}
+    annotations: {}
+  prometheusRule:
+    enabled: false
+    labels: {}
+    annotations: {}
+
+# RBAC configuration
+rbac:
+  create: true
+  rules: []
+
+# Network policies
+networkPolicies:
+  enabled: false
+  ingressRules: []
+  egressRules: []
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Image pull secrets
+imagePullSecrets: []
+
+# Priority class
+priorityClassName: ""
