@@ -308,26 +308,37 @@ jobs:
             --name ${{ env.EKS_CLUSTER }} \
             --kubeconfig kubeconfig
 
-      - name: Deploy to Kubernetes
+      - name: Install Helm
+        run: |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+          helm version
+
+      - name: Deploy to Kubernetes using Helm
         run: |
           export KUBECONFIG=./kubeconfig
 
-          # Install kustomize
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
+          # Add Helm repository (if needed)
+          helm repo add zeta-reticula https://zetareticula.github.io/zeta-reticula || true
+          helm repo update
 
-          # Deploy with improved rollout strategy
-          kubectl apply -k k8s/overlays/prod
+          # Deploy using Helm chart
+          helm upgrade --install zeta-reticula ./charts/zeta-reticula \
+            --namespace zeta-reticula \
+            --create-namespace \
+            --values ./charts/zeta-reticula/values-production.yaml \
+            --set image.tag=${{ steps.meta.outputs.tags }} \
+            --wait \
+            --timeout=600s
 
-          # Wait for deployments with better error handling
-          kubectl rollout status deployment/api-service -n zeta-reticula --timeout=600s
-          kubectl rollout status deployment/master-service -n zeta-reticula --timeout=600s
-          kubectl rollout status deployment/worker -n zeta-reticula --timeout=600s
-          kubectl rollout status statefulset/p2pstore -n zeta-reticula --timeout=600s
+          # Wait for deployments to be ready
+          kubectl rollout status deployment/zeta-reticula -n zeta-reticula --timeout=600s
 
           # Verify deployment health
           kubectl get pods -n zeta-reticula
           kubectl get services -n zeta-reticula
+          kubectl get ingress -n zeta-reticula
 
   notify:
     name: Notify Status

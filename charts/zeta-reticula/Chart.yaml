@@ -1,8 +1,24 @@
 apiVersion: v2
 name: zeta-reticula
-description: A Kubernetes-native inference quantization platform
-version: 0.1.0
+description: A Kubernetes-native inference quantization platform with unified CLI
+version: 0.2.0
 appVersion: "0.1.0"
+keywords:
+  - llm
+  - inference
+  - quantization
+  - ai
+  - machine-learning
+  - rust
+home: https://github.com/zetareticula/zeta-reticula
+sources:
+  - https://github.com/zetareticula/zeta-reticula
 maintainers:
   - name: Zeta Reticula Team
     email: info@zetareticula.ai
+annotations:
+  category: AI/ML
+  licenses: Apache-2.0
+  images: |
+    - name: zeta-reticula
+      image: zetareticula/zeta-reticula:latest
