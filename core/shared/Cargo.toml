@@ -17,3 +17,6 @@ rust-version = "1.70"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+zeta-kv-cache = { path = "../kv-cache" }
+zeta-quantization = { path = "../quantization" }
+zeta-salience = { path = "../salience" }

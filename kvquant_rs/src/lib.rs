@@ -67,7 +67,7 @@ pub type Result<T> = std::result::Result<T, KVQuantError>;
 
 
 // Re-export commonly used types
-pub use crate::block::DataBlock;
+pub use crate::block::{DataBlock, BlockState};
 pub use crate::spot::SpotManager;
 pub use crate::kv_cache::LogStructuredKVCache;
 pub use crate::kvquant_config::{KVQuantConfig, PrecisionLevel, QuantizationResult, QuantizationData};

@@ -132,6 +132,8 @@ mod tests {
             spot_capacity: 2,
             salience_threshold: 0.5,
             precision: PrecisionLevel::Int8,
+            enable_debug_logging: false,
+            max_cache_items: 1000,
         };
         
         let quantizer = KVQuantizer::new(config);

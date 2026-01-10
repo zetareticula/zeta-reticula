@@ -18,8 +18,7 @@ use serde::{Serialize, Deserialize};
 use salience_engine::role_inference::{RoleInferer, RoleInferenceResult, RoleTheory, SalienceResult, TokenFeatures};
 use salience_engine::tableaux::YoungTableau;
 use salience_engine::mesolimbic::MesolimbicSystem;
-use kvquant_rs::{QuantizationResult, PrecisionLevel, SpotManager, DataBlock, KVQuantConfig, KVQuantizer};
-use kvquant_rs::spot::BlockState;
+use kvquant_rs::{QuantizationResult, PrecisionLevel, SpotManager, DataBlock, KVQuantConfig, KVQuantizer, BlockState};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RoleInfererMLPConfig {

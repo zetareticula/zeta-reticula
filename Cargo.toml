@@ -12,17 +12,22 @@ members = [
     # Interfaces (consolidated)
     "interfaces/cli",
     
-    # Legacy (to be removed)
+    # Legacy crates that still compile
+    "kvquant_rs",
+    "salience-engine",
+    "shared",
+]
+
+# Exclude legacy crates with broken dependencies
+exclude = [
     "agentflow-rs",
     "attention-store", 
     "client",
-    "kvquant_rs",
     "llm-rs",
     "master-service",
     "ns-router-rs",
     "p2pstore",
     "protos",
-    # Note: legacy "shared" crate excluded to avoid naming conflict
 ]
 resolver = "2"
 

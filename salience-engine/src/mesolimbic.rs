@@ -31,7 +31,7 @@ use crate::role_inferer::RoleInferer;
 /// # Examples
 /// 
 /// ```
-/// let role_inferer = RoleInfererImpl::new(10, 5);
+/// use salience_engine::mesolimbic::{MesolimbicSystem, MesolimbicConfig};
 /// let mesolimbic_system = MesolimbicSystem::with_config(MesolimbicConfig::new(10, 5));
 /// ```
 

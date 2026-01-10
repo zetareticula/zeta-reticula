@@ -25,8 +25,8 @@ use std::time::SystemTime;
 
 
 
-// Re-export BlockState from block module for convenience
-pub use crate::block::BlockState;
+// BlockState is already imported from block module via crate::block::BlockState
+// No re-export needed here to avoid duplicate definition error
 
 // Local BlockState to avoid conflict with block::BlockState
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,7 +100,7 @@ impl Spot {
         self.is_full = false;
     }
 
-    pub fn update_access_tracking(&self, block_id: usize) {
+    pub fn update_access_tracking(&mut self, block_id: usize) {
         if let Some(block) = self.blocks.get_mut(block_id) {
             block.access_count += 1;
             block.last_accessed = SystemTime::now()
@@ -119,8 +119,8 @@ pub struct SpotConfig {
 }
 
 impl SpotConfig {
-    pub fn new(spot_capacity: usize) -> Self {
-        SpotConfig { spot_capacity }
+    pub fn new(spot_capacity: usize, block_capacity: usize, access_count: usize) -> Self {
+        SpotConfig { spot_capacity, block_capacity, access_count }
     }
 }
 

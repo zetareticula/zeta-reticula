@@ -12,7 +12,7 @@ fn test_kvquantizer_creation() {
     let config = KVQuantConfig::default();
     
     // Create a new KVQuantizer
-    let kvq = KVQuantizer::new(config);
+    let _kvq = KVQuantizer::new(config);
     
     // Simple test to verify the quantizer was created
     // We're just testing that we can create it without panicking
@@ -25,18 +25,17 @@ fn test_quantization() {
     let config = KVQuantConfig::default();
     let kvq = KVQuantizer::new(config);
     
-    // Test data
-    let token_id = 42;
-    let value = 0.5;
-    let pointer = 0;
-    let bias = 0.1;
-    let vector_id = 1;
-    let graph_entry = (0, vec![1, 2, 3]);
+    // Test data - using the actual quantize API which takes a slice of f32
+    let input = vec![0.0, 0.5, -0.5, 1.0, -1.0];
     
     // Perform quantization
-    let result = kvq.quantize(token_id, value, pointer, bias, vector_id, graph_entry);
+    let result = kvq.quantize(&input);
     
-    // For now, just verify that we got some result
-    // The actual quantization logic would have more specific assertions
-    assert!(result.is_some());
+    // Verify quantization succeeded
+    assert!(result.is_ok());
+    
+    // Verify we can dequantize
+    let quantized = result.unwrap();
+    let dequantized = kvq.dequantize(&quantized);
+    assert!(dequantized.is_ok());
 }

@@ -121,21 +121,26 @@ impl Display for PrecisionLevel {
         write!(f, "PrecisionLevel {{ {:?} }}", self)
     }
 }
-    
+
+/// Error type for quantization operations
+#[derive(Debug, Clone)]
+pub enum QuantizationError {
+    /// Invalid precision level
+    InvalidPrecision,
+    /// Value out of range
+    OutOfRange,
+    /// Generic error with message
+    Generic(String),
+}
+
 impl Display for QuantizationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "QuantizationError {{ {:?} }}", self)
+        match self {
+            QuantizationError::InvalidPrecision => write!(f, "Invalid precision level"),
+            QuantizationError::OutOfRange => write!(f, "Value out of range"),
+            QuantizationError::Generic(msg) => write!(f, "Quantization error: {}", msg),
+        }
     }
 }
 
-let mut quantizer = KVQuantizer::new(config);   
-let quantized = quantizer.quantize(&data).unwrap();
-
-if (quantized.error() > 0.0) {
-    let dequantized = quantizer.dequantize(&quantized).unwrap();
-    for i in 0..data.len() {
-        println!("Original: {}, Quantized: {}, Dequantized: {}", data[i], quantized[i], dequantized[i]);
-    }
-
-    println!("Quantization error: {}", quantized.error());
-}
+impl std::error::Error for QuantizationError {}

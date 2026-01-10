@@ -64,13 +64,18 @@ impl KVQuantizer {
             }
         }
         if self.data_blocks.len() >= self.config.block_size {
-        //eviction
-        let mut block = self.data_blocks.iter().min_by_key(|b| b.value().access_count).unwrap();
-        block.value().invalidate();
-        block.value().erase();
-        self.data_blocks.remove(&block.key());
-
-        
+            //eviction - find block with minimum access count
+            let min_key = self.data_blocks.iter()
+                .min_by_key(|b| b.value().access_count)
+                .map(|b| *b.key());
+            
+            if let Some(key) = min_key {
+                if let Some(mut block) = self.data_blocks.get_mut(&key) {
+                    block.value_mut().invalidate();
+                    block.value_mut().erase();
+                }
+                self.data_blocks.remove(&key);
+            }
         }
 
         DataBlock::new(id, self.config.block_size)
@@ -79,10 +84,9 @@ impl KVQuantizer {
 
     /// Get a reference to a data block by ID
     pub fn get_block(&self, id: usize) -> Option<DataBlock> {
-
-        if let mut block = self.data_blocks.get_mut(&id) {
-            block.value().access_count += 1;
-            block.value().last_accessed = std::time::SystemTime::now()
+        if let Some(mut block) = self.data_blocks.get_mut(&id) {
+            block.value_mut().access_count += 1;
+            block.value_mut().last_accessed = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs();
@@ -93,9 +97,9 @@ impl KVQuantizer {
 
     /// Update the access tracking for a block
     pub fn update_access_tracking(&self, block_id: usize) {
-        if let mut block = self.data_blocks.get_mut(&block_id) {
-            block.value().access_count += 1;
-            block.value().last_accessed = std::time::SystemTime::now()
+        if let Some(mut block) = self.data_blocks.get_mut(&block_id) {
+            block.value_mut().access_count += 1;
+            block.value_mut().last_accessed = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs();
@@ -151,6 +155,8 @@ pub struct DataBlock {
     pub navigation_graph: HashMap<usize, Vec<usize>>,
     pub size: usize,
     pub capacity: usize,
+    pub access_count: u64,
+    pub last_accessed: u64,
 }
 
 
@@ -168,6 +174,8 @@ impl DataBlock {
             navigation_graph: HashMap::new(),
             size: 0,
             capacity,
+            access_count: 0,
+            last_accessed: 0,
         }
     }
 

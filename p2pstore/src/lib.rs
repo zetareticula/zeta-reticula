@@ -14,7 +14,12 @@
 
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
-use privacy::PrivacyPolicy;
+
+// Privacy policy placeholder - module not available
+#[derive(Debug, Clone, Default)]
+pub struct PrivacyPolicy {
+    pub enabled: bool,
+}
 
 
 

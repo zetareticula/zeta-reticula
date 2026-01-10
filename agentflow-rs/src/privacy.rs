@@ -36,8 +36,7 @@ use dashmap::mapref::entry::Entry;
 use salience_engine::tableaux::YoungTableau;
 use salience_engine::role_inference::{RoleInferer, RoleInferenceResult, RoleTheory, SalienceResult};
 use salience_engine::mesolimbic::MesolimbicSystem;
-use kvquant_rs::{QuantizationResult, PrecisionLevel, SpotManager, DataBlock, KVQuantConfig, KVQuantizer};
-use kvquant_rs::spot::BlockState;
+use kvquant_rs::{QuantizationResult, PrecisionLevel, SpotManager, DataBlock, KVQuantConfig, KVQuantizer, BlockState};
 
 // Represents a privacy guard that adds noise to data for differential privacy
 // This is used to protect sensitive data while allowing for analysis
