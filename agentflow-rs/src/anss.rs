@@ -20,6 +20,7 @@ use crate::server::AgentFlowServer;
 
 
 
+
 // Federated ANSS are used for collaborative filtering
 #[derive(Serialize, Deserialize)]
 pub struct FederatedANSS;
@@ -51,3 +52,4 @@ impl FederatedANSS {
         ranked.into_iter().flatten().collect()
     }
 }
+

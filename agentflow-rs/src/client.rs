@@ -41,3 +41,4 @@ impl Client {
         self.fusion_anns.initialize().await;
     }
 }
+

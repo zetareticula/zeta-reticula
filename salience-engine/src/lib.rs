@@ -315,8 +315,8 @@ mod tests {
 
         let quantizer = SalienceQuantizer::new(0.3); // Lower threshold to ensure token passes
         let result = quantizer.quantize_tokens_test(&input, theory_key, &bump);
-        // Test passes if quantization completes without error
-        assert!(result.is_ok(), "Quantization should succeed");
+        // Test passes if quantization completes without panic
+        assert!(result.is_ok(), "Quantization should complete successfully");
     }
 }
 

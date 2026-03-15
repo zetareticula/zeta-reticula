@@ -53,6 +53,8 @@ impl DistributedIO {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct IOConfig {
     pub chunk_size: usize,
+
+    
 }
 
 impl IOConfig {
