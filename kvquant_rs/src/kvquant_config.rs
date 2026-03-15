@@ -17,6 +17,7 @@
 
 use serde::{Deserialize, Serialize};
 
+
 /// Configuration for KVQuant
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KVQuantConfig {
@@ -111,3 +112,4 @@ pub enum QuantizationError {
     #[error("Quantization error: {0}")]
     Other(String),
 }
+

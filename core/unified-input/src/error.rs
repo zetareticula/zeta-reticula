@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+
 /// Unified error type for the input layer
 #[derive(Error, Debug)]
 pub enum UnifiedInputError {
@@ -57,3 +58,5 @@ impl From<hf_hub::api::sync::ApiError> for UnifiedInputError {
         UnifiedInputError::HuggingFaceHub(err.to_string())
     }
 }
+
+
