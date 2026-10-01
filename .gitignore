@@ -123,3 +123,10 @@ attention-data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Secrets and keys: never commit.
+.env.development
+.env.production
+*.pem
+*.key
+certs/
